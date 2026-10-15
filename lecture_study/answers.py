@@ -135,8 +135,15 @@ async def freeze_request(db,request,embedding_client=None,web_secret=None,snapsh
         participants=snapshot['participants'];output_limit=min(2048,request.provider.context_limit//4);profile=local_profile(request.provider,runtime_dir) if request.kind=='summary' else None
         from .summary_grounding import grounded_schema,COPY_INSTRUCTION,MODES
         summary_instruction=SUMMARY_INSTRUCTION+COPY_INSTRUCTION+MODES.get(session_kind,'')
-        parts=summary_parts(request,combined,MINUTES_SCHEMA,MINUTES_COPY_INSTRUCTION,{'participants':participants}) if request.kind=='minutes' else summary_parts(request,combined,grounded_schema(SUMMARY_PART_SCHEMA,copy_subject=True),summary_instruction+EMPTY_SUMMARY_INSTRUCTION,output_limit=output_limit,tokenizer_profile=profile,grounded=True)
-        return {'request':request.model_dump(),'evidence':[e.model_dump() for e in combined],'participants':participants,'summary_parts':[[e.model_dump() for e in part] for part in parts],'cutoff_ms':cutoff,'retrieval_mode':'full_snapshot','source_sampling':'copy-v1','warning':found.warning,'excerpted':False,'web_status':web_status|{'used_count':len(web)},**({'minutes_instruction':MINUTES_COPY_INSTRUCTION} if request.kind=='minutes' else {}),**({'summary_policy':'context-v1','allow_empty_summary_parts':True,'summary_instruction':summary_instruction,'summary_grounding':'quotes-v1','summary_subject':'quote-v1','summary_mode':session_kind,'summary_output_limit':output_limit,'summary_tokenizer':profile} if request.kind=='summary' else {})}
+        excerpts=request.kind=='summary'and request.provider.provider=='ollama'
+        if excerpts:
+            from .summary_excerpts import SCHEMA,INSTRUCTION
+            output_limit=min(512,request.provider.context_limit//4);summary_instruction=INSTRUCTION;summary_schema=SCHEMA
+        else:summary_schema=grounded_schema(SUMMARY_PART_SCHEMA,copy_subject=True)
+        parts=summary_parts(request,combined,MINUTES_SCHEMA,MINUTES_COPY_INSTRUCTION,{'participants':participants}) if request.kind=='minutes' else summary_parts(request,combined,summary_schema,summary_instruction+(''if excerpts else EMPTY_SUMMARY_INSTRUCTION),output_limit=output_limit,tokenizer_profile=profile,grounded=True)
+        frozen={'request':request.model_dump(),'evidence':[e.model_dump() for e in combined],'participants':participants,'summary_parts':[[e.model_dump() for e in part] for part in parts],'cutoff_ms':cutoff,'retrieval_mode':'full_snapshot','source_sampling':'copy-v1','warning':found.warning,'excerpted':False,'web_status':web_status|{'used_count':len(web)},**({'minutes_instruction':MINUTES_COPY_INSTRUCTION} if request.kind=='minutes' else {}),**({'summary_policy':'context-v1','summary_input':'compact-v1','summary_context':'preceding-v1','allow_empty_summary_parts':True,'summary_instruction':summary_instruction,'summary_grounding':'quotes-v1','summary_subject':'quote-v1','summary_mode':session_kind,'summary_output_limit':output_limit,'summary_tokenizer':profile} if request.kind=='summary' else {})}
+        if excerpts:frozen['summary_format']='excerpts-v1';frozen.pop('summary_grounding');frozen.pop('summary_subject')
+        return frozen
     schema=ANSWER_SCHEMA;instruction='';concepts=[]
     if request.kind in ('note','candidates'):
         from .assistance import NOTE_SCHEMA,CARD_SCHEMA,NOTE_INSTRUCTION,CARD_INSTRUCTION

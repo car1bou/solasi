@@ -46,6 +46,25 @@ class PartialSummaryTests(unittest.IsolatedAsyncioTestCase):
             with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=response))as generated:await summarize_session(self.db,current,job['id'])
             self.assertEqual(generated.call_args.kwargs.get('source_copy',False),modern)
 
+    async def test_compact_summary_input_is_frozen_without_changing_legacy_source_fields(self):
+        frozen=await freeze_request(self.db,self.request.model_copy(update={'kind':'summary'}))
+        self.assertEqual(frozen.get('summary_input'),'compact-v1')
+        self.assertEqual(frozen.get('summary_context'),'preceding-v1')
+        response=ProviderResult(text=json.dumps({'sections':[{'title':'프로세스','text':'프로세스는 실행 중인 프로그램이다.','subject_quote':'프로세스','subject_source_id':'s1','event_type':'fact','evidence_ids':['s1']}]}),model='test',usage={},elapsed_ms=1)
+        for compact,contextual in ((True,True),(True,False),(False,False)):
+            current=dict(frozen)
+            if not compact:current.pop('summary_input')
+            if not contextual:current.pop('summary_context')
+            job=submit_job(self.db,self.sid,'ai',current)
+            with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=response))as generated:
+                result=await summarize_session(self.db,current,job['id'])
+            data=json.loads(generated.call_args.args[1][1]['content']);sent=data['evidence'][0]
+            self.assertEqual('preceding_context'in data,contextual)
+            self.assertEqual(set(sent),{'source_id','text'}if compact else {'source_id','text','kind','page','start_ms','end_ms'})
+            self.assertEqual(result.evidence[0].ref,self.ref)
+            fields=list(generated.call_args.args[3]['properties']['sections']['items']['properties'])
+            self.assertEqual(generated.call_args.args[3]['properties']['sections']['items']['required'],fields)
+
 class ExperimentReuseTests(unittest.TestCase):
     def test_failed_experiment_cannot_reuse_maps_under_changed_policy(self):
         from experiments.validate_recording_assistance import assert_same_summary_request,completed_grounded_parts

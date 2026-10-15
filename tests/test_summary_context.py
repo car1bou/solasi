@@ -17,6 +17,78 @@ class ContextSummaryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(parts),1)
         self.assertEqual([e.ref.id for e in parts[0]],[e.ref.id for e in evidence])
 
+    def test_grounded_summary_keeps_sparse_context_across_two_minutes(self):
+        request=self.request.model_copy(update={'kind':'summary'})
+        evidence=[Evidence(ref=SourceRef(id='r'+str(n),kind='transcript',session_id=self.sid,start_ms=n*60000,end_ms=(n+1)*60000),text=text,label='전사')for n,text in enumerate(('아내가 남편이 돌아오면 받을 도움을 기대했다.','그 기대 속에서 여러 장면을 상상했다.','친구들과 술을 마시는 광경도 그 공상이었다.'))]
+        parts=summary_parts(request,evidence,grounded=True,output_limit=2048)
+        self.assertEqual([[e.ref.id for e in part]for part in parts],[['r0','r1','r2']])
+        self.assertEqual(len(summary_parts(request,evidence,output_limit=2048)),2)
+
+    def test_grounded_context_still_respects_record_and_silence_boundaries(self):
+        request=self.request.model_copy(update={'kind':'summary'})
+        evidence=[Evidence(ref=SourceRef(id='a',kind='transcript',session_id=self.sid,start_ms=0,end_ms=1000),text='제안을 설명했다.',label='전사'),Evidence(ref=SourceRef(id='b',kind='transcript',session_id=self.sid,start_ms=32000,end_ms=33000),text='새 주제를 설명했다.',label='전사')]
+        self.assertEqual(len(summary_parts(request,evidence,grounded=True,output_limit=2048)),2)
+        evidence[1]=evidence[1].model_copy(update={'ref':evidence[1].ref.model_copy(update={'session_id':'other','start_ms':1000,'end_ms':2000})})
+        self.assertEqual(len(summary_parts(request,evidence,grounded=True,output_limit=2048)),2)
+
+    def test_compact_summary_preserves_source_kind_and_web_provenance(self):
+        request=self.request.model_copy(update={'kind':'summary'})
+        lecture=Evidence(ref=self.ref,text='프로세스는 실행 중인 프로그램이다.',label='노트')
+        web=Evidence(ref=SourceRef(id='web1',kind='web',session_id=self.sid,url='https://example.com/process'),text='운영체제가 프로세스를 관리한다.',label='외부 웹',retrieved_at='2026-10-16T00:00:00Z')
+        data=json.loads(output_messages(request,[lecture],SUMMARY_INSTRUCTION,compact=True)[1]['content'])
+        self.assertEqual(data.get('source_kind'),'note');self.assertNotIn('kind',data['evidence'][0])
+        data=json.loads(output_messages(request,[lecture,web],SUMMARY_INSTRUCTION,compact=True)[1]['content'])
+        self.assertEqual([e.get('kind')for e in data['evidence']],['note','web'])
+        self.assertEqual(data['evidence'][1]['url'],'https://example.com/process');self.assertEqual(data['evidence'][1]['retrieved_at'],'2026-10-16T00:00:00Z')
+
+    def test_preceding_attribution_is_read_only_and_excludes_other_records_and_old_context(self):
+        from lecture_study.outputs import preceding_summary_context
+        sources=[Evidence(ref=SourceRef(id='r'+str(i),kind='transcript',session_id=self.sid,start_ms=i*10000,end_ms=(i+1)*10000),text=text,label='전사')for i,text in enumerate(('오래전 실제 사건이다.','아내는 공상과 환영에 잠겼다.','그의 머리에 장면이 떠돌았다.','음식이 놓인 상이 보였다.','친구들과 술을 마시는 광경이 보였다.'))]
+        aliases={e.ref.id:'s'+str(i+1)for i,e in enumerate(sources)}
+        context=preceding_summary_context(sources,[sources[4]],aliases)
+        self.assertEqual(context,[{'source_id':'s2','text':'아내는 공상과 환영에 잠겼다.'},{'source_id':'s3','text':'그의 머리에 장면이 떠돌았다.'},{'source_id':'s4','text':'음식이 놓인 상이 보였다.'}])
+        sources[3]=sources[3].model_copy(update={'ref':sources[3].ref.model_copy(update={'session_id':'other'})})
+        self.assertEqual(preceding_summary_context(sources,[sources[4]],aliases),[])
+        sources[3]=sources[3].model_copy(update={'ref':sources[3].ref.model_copy(update={'session_id':self.sid,'start_ms':1000,'end_ms':2000})})
+        self.assertEqual(preceding_summary_context(sources,[sources[4]],aliases),[])
+
+    def test_grounded_part_budget_includes_preceding_context_and_keeps_it_out_of_citations(self):
+        from lecture_study.outputs import preceding_summary_context,SUMMARY_PART_SCHEMA
+        from lecture_study.summary_grounding import grounded_schema,grounded_units
+        request=self.request.model_copy(update={'kind':'summary','provider':self.request.provider.model_copy(update={'context_limit':8192})})
+        evidence=[Evidence(ref=SourceRef(id='r'+str(i),kind='transcript',session_id=self.sid,start_ms=i*1000,end_ms=(i+1)*1000),text=('가정에 관한 설명을 원문 그대로 남긴다. '*4),label='전사')for i in range(24)]
+        schema=grounded_schema(SUMMARY_PART_SCHEMA,copy_subject=True)
+        parts=summary_parts(request,evidence,schema,SUMMARY_INSTRUCTION,grounded=True,output_limit=2048)
+        self.assertGreater(len(parts),1);self.assertEqual([e.ref.id for p in parts for e in p],[e.ref.id for e in evidence])
+        aliases={e.ref.id:'s'+str(i+1)for i,e in enumerate(evidence)}
+        for part in parts:
+            compact,_=grounded_units(part,aliases);context=preceding_summary_context(evidence,part,aliases)
+            messages=output_messages(request,compact,SUMMARY_INSTRUCTION,{'preceding_context':context},compact=True)
+            constrained=evidence_schema(schema,compact);check_budget(request.provider,messages,constrained,output_limit=2048)
+            allowed=set(constrained['properties']['sections']['items']['properties']['evidence_ids']['items']['enum'])
+            self.assertTrue(allowed.isdisjoint(e['source_id']for e in context))
+        self.assertTrue(preceding_summary_context(evidence,parts[1],aliases))
+
+    def test_optional_context_does_not_reject_a_valid_small_budget_summary(self):
+        from lecture_study.outputs import SUMMARY_PART_SCHEMA,EMPTY_SUMMARY_INSTRUCTION
+        from lecture_study.summary_grounding import grounded_schema,COPY_INSTRUCTION,MODES
+        request=self.request.model_copy(update={'kind':'summary','prompt':'요약','provider':self.request.provider.model_copy(update={'context_limit':7168})})
+        evidence=[Evidence(ref=SourceRef(id='r'+str(i),kind='transcript',session_id=self.sid,start_ms=i*1000,end_ms=(i+1)*1000),text='가'*100,label='전사')for i in range(5)]
+        schema=grounded_schema(SUMMARY_PART_SCHEMA,copy_subject=True)
+        try:parts=summary_parts(request,evidence,schema,SUMMARY_INSTRUCTION+COPY_INSTRUCTION+MODES['lecture']+EMPTY_SUMMARY_INSTRUCTION,grounded=True,output_limit=1792)
+        except ValueError as exc:self.fail('인접 문맥 때문에 유효한 원문 입력을 거절했습니다: '+str(exc))
+        for source in evidence:self.assertEqual(''.join(e.text for part in parts for e in part if e.ref.id==source.ref.id),source.text)
+
+    def test_context_is_not_removed_just_to_pack_more_primary_sources(self):
+        from lecture_study.outputs import contextual_summary_messages,SUMMARY_PART_SCHEMA
+        from lecture_study.summary_grounding import grounded_schema
+        request=self.request.model_copy(update={'kind':'summary','provider':self.request.provider.model_copy(update={'context_limit':8192})})
+        evidence=[Evidence(ref=SourceRef(id='r'+str(i),kind='transcript',session_id=self.sid,start_ms=i*1000,end_ms=(i+1)*1000),text='나'*550,label='전사')for i in range(2)]
+        schema=grounded_schema(SUMMARY_PART_SCHEMA,copy_subject=True);context=[{'source_id':'before','text':'이것은 가정입니다. '+'가'*300}]
+        contextual_summary_messages(request,evidence[:1],'',evidence_schema(schema,evidence[:1]),context,output_limit=2048)
+        contextual_summary_messages(request,evidence,'',evidence_schema(schema,evidence),[],output_limit=2048)
+        with self.assertRaisesRegex(ValueError,'예산'):contextual_summary_messages(request,evidence,'',evidence_schema(schema,evidence),context,output_limit=2048)
+
     def test_escaped_large_source_is_split_without_budget_overflow(self):
         request=self.request.model_copy(update={'kind':'summary'})
         original=Evidence(ref=self.ref,text='"\n한국어"'*2000,label='원문')

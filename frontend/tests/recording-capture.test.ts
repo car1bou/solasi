@@ -97,6 +97,32 @@ test('pending microphone acquisition cannot revive a stopped capture',async t=>{
   assert.equal(f.track.readyState,'ended');assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,0);assert.equal(f.states.at(-1).phase,'idle');
 });
 
+test('hidden page does not queue a microphone request for a later click',async t=>{
+  const f=setup(t),old=Object.getOwnPropertyDescriptor(globalThis,'document');
+  Object.defineProperty(globalThis,'document',{value:{visibilityState:'hidden'},configurable:true});
+  t.after(()=>{if(old)Object.defineProperty(globalThis,'document',old);else Reflect.deleteProperty(globalThis,'document');});
+  await f.capture.start();
+  assert.equal(f.acquisitions(),0);assert.equal(f.states.at(-1).phase,'idle');
+  assert.match(f.states.at(-1).error,/앱 창을 앞으로/);assert.equal(f.calls.length,0);
+});
+
+test('microphone acquisition expires at 30 seconds and late grant cannot start recording',async t=>{
+  const f=setup(t);let grant:any;
+  t.mock.method(navigator.mediaDevices,'getUserMedia',()=>new Promise(resolve=>{grant=resolve;}));
+  const started=f.capture.start();await flush();await f.tick(29999);
+  assert.equal(f.states.at(-1).phase,'starting');await f.tick(1);await started;
+  assert.equal(f.states.at(-1).phase,'idle');assert.match(f.states.at(-1).error,/마이크 준비 시간 초과 · 다시 시작/);
+  grant({getTracks:()=>[f.track],getAudioTracks:()=>[f.track]});await flush();
+  assert.equal(f.track.readyState,'ended');assert.equal(f.calls.length,0);assert.equal(f.contexts.length,0);
+});
+
+test('denial explains a refused connection without claiming macOS permission is absent',async t=>{
+  const f=setup(t);t.mock.method(navigator.mediaDevices,'getUserMedia',async()=>{throw new DOMException('Permission denied','NotAllowedError');});
+  await f.capture.start();assert.equal(f.states.at(-1).phase,'idle');
+  assert.match(f.states.at(-1).error,/마이크 연결이 허용되지/);assert.match(f.states.at(-1).error,/계속되면.*macOS/);
+  assert.equal(f.calls.length,0);
+});
+
 test('unsettled resume and stop API release resources within deadlines',async t=>{
   const f=setup(t);t.mock.method((globalThis as any).AudioContext.prototype,'resume',()=>new Promise(()=>{}));
   const started=f.capture.start();await flush();await f.tick(5000);await flush();await f.tick(1000);await started;

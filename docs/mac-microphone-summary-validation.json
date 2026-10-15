@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-16",
+  "input": {
+    "title": "술 권하는 사회 Part 1",
+    "author": "현진건",
+    "reader": "Jessie Yun",
+    "source": "https://archive.org/download/short_stories_hyun_1411_librivox/short_stories_02_hyun_128kb.mp3",
+    "catalog": "https://librivox.org/short-stories-by-jin-geon-hyun/",
+    "license": "Public Domain Mark 1.0 / LibriVox public-domain dedication",
+    "bytes": 14058564,
+    "sha256": "68f07d5ca8677317590af0fc1dd5b8634ae0749ba1bbddc3965962f73086f1fc",
+    "reference_limit": "book text is not time-aligned ground truth; introduction and part boundary need manual checking"
+  },
+  "asr_text_sha256": "6dea8ed972f177147e9bf6377f085413f64d111e8e7f99b5019ae0f95e71c550",
+  "model": {
+    "name": "qwen3.5:4b",
+    "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13"
+  },
+  "microphone": {
+    "status": "stopped",
+    "sample_rate": 48000,
+    "source_frames": 6461440,
+    "stored_frames": 6461440,
+    "error": null,
+    "gaps": [],
+    "page_data_unchanged": true,
+    "wav": {
+      "frames": 6461440,
+      "sample_rate": 48000,
+      "channels": 1
+    },
+    "duration_seconds": 134.61333333333334,
+    "first_attempt_after_launch": true,
+    "stop_delay_caused_by_tool_approval_timeout": true
+  },
+  "summary_runs": {
+    "baseline": {
+      "elapsed_seconds": 710.1574079990387,
+      "completed_parts": 8,
+      "source_count": 301,
+      "section_count": 61,
+      "review_required_section_count": 48,
+      "cited_source_count": 262,
+      "unquoted_source_count": 39,
+      "selection_incomplete_parts": []
+    },
+    "compact_only": {
+      "elapsed_seconds": 150.16643691062927,
+      "completed_parts": 2,
+      "source_count": 301,
+      "section_count": 19,
+      "review_required_section_count": 16,
+      "cited_source_count": 198,
+      "unquoted_source_count": 103,
+      "selection_incomplete_parts": []
+    },
+    "rejected_text_first": {
+      "elapsed_seconds": 79.13769793510437,
+      "completed_parts": 3,
+      "source_count": 301,
+      "section_count": 6,
+      "review_required_section_count": 6,
+      "cited_source_count": 125,
+      "unquoted_source_count": 176,
+      "selection_incomplete_parts": []
+    },
+    "source_first_with_context": {
+      "elapsed_seconds": 127.00730375002604,
+      "completed_parts": 3,
+      "source_count": 301,
+      "section_count": 14,
+      "review_required_section_count": 7,
+      "cited_source_count": 198,
+      "unquoted_source_count": 103,
+      "selection_incomplete_parts": []
+    },
+    "anchors_before_focused_repair": {
+      "elapsed_seconds": 47.62842487508897,
+      "completed_parts": 2,
+      "source_count": 301,
+      "section_count": 16,
+      "review_required_section_count": 2,
+      "cited_source_count": 76,
+      "unquoted_source_count": 225,
+      "selection_incomplete_parts": [
+        0
+      ],
+      "exact_source_quote_count": 168
+    },
+    "anchors_with_focused_repair": {
+      "elapsed_seconds": 53.68125641695224,
+      "completed_parts": 2,
+      "source_count": 301,
+      "section_count": 23,
+      "review_required_section_count": 1,
+      "cited_source_count": 86,
+      "unquoted_source_count": 215,
+      "selection_incomplete_parts": [
+        0
+      ],
+      "exact_source_quote_count": 239
+    }
+  },
+  "same_voice_full_rerun": {
+    "range_count": 33,
+    "all_ranges_done": true,
+    "continuous_source_coverage": true,
+    "segment_count": 301,
+    "recognized_characters": 5083,
+    "duration_seconds": 878.3034920634921,
+    "gaps": [],
+    "error": null,
+    "generation_asr_overlap_seconds": 18.589017868041992
+  },
+  "snapshot_recheck": {
+    "route": "ASGI production APIs on SQLite backup; real owned Ollama, no ASR rerun or UI",
+    "same_asr_text_sha256": "6dea8ed972f177147e9bf6377f085413f64d111e8e7f99b5019ae0f95e71c550",
+    "model_digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+    "model": "qwen3.5:4b",
+    "elapsed_seconds": 53.68125641695224,
+    "source_count": 301,
+    "completed_parts": 2,
+    "covered_source_count": 301,
+    "cited_source_count": 86,
+    "unquoted_source_count": 215,
+    "section_count": 23,
+    "review_required_section_count": 1,
+    "selection_incomplete_parts": [
+      0
+    ],
+    "generation_calls": [
+      {
+        "seconds": 25.24843174999114,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 5920,
+          "eval_count": 36
+        }
+      },
+      {
+        "seconds": 19.918914207955822,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 4197,
+          "eval_count": 38
+        }
+      },
+      {
+        "seconds": 6.578542417031713,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 1082,
+          "eval_count": 35
+        }
+      }
+    ],
+    "summary_format": "excerpts-v1",
+    "exact_source_quote_count": 239
+  },
+  "limitations": [
+    "The text-first experiment was rejected for worse meaning and coverage;79.138s is not a shipped quality improvement.",
+    "Source-first context preserves and supplies attribution but does not reliably resolve the 4B model interpretation errors.",
+    "Passed citation/coverage validation is not semantic accuracy; wrong condition/expectation labels still occur.",
+    "Physical microphone input was uncontrolled room sound, not a speech-accuracy benchmark.",
+    "The134.613s capture includes a90s UI-tool approval timeout before stopping; this is not measured app stop latency.",
+    "Full voice is single-speaker literary narration, not a lecture or meeting; no aligned gold transcript or CER.",
+    "Snapshot recheck uses ASGI production APIs with a real owned local model, not another ASR/native capture run.",
+    "Host load,memory,and warm-up were uncontrolled; no general speed ranking.",
+    "The30s JavaScript deadline cannot dismiss an OS/WebKit permission prompt; late streams are stopped.",
+    "The final excerpt run preserves exact text but the 4B selector still clusters early; one positional band remains flagged after the allowed repair.",
+    "Important imagery passages were not selected into the main excerpts and remain in retained unquoted sources. Source fidelity does not establish semantic importance or completeness.",
+    "Excerpt context can overlap between displayed items.",
+    "Final summary replay reuses frozen ASR; post-change physical capture was134.6s, not another tens-of-minutes,multispeaker/noise capture benchmark."
+  ],
+  "code_files_sha256": {
+    "frontend/src/recording-capture.ts": "1948ee3ed225d9a2145cdf3a2adb04e8018d8ae9c36bd77ae0b21802ffd5137f",
+    "frontend/src/SummarySection.tsx": "8f9eadffd49f01c7bb958d029f9c391c69f8325424b59bfe62f4e255219d1faf",
+    "frontend/src/QuestionView.tsx": "f804ae2902165b0a68a02c394bfb80763ed882701c2387ed4a7083f5a8892ccc",
+    "frontend/src/StudyView.tsx": "3fe53345c22053324ff3df8856949eee6a4d2bcbfce540461beac2cf7cc0fbbd",
+    "lecture_study/answers.py": "661fa9add9bfea8d264174dceda9c2cd976986b3dbbc9ec6155c4dad2b6e1f66",
+    "lecture_study/outputs.py": "38f30cd44f0ce37ece903df0fd2915d561e5f53871af768bddb24aeb770c6519",
+    "lecture_study/summary_grounding.py": "139901205be9b63ff90afe3d61c6bbb90e877ced15346d612336cd0973634664",
+    "lecture_study/summary_excerpts.py": "c666dc7d05ba0fa578d134b64ba80e71aa2725eebab142107348cb05226560ce",
+    "experiments/recheck_long_summary.py": "33d0a0f75b5aadedabe64c49bcd972334706c1a8ae1f2f0856a7e101798ac93c"
+  },
+  "prior_rewrite_snapshot_recheck": {
+    "route": "ASGI production APIs on SQLite backup; real owned Ollama, no ASR rerun or UI",
+    "generation_calls": [
+      {
+        "seconds": 26.907707541016862,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 3902,
+          "eval_count": 142
+        }
+      },
+      {
+        "seconds": 86.49264308298007,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 3829,
+          "eval_count": 1260
+        }
+      },
+      {
+        "seconds": 12.383009874960408,
+        "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+        "usage": {
+          "prompt_eval_count": 1081,
+          "eval_count": 130
+        }
+      }
+    ]
+  },
+  "excerpt_integration": {
+    "final_format": "excerpts-v1",
+    "selection_response": "unique evidence_ids array, maximum 8 per response",
+    "forward_expansion_current_units_max": 4,
+    "preceding_context_chars_max": 320,
+    "preceding_context_seconds_max": 30,
+    "calls_per_part_max": 2,
+    "output_reservation": 512,
+    "rejected_range_experiment": {
+      "512_cap_truncations": 2,
+      "1024_cap_truncations": 1,
+      "observed_stop_reason": "length",
+      "short_synthetic_range_schema_probes": "all completed; no general unsupported-schema claim",
+      "compact_long_range_probe": "completed JSON but exceeded allowed span width; not adopted"
+    },
+    "focused_repair_input_units": 177,
+    "focused_repair_planned_input_upper_bound": 5497,
+    "initial_planned_input_upper_bounds": [
+      7677,
+      1513
+    ],
+    "important_imagery_passages_in_main_excerpts": false,
+    "important_imagery_passages_retained_as_unquoted": true,
+    "late_return_to_room_passage_in_main_excerpts": true,
+    "exact_quote_check": "every occurrence is an exact substring of its frozen source; section text equals joined quotes",
+    "displayed_ai_subject_or_event_labels": false,
+    "real_markdown_export_verified": true
+  },
+  "verification": {
+    "python_tests": {
+      "count": 362,
+      "passed": true,
+      "seconds": 62.674
+    },
+    "frontend_tests": {
+      "count": 44,
+      "passed": true
+    },
+    "typescript_check": true,
+    "vite_build": true,
+    "independent_focused_review_tests": 33,
+    "anchor_span_assertion_cases": 7800,
+    "installed_app": {
+      "ready": true,
+      "latest_frontend": true,
+      "page_documents_unchanged": true
+    }
+  }
+}

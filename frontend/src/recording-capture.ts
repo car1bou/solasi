@@ -37,13 +37,19 @@ export class RecordingCapture{
   async start(){
     this.update({phase:'starting'});
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1},video:false});
+      // WebKit can defer a hidden page's request until a later, unrelated click.
+      if(typeof document!=='undefined'&&document.visibilityState==='hidden')throw new Error('앱 창을 앞으로 연 뒤 녹음을 다시 시작하세요.');
+      const acquisition=navigator.mediaDevices.getUserMedia({audio:{channelCount:1},video:false}).then(stream=>{
+        if(this.finished)stream.getTracks().forEach(t=>t.stop());
+        return stream;
+      });
+      const stream=await limited(acquisition,30000,'마이크 준비 시간 초과 · 다시 시작');
       if(this.finished){stream.getTracks().forEach(t=>t.stop());return;}
       this.stream=stream;
       stream.getAudioTracks().forEach(track=>{track.addEventListener('ended',this.trackEnded);track.addEventListener('mute',this.trackChanged);track.addEventListener('unmute',this.trackChanged);});
       await this.openSegment();
       if(!this.finished)this.timer=setInterval(()=>this.checkHealth(),1000);
-    }catch(e){if(!this.finished)await this.terminate((e as Error).name==='NotAllowedError'?'마이크 권한이 필요합니다':(e as Error).message);}
+    }catch(e){if(!this.finished)await this.terminate((e as Error).name==='NotAllowedError'?'마이크 연결이 허용되지 않았습니다. 앱 창을 앞으로 연 뒤 다시 시도하고, 계속되면 macOS 마이크 접근 권한을 확인하세요.':(e as Error).message);}
   }
   private async openSegment(){
     if(this.finished)return;

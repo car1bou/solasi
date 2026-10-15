@@ -6,6 +6,22 @@ from lecture_study.jobs import submit_job
 
 class GroundingTests(unittest.TestCase):
     def source(self,i,text):return Evidence(ref=SourceRef(id='s'+str(i),kind='transcript',session_id='session',start_ms=i*1000,end_ms=(i+1)*1000),text=text,label='전사')
+    def test_unsupported_ai_condition_label_is_not_repeated_in_review_title(self):
+        from lecture_study.summary_grounding import ground_sections
+        source=self.source(0,'남편이 문을 열고 방으로 들어왔다.')
+        for state in ('condition','hypothesis'):
+            item={'title':'입장','text':'남편이 문을 열고 입장했다.','subject_quote':source.text,'subject_source_id':'s0','event_type':state,'evidence_ids':['s0']}
+            section=ground_sections({'sections':[item]},[source],copy_subject=True)['sections'][0]
+            self.assertTrue(section['review_required']);self.assertEqual(section['title'],'원문 발췌 · 해석 확인 필요');self.assertEqual(section['text'],source.text)
+    def test_additive_not_only_does_not_require_a_negative_summary(self):
+        from lecture_study.summary_grounding import ground_sections
+        source=self.source(0,'김민수는 발표했을 뿐만 아니라 질문에도 답했습니다.')
+        item={'title':'발표와 답변','text':'김민수는 발표하고 질문에도 답했다.','subject':'김민수','event_type':'fact','evidence_ids':['s0']}
+        self.assertFalse(ground_sections({'sections':[item]},[source])['sections'][0]['review_required'])
+        source=source.model_copy(update={'text':'김민수는 발표했을 뿐만 아니라 질문에 답하지 않았습니다.'})
+        self.assertTrue(ground_sections({'sections':[item]},[source])['sections'][0]['review_required'])
+        item['text']='김민수는 발표했을 뿐만 아니라 질문에도 답했다.'
+        self.assertTrue(ground_sections({'sections':[item]},[source])['sections'][0]['review_required'])
     def test_hypothesis_and_adjacent_health_context_are_preserved_as_quotes(self):
         from lecture_study.summary_grounding import ground_sections
         evidence=[self.source(i,t)for i,t in enumerate(['절대 일어나서는 안 되지만','부모님이 이렇게','돌아가셨을 때','혼자 남는다 생각하니까','예 건강하시죠'])]

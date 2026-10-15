@@ -91,10 +91,14 @@ def summary_warnings(body,evidence):
     return list(dict.fromkeys(warnings))
 
 
-def output_messages(request,evidence,instruction,extra=None):
+def output_messages(request,evidence,instruction,extra=None,*,compact=False):
     data=model_data(request,evidence)
     if request.kind in ('summary','note'):
         for item in data['evidence']:item.pop('label',None)
+    if compact:
+        kinds={item['kind']for item in data['evidence']}
+        if len(kinds)==1:data['source_kind']=next(iter(kinds))
+        data['evidence']=[{key:value for key,value in item.items()if key in ('source_id','text','url','retrieved_at')or key=='kind'and len(kinds)>1}for item in data['evidence']]
     if extra: data.update(extra)
     return [{'role':'system','content':SYSTEM+' '+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False,separators=(',',':'))}]
 
@@ -112,14 +116,41 @@ def metadata_for(request,frozen,result,kind):
     return {'kind':kind,'provider':request.provider.provider,'model':result.model,'digest':result.digest,'usage':result.usage,'elapsed_ms':result.elapsed_ms,'cutoff_ms':frozen['cutoff_ms'],'retrieval_mode':frozen['retrieval_mode'],'warning':frozen['warning'],'excerpted':frozen['excerpted'],'web_status':frozen.get('web_status',{'status':'off'})}
 
 
+def preceding_summary_context(evidence,part,aliases):
+    first=part[0].ref
+    if first.kind!='transcript' or first.start_ms is None:return []
+    index=next((i for i,e in enumerate(evidence)if e.ref.id==first.id),0);context=[];start=first.start_ms
+    for item in reversed(evidence[:index]):
+        ref=item.ref
+        if ref.kind!='transcript' or ref.session_id!=first.session_id or ref.start_ms is None or ref.end_ms is None or first.start_ms-ref.start_ms>30000 or start-ref.end_ms>30000 or sum(len(e['text'])for e in context)+len(item.text)>320:break
+        context.insert(0,{'source_id':aliases[ref.id],'text':item.text});start=ref.start_ms
+    return context
+
+
+def contextual_summary_messages(request,evidence,instruction,schema,context,*,extra=None,output_limit=4096,tokenizer_profile=None):
+    context=list(context)
+    while context:
+        first=output_messages(request,evidence[:1],instruction,(extra or {})|{'preceding_context':context},compact=True)
+        try:check_budget(request.provider,first,evidence_schema(schema,evidence[:1]),output_limit=output_limit,tokenizer_profile=tokenizer_profile)
+        except ValueError as exc:
+            if '예산'not in str(exc):raise
+            context=context[1:]
+        else:break
+    messages=output_messages(request,evidence,instruction,(extra or {})|{'preceding_context':context},compact=True)
+    return messages,check_budget(request.provider,messages,schema,output_limit=output_limit,tokenizer_profile=tokenizer_profile)
+
+
 def summary_parts(request,evidence,schema=SUMMARY_SCHEMA,instruction=SUMMARY_INSTRUCTION,extra=None,*,output_limit=4096,tokenizer_profile=None,grounded=False):
     parts=[];group=[]
     aliases={e.ref.id:'s'+str(n+1)for n,e in enumerate(evidence)}
     def fits(entries):
         if grounded:
             from .summary_grounding import grounded_units
+            context=preceding_summary_context(evidence,entries,aliases)
             entries,_=grounded_units(entries,aliases)
-        try:check_budget(request.provider,output_messages(request,entries,instruction,extra),evidence_schema(schema,entries),output_limit=output_limit,tokenizer_profile=tokenizer_profile)
+        try:
+            if grounded:contextual_summary_messages(request,entries,instruction,evidence_schema(schema,entries),context,extra=extra,output_limit=output_limit,tokenizer_profile=tokenizer_profile)
+            else:check_budget(request.provider,output_messages(request,entries,instruction,extra),evidence_schema(schema,entries),output_limit=output_limit,tokenizer_profile=tokenizer_profile)
         except ValueError:return False
         return True
     for item in evidence:
@@ -129,7 +160,7 @@ def summary_parts(request,evidence,schema=SUMMARY_SCHEMA,instruction=SUMMARY_INS
                 first,last=group[0].ref,group[-1].ref;ref=item.ref
                 boundary=ref.session_id!=last.session_id or ref.kind!=last.kind
                 if ref.kind=='transcript' and ref.start_ms is not None and last.end_ms is not None and first.start_ms is not None:
-                    boundary|=ref.start_ms-last.end_ms>30000 or (ref.end_ms or ref.start_ms)-first.start_ms>120000
+                    boundary|=ref.start_ms-last.end_ms>30000 or not grounded and (ref.end_ms or ref.start_ms)-first.start_ms>120000
                 if boundary:parts.append(group);group=[]
             candidate=item.model_copy(update={'text':remaining})
             if fits(group+[candidate]):group.append(candidate);break
@@ -146,11 +177,15 @@ def summary_parts(request,evidence,schema=SUMMARY_SCHEMA,instruction=SUMMARY_INS
 
 
 async def summarize_session(db,frozen,job_id,**kwargs):
+    if frozen.get('summary_format')=='excerpts-v1':
+        from .summary_excerpts import summarize_excerpts
+        return await summarize_excerpts(db,frozen,job_id,**kwargs)
     from .merging import cited_ids,remap_ids
     request,evidence=checked_evidence(db,frozen);parts=[[Evidence.model_validate(e) for e in part] for part in frozen['summary_parts']];sections=[];part_metadata=[];pieces=[]
     if frozen.get('source_sampling')=='copy-v1':kwargs=kwargs|{'source_copy':True}
     aliases={e.ref.id:'s'+str(n+1) for n,e in enumerate(evidence)}
     grounded=frozen.get('summary_grounding')=='quotes-v1';copy_subject=frozen.get('summary_subject')=='quote-v1'
+    contextual=frozen.get('summary_context')=='preceding-v1'
     from .summary_grounding import ground_sections,grounded_schema,checked_grounded,grounded_units
     selective=frozen.get('summary_policy')=='context-v1'
     allow_empty=selective and frozen.get('allow_empty_summary_parts',False)
@@ -169,8 +204,11 @@ async def summarize_session(db,frozen,job_id,**kwargs):
         else:
             if grounded:compact,restore=grounded_units(part,aliases)
             else:compact=[e.model_copy(update={'ref':e.ref.model_copy(update={'id':aliases[e.ref.id]})}) for e in part];restore={v:k for k,v in aliases.items()}
-            messages=output_messages(request,compact,instruction)
-            schema=evidence_schema(grounded_schema(part_schema,copy_subject=copy_subject) if grounded else part_schema,compact);input_tokens=check_budget(request.provider,messages,schema,output_limit=output_limit,tokenizer_profile=profile)
+            schema=evidence_schema(grounded_schema(part_schema,copy_subject=copy_subject) if grounded else part_schema,compact)
+            if contextual:messages,input_tokens=contextual_summary_messages(request,compact,instruction,schema,preceding_summary_context(evidence,part,aliases),output_limit=output_limit,tokenizer_profile=profile)
+            else:
+                messages=output_messages(request,compact,instruction,compact=frozen.get('summary_input')=='compact-v1')
+                input_tokens=check_budget(request.provider,messages,schema,output_limit=output_limit,tokenizer_profile=profile)
             result=await generate(request.provider,messages,[],schema,**(kwargs|{'output_limit':output_limit}))
             if profile and result.usage.get('prompt_eval_count',input_tokens+1)>input_tokens:raise ValueError('모델 입력 토큰이 계산 상한을 넘었습니다. 원문 전달을 확인하세요')
             raw_body=json.loads(result.text)
@@ -221,13 +259,16 @@ def cached_summary_parts(db,job_id):
         if not 0<=number<len(parts):raise ValueError('구간 요약 번호가 유효하지 않습니다')
         provided=[Evidence.model_validate(e)for e in parts[number]]
         empty=job['request'].get('allow_empty_summary_parts') and all(e.ref.kind=='note'for e in provided)
-        if job['request'].get('summary_grounding')=='quotes-v1':
+        if job['request'].get('summary_format')=='excerpts-v1':
+            from .summary_excerpts import checked_excerpts
+            body=checked_excerpts(json.loads(saved['body']),evidence)
+        elif job['request'].get('summary_grounding')=='quotes-v1':
             from .summary_grounding import checked_grounded
             body=checked_grounded(json.loads(saved['body']),provided,empty,copy_subject=job['request'].get('summary_subject')=='quote-v1')
         else:body=parsed(SummaryPart if empty else Summary,saved['body'])
-        for section in body['sections']:check_ids(section['evidence_ids'],provided)
+        for section in body['sections']:check_ids(section['evidence_ids'],evidence if job['request'].get('summary_format')=='excerpts-v1'else provided)
         result.append({'part_no':number,'sections':body['sections'],'source_ids':list(dict.fromkeys(e.ref.id for e in provided))})
-    return {'parts':result,'total_parts':len(parts),'evidence':[e.model_dump()for e in evidence]}
+    return {'parts':result,'total_parts':len(parts),'evidence':[e.model_dump()for e in evidence],**({'summary_format':'excerpts-v1'}if job['request'].get('summary_format')=='excerpts-v1'else {})}
 
 
 def quiz_schema(evidence,terms):
@@ -489,11 +530,13 @@ def export_markdown(db,ident):
             if not saved['body'][key]: lines.append('- 없음')
             lines.append('')
     elif saved['kind']=='summary':
+        excerpt=saved['body'].get('summary_format')=='excerpts-v1'
         if saved['metadata'].get('warning'):lines.extend(['주의: '+saved['metadata']['warning'],''])
-        if saved['body'].get('selection_incomplete_parts'):lines.extend(['최종 선택에서 누락한 구간은 원래 구간 요약을 함께 표시했습니다.',''])
+        if saved['body'].get('selection_incomplete_parts'):lines.extend(['핵심 구간 선택 불완전 · 확인할 원문 구간을 함께 표시했습니다.'if excerpt else '최종 선택에서 누락한 구간은 원래 구간 요약을 함께 표시했습니다.',''])
         for item in saved['body']['sections']:
             lines.extend(['## '+('원문 발췌'if item.get('review_required')else item['title']),'',item['text'],'근거: '+', '.join(item['evidence_ids']),''])
-            if item.get('event_type'):
+            if excerpt:lines.extend(['원문 발췌 · 구간 선택 확인 필요'if item.get('review_required')else '원문 발췌',''])
+            elif item.get('event_type'):
                 from .summary_grounding import LABELS
                 lines.extend(['원문 발췌 · 생성 해석 확인 필요'if item.get('review_required')else '주어: '+item['subject']+' · '+LABELS[item['event_type']],''])
                 lines.extend('> '+line for q in item['quotes'] for line in q['text'].splitlines());lines.append('')
