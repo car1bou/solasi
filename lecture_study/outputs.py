@@ -491,10 +491,10 @@ def export_markdown(db,ident):
         if saved['metadata'].get('warning'):lines.extend(['주의: '+saved['metadata']['warning'],''])
         if saved['body'].get('selection_incomplete_parts'):lines.extend(['최종 선택에서 누락한 구간은 원래 구간 요약을 함께 표시했습니다.',''])
         for item in saved['body']['sections']:
-            lines.extend(['## '+item['title'],'',item['text'],'근거: '+', '.join(item['evidence_ids']),''])
+            lines.extend(['## '+('원문 발췌'if item.get('review_required')else item['title']),'',item['text'],'근거: '+', '.join(item['evidence_ids']),''])
             if item.get('event_type'):
                 from .summary_grounding import LABELS
-                lines.extend(['주어: '+item['subject']+' · '+LABELS[item['event_type']]+(' · 생성 요약 확인 필요'if item.get('review_required')else ''),''])
+                lines.extend(['원문 발췌 · 생성 해석 확인 필요'if item.get('review_required')else '주어: '+item['subject']+' · '+LABELS[item['event_type']],''])
                 lines.extend('> '+line for q in item['quotes'] for line in q['text'].splitlines());lines.append('')
         if saved['body'].get('unquoted_sources'):
             lines.extend(['## 직접 인용하지 않은 원문 · 누락 여부 확인',''])

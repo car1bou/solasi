@@ -865,7 +865,7 @@ def create_app(config: AppConfig) -> FastAPI:
                     latest=db.execute('SELECT * FROM transcript_ranges WHERE id=?',(chunk['id'],)).fetchone()
                     if latest and latest['final'] and latest['status']=='done':
                         activity=task.result()if not task.cancelled()else None
-                        try:queue_review(db,latest['id'],automatic=True,**({'activity':activity}if isinstance(activity,list)else{}))
+                        try:queue_review(db,latest['id'],automatic=True,runtime=config.runtime_dir,**({'activity':activity}if isinstance(activity,list)else{}))
                         except (KeyError,ValueError,OSError) as exc:logging.getLogger(__name__).warning('Optional transcription review skipped: %s',exc)
                     app.state.active_transcription=None
                     finish_audio_jobs()
@@ -996,7 +996,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post('/api/transcript-ranges/{ident}/review',status_code=202)
     async def request_review(ident:str):
-        job=queue_review(db,ident,automatic=False)
+        job=queue_review(db,ident,automatic=False,runtime=config.runtime_dir)
         kick_transcription()
         return job
 

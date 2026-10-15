@@ -52,7 +52,7 @@ def checked_chunk(db,chunk_id):
     return chunk,record
 
 
-def queue_review(db,chunk_id,*,automatic,activity=None):
+def queue_review(db,chunk_id,*,automatic,activity=None,runtime=None):
     chunk,record=checked_chunk(db,chunk_id)
     old=[get_job(db,r[0])for r in db.execute("SELECT id FROM jobs WHERE session_id=? AND kind='asr_review'",(record['session_id'],))]
     if automatic and any(j['request']['chunk_id']==chunk_id and j['request']['automatic']for j in old):return None
@@ -61,6 +61,8 @@ def queue_review(db,chunk_id,*,automatic,activity=None):
     reason=suspect_reason(db,chunk,activity)if automatic else '사용자가 원음 재인식을 요청함'
     if not reason:return None
     request={'chunk_id':chunk_id,'recording_id':record['id'],'chunk_revision':chunk['revision'],'automatic':automatic,'reason':reason,'original_segments':active_segments(db,chunk_id),'prompt':chunk['prompt'],'model':tr.MODEL_NAME,'alternative':'native-vad-off'}
+    from . import qwen_asr
+    if runtime is not None and qwen_asr.available(runtime):request.update(model=qwen_asr.MODEL,alternative=qwen_asr.ALTERNATIVE)
     if activity is not None:request['voice_activity_ranges']=activity
     return submit_job(db,record['session_id'],'asr_review',request)
 
@@ -73,17 +75,25 @@ def unchanged(db,request):
 
 async def process_review(db,job,runtime):
     request=job['request'];chunk,record=unchanged(db,request)
+    duration=round((chunk['end_frame']-chunk['start_frame'])*1000/record['sample_rate']);metrics={}
     with tempfile.TemporaryDirectory(prefix='lecture-review-')as temp:
         clip=Path(temp)/'input.wav';await tr.range_clip(db,record,chunk,clip,runtime)
-        segments=await tr.transcribe_range(clip,0,request['prompt'],runtime,padding_ms=200,vad_enabled=False)
+        from . import qwen_asr
+        if request['alternative']==qwen_asr.ALTERNATIVE:
+            candidate=await qwen_asr.transcribe(clip,runtime);text=candidate['text'].strip()
+            segments=[{'start_ms':0,'end_ms':duration,'text':text}]if text else [];metrics={k:v for k,v in candidate.items()if k!='text'}
+            warning='Qwen3-ASR 재인식 후보입니다. 구간 전체 시각이며 단어 정렬이 아닙니다. 용어 힌트 없이 인식하며 소음·누락·잘못된 문장이 남을 수 있으므로 원음을 확인하세요.'
+        else:
+            segments=await tr.transcribe_range(clip,0,request['prompt'],runtime,padding_ms=200,vad_enabled=False)
+            warning='음성 감지 없이 재인식한 후보입니다. 소음에서 잘못된 문장이 생길 수 있으므로 원음을 확인하세요.'
     unchanged(db,request)
-    duration=round((chunk['end_frame']-chunk['start_frame'])*1000/record['sample_rate'])
     for s in segments:
         if type(s['start_ms'])is not int or type(s['end_ms'])is not int or not 0<=s['start_ms']<s['end_ms']<=duration or not isinstance(s['text'],str) or not s['text'].strip():raise ValueError('재인식 결과가 원음 범위를 벗어납니다')
     text=' '.join(s['text'].strip()for s in segments)
     if len(text)>10000:raise ValueError('재인식 후보가 10000자를 초과합니다')
+    if request.get('voice_activity_ranges')==[] and text:warning='음성 활동이 감지되지 않은 구간의 후보입니다. 발화·소음 또는 감지 누락인지 확인하세요. '+warning
     first=record['offset_ms']+round(chunk['start_frame']*1000/record['sample_rate'])
-    return {'text':text,'segments':segments,'start_ms':first,'end_ms':first+duration,'warning':'음성 감지 없이 재인식한 후보입니다. 소음에서 잘못된 문장이 생길 수 있으므로 원음을 확인하세요.','applied':False}
+    return {'text':text,'segments':segments,'start_ms':first,'end_ms':first+duration,'warning':warning,'model':request['model'],'metrics':metrics,'applied':False}
 
 
 def apply_review(db,job_id,text):

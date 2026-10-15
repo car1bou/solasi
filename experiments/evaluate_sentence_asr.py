@@ -1,6 +1,6 @@
 """Same fixed 90 human clips; references are used only for scoring, no downloads.
 
-Run with app .venv for whisper, existing qwen-eval-venv for qwen.
+Run with app .venv for whisper/qwen-review, existing qwen-eval-venv for qwen.
 Raw results contain human transcripts: use /private/tmp, not tracked docs.
 """
 import argparse,ast,asyncio,hashlib,json,math,os,time,unicodedata
@@ -42,6 +42,13 @@ async def main(engine,output):
         import mlx.core as mx
         from mlx_audio.stt.utils import load_model
         model=load_model(model_path,strict=True);report['model']=proof['model']
+    elif engine=='qwen-review':
+        import sys
+        sys.path.insert(0,str(ROOT))
+        from lecture_study import qwen_asr
+        assert qwen_asr.available(RUNTIME)
+        report['model']=qwen_asr.MODEL
+        report['condition']+='; production candidate subprocess, normalization/file validation/cold load per clip; whole-range timing only, no vocabulary hints'
     else:
         import sys
         sys.path.insert(0,str(ROOT))
@@ -51,9 +58,12 @@ async def main(engine,output):
     for clip in clips:
         assert hashlib.sha256(Path(clip['path']).read_bytes()).hexdigest()==clip['sha256']
         values=[];started=time.perf_counter()
+        candidate={}
         if engine=='qwen':
             result=model.generate(clip['path'],language='Korean',temperature=0.0,batch_size=1,max_tokens=256,verbose=False)
             mx.synchronize();assert result.generation_tokens<256;text=result.text
+        elif engine=='qwen-review':
+            candidate=await qwen_asr.transcribe(Path(clip['path']),RUNTIME);text=candidate.pop('text')
         else:
             async def native(argv,**kwargs):
                 if Path(argv[0]).name!='whisper-cli':return await command(argv,**kwargs)
@@ -62,12 +72,12 @@ async def main(engine,output):
                 return result
             with patch.object(tr,'command',new=native):segments=await tr.transcribe_range(clip['path'],0,'',RUNTIME,padding_ms=1000)
             text=' '.join(s['text']for s in segments)
-        report['rows'].append({'sha256':clip['sha256'],'group':clip['group'],'reference':clip['reference'],'recognized':text,'seconds':time.perf_counter()-started,'token_scores':values,**score(clip['reference'],text),**character_errors(clip['reference'],text)})
+        report['rows'].append({'sha256':clip['sha256'],'group':clip['group'],'reference':clip['reference'],'recognized':text,'seconds':time.perf_counter()-started,'token_scores':values,**candidate,**score(clip['reference'],text),**character_errors(clip['reference'],text)})
         output.write_text(json.dumps(report,ensure_ascii=False,indent=2))
         print('clip',len(report['rows']),report['rows'][-1]['edits'],flush=True)
     report['completed']=True;output.write_text(json.dumps(report,ensure_ascii=False,indent=2))
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('engine',choices=('whisper','qwen'));parser.add_argument('--output',type=Path,required=True)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('engine',choices=('whisper','qwen','qwen-review'));parser.add_argument('--output',type=Path,required=True)
     args=parser.parse_args();asyncio.run(main(args.engine,args.output.resolve()))

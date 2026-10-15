@@ -70,6 +70,18 @@ class LectureAndMeetingTests(unittest.TestCase):
 
 class GroundedDispatchTests(unittest.IsolatedAsyncioTestCase):
     setUp=test_answers.AnswerTests.setUp
+    async def test_export_hides_unverified_labels_but_keeps_source_and_original_model_metadata(self):
+        from lecture_study.answers import freeze_request
+        from lecture_study.outputs import summarize_session,export_markdown
+        frozen=await freeze_request(self.db,self.request.model_copy(update={'kind':'summary'}));job=submit_job(self.db,self.sid,'ai',frozen)
+        item={'title':'해석','text':'프로세스가 실행된다.','subject_quote':'프로세스는 실행 중인 프로그램입니다.','subject_source_id':'s1','event_type':'hypothesis','evidence_ids':['s1']}
+        result=ProviderResult(text=json.dumps({'sections':[item]}),model='test',usage={},elapsed_ms=1)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=result)):saved=await summarize_session(self.db,frozen,job['id'])
+        markdown=export_markdown(self.db,saved.id)
+        self.assertIn('원문 발췌 · 생성 해석 확인 필요',markdown);self.assertIn('프로세스는 실행 중인 프로그램입니다.',markdown)
+        self.assertNotIn('주어:',markdown);self.assertNotIn('가정·조건',markdown)
+        from lecture_study.answers import get_artifact
+        self.assertEqual(get_artifact(self.db,saved.id)['metadata']['part_metadata'][0]['unreviewed_body']['sections'][0],item)
     async def test_new_request_schema_source_quotes_cache_and_export(self):
         from lecture_study.answers import freeze_request
         from lecture_study.outputs import summarize_session,cached_summary_parts,export_markdown
@@ -327,6 +339,40 @@ class SourceCoverageTests(unittest.TestCase):
         section={'title':'출신지','text':'부모님 어머니는 충청도 출신이다.','subject':'부모님 어머니','event_type':'fact','evidence_ids':['s0','s1'],'review_required':False,'quotes':[{'text':e.text,'evidence_ids':[e.ref.id]}for e in sources]}
         self.assertEqual(checked_grounded({'sections':[section]},sources)['sections'],[section])
         with self.assertRaises(ValueError):checked_grounded({'sections':[section]},sources,copy_subject=True)
+
+class SubjectRoleFollowupTests(unittest.TestCase):
+    source=GroundingTests.source
+    def check(self,original,generated,subject):
+        from lecture_study.summary_grounding import ground_sections
+        item={'title':'발언','text':generated,'subject_quote':subject,'subject_source_id':'s0','event_type':'fact','evidence_ids':['s0']}
+        return ground_sections({'sections':[item]},[self.source(0,original)],copy_subject=True)['sections'][0]
+    def test_explicit_actor_cannot_become_only_the_recipient(self):
+        original='김민수는 이서연에게 보고했습니다.'
+        section=self.check(original,'이서연은 김민수에게 보고했습니다.','김민수')
+        self.assertTrue(section['review_required']);self.assertEqual(section['text'],original)
+    def test_person_in_a_spatial_expression_cannot_become_the_actor(self):
+        original='어머니 앞에서는 제가 딸 노릇을 했습니다.'
+        section=self.check(original,'어머니는 딸 노릇을 했습니다.','어머니')
+        self.assertTrue(section['review_required']);self.assertEqual(section['text'],original)
+    def test_actor_and_recipient_can_both_remain_in_a_faithful_paraphrase(self):
+        section=self.check('김민수는 이서연에게 보고했습니다.','김민수가 이서연에게 보고했다.','김민수')
+        self.assertFalse(section['review_required'])
+    def test_descriptive_paraphrases_do_not_turn_into_role_reversal_warnings(self):
+        for original,generated,subject in [('서울은 대한민국의 수도입니다.','대한민국의 수도는 서울로 알려져 있습니다.','서울'),('김민수는 문서 작성자입니다.','문서는 김민수의 작품입니다.','김민수')]:
+            with self.subTest(original=original):self.assertFalse(self.check(original,generated,subject)['review_required'])
+    def test_a_title_cannot_repair_an_actor_swapped_with_the_recipient_in_the_body(self):
+        from lecture_study.summary_grounding import ground_sections
+        original='김민수는 이서연에게 보고했습니다.'
+        item={'title':'김민수는 보고했습니다','text':'이서연은 김민수에게 보고했습니다.','subject_quote':'김민수','subject_source_id':'s0','event_type':'fact','evidence_ids':['s0']}
+        self.assertTrue(ground_sections({'sections':[item]},[self.source(0,original)],copy_subject=True)['sections'][0]['review_required'])
+    def test_opposite_assumption_cannot_borrow_negation_from_an_unrelated_clause(self):
+        from lecture_study.summary_grounding import ground_sections
+        original='마찰이 없다고 가정하면 에너지가 보존됩니다. 실제 장치에 마찰이 없다는 뜻은 아닙니다.'
+        item={'title':'보존 조건','text':'마찰이 있다고 가정하면 에너지가 보존됩니다. 실제 장치와 같다는 뜻은 아닙니다.','subject_quote':'마찰','subject_source_id':'s0','event_type':'condition','evidence_ids':['s0']}
+        section=ground_sections({'sections':[item]},[self.source(0,original)],copy_subject=True)['sections'][0]
+        self.assertTrue(section['review_required']);self.assertEqual(section['text'],original)
+        item['text']='마찰이 있다면 에너지가 보존됩니다. 실제 장치와 같다는 뜻은 아닙니다.'
+        self.assertTrue(ground_sections({'sections':[item]},[self.source(0,original)],copy_subject=True)['sections'][0]['review_required'])
 
 class SubjectWhitespaceTests(unittest.TestCase):
     source=GroundingTests.source

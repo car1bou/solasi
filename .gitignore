@@ -1,7 +1,7 @@
 .venv/
 __pycache__/
 *.egg-info/
-frontend/node_modules/
+frontend/node_modules
 frontend/dist/
 .local-state/
 vendor/
@@ -26,3 +26,4 @@ docs/verification/*
 !docs/verification/sentence-checks-20261015.json
 !docs/verification/sentence-db-20261015.json
 !docs/verification/sentence-summary-20261015.json
+!docs/verification/fidelity-followup-20261015.json

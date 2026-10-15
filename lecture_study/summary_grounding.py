@@ -96,10 +96,20 @@ def ground_sections(body,evidence,mode='lecture',*,copy_subject=False):
         # shortcut: literal numeric exclusive-condition values, not general condition entailment.
         source_values=set(re.findall(r'(\d+)\s*(?:일\s*때|인\s*경우)(?:에)?만',raw));output_values=set(re.findall(r'(\d+)\s*(?:일\s*때|인\s*경우)(?:에)?만',item['text']))
         if source_values and output_values and source_values!=output_values:reasons.append('조건의 적용 값 확인')
+        # shortcut: explicit existence premises only; negation in a different clause cannot justify their reversal.
+        premise=re.compile(re.escape(subject)+r'(?:이|가)\s*(없|있)(?:다고\s*가정|는\s*가정|다면|으면|는\s*경우)')
+        original_premises=set(premise.findall(raw));generated_premises=set(premise.findall(item['text']))
+        if original_premises and generated_premises and original_premises.isdisjoint(generated_premises):reasons.append('가정·조건 전제의 긍정·부정 확인')
         if state=='unclear':reasons.append('해석 확인')
         if copy_subject and re.sub(r'\s+','',subject)not in re.sub(r'\s+','',item['text']):reasons.append('설명문의 주어 근거 확인')
-        # shortcut: Korean particle checks flag obvious object/location/possessive-to-actor changes, not general semantic entailment.
-        if copy_subject and subject!='불명확' and re.search(re.escape(subject)+r'(?:을|를|에게|한테|에서|으로|로|에|의)(?:\s|[.!?。]|$)',raw) and not re.search(re.escape(subject)+r'(?:은|는|이|가)(?:\s|[.!?。]|$)',raw) and re.search(re.escape(subject)+r'(?:은|는|이|가)(?:\s|[.!?。]|$)',item['title']+' '+item['text']):reasons.append('원문 대상이 행동 주체로 바뀌었는지 확인')
+        # shortcut: explicit Korean particles/spatial phrases flag role reversals, not general semantic entailment.
+        if copy_subject and subject!='불명확':
+            actor=re.compile(re.escape(subject)+r'(?:은|는|이|가)(?=\s|[,;.!?。]|$)')
+            target=re.compile(re.escape(subject)+r'(?:(?:을|를|에게|한테|에서|으로|로|에|의)|\s+(?:앞|옆|뒤)에(?:서)?(?:는|도)?)(?=\s|[,;.!?。]|$)')
+            direct=refs[source].text;generated=item['title']+' '+item['text']
+            if target.search(direct) and not actor.search(direct) and actor.search(generated):reasons.append('원문 대상이 행동 주체로 바뀌었는지 확인')
+            recipient=re.compile(re.escape(subject)+r'(?:에게|한테)(?=\s|[,;.!?。]|$)')
+            if actor.search(direct) and not recipient.search(direct) and recipient.search(item['text']) and not actor.search(item['text']):reasons.append('원문 주체가 수신자로 바뀌었는지 확인')
         # shortcut: catches other copied subjects leaking across items, not every invented person or relation.
         if any(name not in raw and name in item['title']+' '+item['text']for name in copied_subjects):reasons.append('다른 항목의 주어 혼입 확인')
         # shortcut: literal digit groups catch introduced numbers, not changed targets or Korean numeral paraphrases.

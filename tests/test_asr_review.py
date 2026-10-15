@@ -46,6 +46,20 @@ class ReviewTests(unittest.IsolatedAsyncioTestCase):
             source=resolve_source(self.db,ref);self.assertEqual(source['status'],'changed');self.assertIn(self.rid,source['open_url'])
         self.assertEqual(review.apply_review(self.db,job['id'],'확인한 새 전사'),applied)
         self.assertEqual(self.db.execute('SELECT count(DISTINCT source_id) FROM searchable_chunks').fetchone()[0],1)
+    async def test_installed_qwen_is_frozen_as_one_candidate_without_changing_first_transcript(self):
+        self.first([{'start_ms':0,'end_ms':1000,'text':'최초 전사'}]);before=tr.list_transcripts(self.db,self.sid)
+        with patch('lecture_study.qwen_asr.available',return_value=True):job=review.queue_review(self.db,self.chunk['id'],automatic=False,runtime=self.root/'runtime',activity=[])
+        self.assertEqual(job['request']['alternative'],'qwen3-asr-1.7b-4bit')
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(return_value={'text':'다른 후보','generation_tokens':5,'mlx_peak_bytes':10,'process_peak_rss_bytes':20})),patch.object(tr,'transcribe_range',new=AsyncMock(side_effect=AssertionError('second inference'))):
+            result=await review.process_review(self.db,job,self.root/'runtime')
+        self.assertEqual(result['text'],'다른 후보');self.assertIn('구간 전체',result['warning']);self.assertIn('음성 활동이 감지되지 않은',result['warning']);self.assertEqual(result['segments'],[{'start_ms':0,'end_ms':1000,'text':'다른 후보'}])
+        self.assertEqual(tr.list_transcripts(self.db,self.sid),before)
+    async def test_qwen_failure_never_runs_a_second_whisper_inference(self):
+        self.first([])
+        with patch('lecture_study.qwen_asr.available',return_value=True):job=review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime')
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(side_effect=ValueError('모델 검증 실패'))),patch.object(tr,'transcribe_range',new=AsyncMock(side_effect=AssertionError('second inference'))):
+            with self.assertRaisesRegex(ValueError,'검증'):await review.process_review(self.db,job,self.root/'runtime')
+        self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime'))
     async def test_manual_change_makes_candidate_stale(self):
         self.first([{'start_ms':0,'end_ms':1000,'text':'기존'}]);job=review.queue_review(self.db,self.chunk['id'],automatic=False);await self.decode(job)
         tr.edit_segment(self.db,tr.list_transcripts(self.db,self.sid)[0]['id'],'사용자 수정')
