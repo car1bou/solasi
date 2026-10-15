@@ -95,7 +95,7 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
         try: db=open_db(root)
         except Exception as exc: self.fail("기존 자료 마이그레이션 실패: "+str(exc))
         self.assertEqual(db.execute("SELECT external_path,version FROM assets WHERE id='kept'").fetchone()["external_path"],"/tmp/old.txt")
-        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0],16)
+        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0],17)
         db.close()
 
     async def test_v13_note_versions_migrate_with_unknown_anchor(self):
@@ -104,13 +104,12 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
         root=Path(self.temp.name)/'v13';db=open_db(root)
         sid=create_session(db,'lecture','과거 메모',None,None).id
         save_note(db,sid,'원래 메모');second=save_note(db,sid,'두 번째 메모')
-        with db:
-            db.execute('ALTER TABLE notes DROP COLUMN anchor_ms')
-            db.execute('PRAGMA user_version=13')
+        from tests.legacy import legacy_fixture
+        legacy_fixture(db,13)
         db.close();db=open_db(root)
         try:
             note=list_materials(db,sid)['note'];self.assertEqual(note['source_id'],second.id);self.assertEqual(note['text'],'두 번째 메모');self.assertIsNone(note['anchor_ms'])
-            self.assertEqual(db.execute('SELECT count(*) FROM notes').fetchone()[0],2);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],16)
+            self.assertEqual(db.execute('SELECT count(*) FROM notes').fetchone()[0],2);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],17)
             self.assertFalse(db.execute('PRAGMA foreign_key_check').fetchall())
         finally:db.close()
 
@@ -125,6 +124,28 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual((await self.client.get('/api/sessions')).status_code,200)
                 self.assertEqual((await client.get('/api/sessions')).status_code,200)
         finally:other.state.db.close();other.state.instance_lock.close()
+
+    async def test_v16_migration_preserves_extraction_and_backfills_course_membership(self):
+        from lecture_study.db import open_db,create_session,now
+        from tests.legacy import legacy_fixture
+        root=Path(self.temp.name)/'v16';db=open_db(root)
+        with db:db.execute('INSERT INTO courses VALUES (?,?,?,?)',('legacy-course','기존 과목','',now()))
+        sid=create_session(db,'lecture','기존 수업','legacy-course',1).id
+        with db:
+            db.execute("INSERT INTO assets(id,filename,kind,sha256,size,status,extraction,created_at) VALUES ('legacy-asset','기존.txt','txt',?,3,'ready',?,?)",('a'*64,'{"pages":[]}',now()))
+            db.execute('INSERT INTO session_assets VALUES (?,?)',(sid,'legacy-asset'))
+        legacy_fixture(db,16)
+        before=dict(db.execute("SELECT * FROM assets WHERE id='legacy-asset'").fetchone())
+        db.close();db=open_db(root)
+        try:
+            after=dict(db.execute("SELECT * FROM assets WHERE id='legacy-asset'").fetchone())
+            self.assertEqual({key:after[key] for key in before},before)
+            self.assertEqual(after['extraction_sha256'],'a'*64)
+            self.assertEqual([tuple(row) for row in db.execute('SELECT * FROM course_assets')],[('legacy-course','legacy-asset')])
+            self.assertEqual([tuple(row) for row in db.execute('SELECT * FROM session_assets')],[(sid,'legacy-asset')])
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],17)
+            self.assertFalse(db.execute('PRAGMA foreign_key_check').fetchall())
+        finally:db.close()
 
 
 if __name__ == "__main__":

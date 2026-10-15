@@ -38,12 +38,12 @@ export class PageDraft{
       this.update({recovered:recovered.filter((row,index,all)=>!equal(row,server)&&(!draft||!equal(row,draft))&&all.findIndex(other=>equal(row,other))===index)});
       if(draft&&draft.dirty!==false&&!equal(draft,server)){
         const conflict=draft.revision!==server.revision;
-        this.update({loaded:true,text:draft.text,ink:draft.ink,revision:server.revision,server,status:conflict?'conflict':'pending',backup:draft.backup,error:conflict?'다른 편집 내용이 저장되어 있습니다. 두 내용을 확인한 후 선택하세요.':''});
+        this.update({loaded:true,text:draft.text,ink:draft.ink,revision:draft.revision,server,status:conflict?'conflict':'pending',backup:draft.backup,error:conflict?'다른 편집 내용이 저장되어 있습니다. 두 내용을 확인한 후 선택하세요.':''});
         if(!conflict)this.schedule();
       }else this.update({loaded:true,text:server.text,ink:server.ink,revision:server.revision,server,status:'saved',backup:draft?.backup});
     }catch(e){this.token=draft?.token||crypto.randomUUID();this.update({loaded:!!draft,text:draft?.text||'',ink:draft?.ink||[],revision:draft?.revision||0,status:'failed',backup:draft?.backup,recovered,error:(e as Error).message});}
   }
-  async refresh(){if(!this.state.loaded||this.saving)return;try{const server=await api<PageDocument>(this.path+'?document_sha256='+encodeURIComponent(this.hash));if(this.saving||server.revision===this.state.revision)return;if(this.state.status==='saved'||equal(this.state,server)){this.update({text:server.text,ink:JSON.stringify(this.state.ink)===JSON.stringify(server.ink)?this.state.ink:server.ink,revision:server.revision,server,status:'saved',error:''});}else this.update({revision:server.revision,server,status:'conflict',error:'다른 창에서 저장한 내용과 현재 초안을 확인하세요.'});await this.persist();}catch(e){this.update({status:'failed',error:'최신 페이지 버전 대조 실패: '+(e as Error).message});}}
+  async refresh(){if(!this.state.loaded||this.saving)return;try{const server=await api<PageDocument>(this.path+'?document_sha256='+encodeURIComponent(this.hash));if(this.saving||server.revision===this.state.revision)return;if(this.state.status==='saved'||equal(this.state,server)){this.update({text:server.text,ink:JSON.stringify(this.state.ink)===JSON.stringify(server.ink)?this.state.ink:server.ink,revision:server.revision,server,status:'saved',error:''});}else this.update({server,status:'conflict',error:'다른 창에서 저장한 내용과 현재 초안을 확인하세요.'});await this.persist();}catch(e){this.update({status:this.state.status==='conflict'?'conflict':'failed',error:'최신 페이지 버전 대조 실패: '+(e as Error).message});}}
   change(content:Content){
     this.token=crypto.randomUUID();
     this.update({...content,status:this.state.status==='conflict'?'conflict':'pending',error:this.state.status==='conflict'?this.state.error:''});

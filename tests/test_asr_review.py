@@ -99,10 +99,11 @@ class ReviewTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(review.empty_ranges(self.db,self.sid),[])
     def test_migration_retains_rows_and_active_view(self):
         self.first([{'start_ms':0,'end_ms':1000,'text':'기존'}]);before=tr.list_transcripts(self.db,self.sid)
-        self.db.execute('DROP VIEW searchable_chunks');self.db.execute('ALTER TABLE transcripts DROP COLUMN superseded_by');self.db.execute('PRAGMA user_version=14');self.db.commit()
+        from tests.legacy import legacy_fixture
+        legacy_fixture(self.db,14)
         upgraded=open_db(self.root/'data')
         try:
-            self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],16)
+            self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],17)
             self.assertEqual(tr.list_transcripts(upgraded,self.sid),before)
         finally:upgraded.close()
 

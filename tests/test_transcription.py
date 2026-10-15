@@ -214,9 +214,8 @@ class ModelTests(unittest.TestCase):
             chunk=tr.plan_chunks(old,rid,True)[0]
             with old:
                 old.execute("UPDATE transcript_ranges SET prompt='이전 명칭',status='done' WHERE id=?",(chunk['id'],))
-                if 'model' in {r['name'] for r in old.execute('PRAGMA table_info(transcript_ranges)')}:
-                    old.execute('ALTER TABLE transcript_ranges DROP COLUMN model')
-                old.execute('PRAGMA user_version=6')
+            from tests.legacy import legacy_fixture
+            legacy_fixture(old,6)
             old.close()
             upgraded=open_db(root)
             try:
@@ -224,7 +223,7 @@ class ModelTests(unittest.TestCase):
                 self.assertEqual(row['model'],'base')
                 self.assertEqual(row['prompt'],'이전 명칭')
                 self.assertEqual(row['status'],'done')
-                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],16)
+                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],17)
             finally: upgraded.close()
 
 class TimestampGapTests(unittest.TestCase):

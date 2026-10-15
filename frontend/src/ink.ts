@@ -23,7 +23,7 @@ export function eraseInk(strokes:InkStroke[],center:Point,radius:number,partial:
     for(let i=1;i<points.length;i++){
       const a=points[i-1],b=points[i],dx=b.x-a.x,dy=(b.y-a.y)*aspect,ax=a.x-center.x,ay=(a.y-center.y)*aspect,A=dx*dx+dy*dy,B=2*(ax*dx+ay*dy),C=ax*ax+ay*ay-r*r,D=B*B-4*A*C;
       const cuts=[0,1];if(A>0&&D>0){for(const t of [(-B-Math.sqrt(D))/(2*A),(-B+Math.sqrt(D))/(2*A)])if(t>0&&t<1)cuts.push(t);}cuts.sort((x,y)=>x-y);
-      for(let j=1;j<cuts.length;j++){const from=cuts[j-1],to=cuts[j],mid=(from+to)/2,outside=Math.hypot(ax+dx*mid,ay+dy*mid)>r;
+      for(let j=1;j<cuts.length;j++){const from=cuts[j-1],to=cuts[j],mid=(from+to)/2,outside=Math.hypot(ax+dx*mid,ay+dy*mid)>=r;
         if(outside){const start=interpolate(a,b,from);if(!current.length)current.push(start);current.push(interpolate(a,b,to));}else if(current.length){pieces.push(current);current=[];}}
     }
     if(current.length)pieces.push(current);

@@ -36,9 +36,11 @@ class VisionTests(unittest.IsolatedAsyncioTestCase):
         forged=body|{'session_id':other,'scope':{'session_id':other}}
         self.assertEqual((await self.client.post('/api/ai/jobs',json=forged,headers=self.headers)).status_code,422)
         (self.sources/'vector.pdf').write_bytes(pdf_fixture()+b'changed')
+        job_count=self.app.state.db.execute('SELECT count(*) FROM jobs').fetchone()[0]
         with patch('lecture_study.outputs.model_status',new=AsyncMock(return_value={'vision':True})),patch('lecture_study.outputs.generate',new=AsyncMock()) as generate:
             submitted=await self.client.post('/api/ai/jobs',json=body,headers=self.headers)
-            self.assertEqual(submitted.status_code,409);generate.assert_not_called()
+            self.assertEqual(submitted.status_code,422,submitted.text);self.assertIn('변경',submitted.json()['detail']);generate.assert_not_called()
+        self.assertEqual(self.app.state.db.execute('SELECT count(*) FROM jobs').fetchone()[0],job_count)
 
     async def test_png_and_extracted_pdf_raster_use_original_refs(self):
         import asyncio

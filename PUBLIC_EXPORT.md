@@ -10,4 +10,4 @@
 
 ## 실행
 
-설치와 사용 방법은 [README](README.md), 현재 실측과 남은 오류는 [최신 검증](docs/fidelity-followup.md)을 확인하세요.
+설치와 사용 방법은 [README](README.md), 현재 Mac 변경은 [대본·필기 검증](docs/mac-script-validation.md), 실제 모델 실측과 남은 품질 문제는 [긴 음성 검증](docs/mac-long-file-validation.md)을 확인하세요. 이전 전사·요약 개선 기록은 [전사 충실도 후속 검증](docs/fidelity-followup.md)에 있습니다.

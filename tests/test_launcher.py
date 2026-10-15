@@ -69,7 +69,8 @@ class LauncherTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             db=open_db(Path(folder));sid=create_session(db,'lecture','보존',None,None).id;ref=save_note(db,sid,'원문');job=submit_job(db,sid,'ai',{})
             result=save_artifact(db,job['id'],{'answer':'보존'},[Evidence(ref=ref,text='원문',label='노트')],{'kind':'answer','provider':'ollama','model':'test','cutoff_ms':None,'retrieval_mode':'keyword'})
-            db.execute('PRAGMA user_version=12');db.close();db=open_db(Path(folder))
+            from tests.legacy import legacy_fixture
+            legacy_fixture(db,12);db.close();db=open_db(Path(folder))
             try:
                 self.assertEqual(get_artifact(db,result.id)['body']['answer'],'보존');self.assertEqual(db.execute('PRAGMA foreign_keys').fetchone()[0],1);self.assertIsNone(db.execute('PRAGMA foreign_key_check').fetchone())
                 self.assertIsNone(submit_job(db,None,'runtime',{'component':'ocr'})['session_id'])

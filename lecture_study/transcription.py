@@ -295,24 +295,72 @@ def list_transcripts(db,sid):
     return [dict(row) for row in db.execute("SELECT * FROM transcripts WHERE session_id=? AND superseded_by IS NULL ORDER BY start_ms,id",(sid,))]
 
 
-def edit_segment(db,ident,text,*,bounds=None):
+class TranscriptConflict(ValueError):
+    pass
+
+
+def edit_segment(db,ident,text,*,bounds=None,expected_revision=None):
     row=db.execute("SELECT * FROM transcripts WHERE id=?",(ident,)).fetchone()
     if row is None: raise KeyError("전사를 찾을 수 없습니다")
     if row["superseded_by"]:raise ValueError("새 버전으로 대체된 전사입니다")
     if not row["final"]: raise ValueError("확정 전사만 수정할 수 있습니다")
+    if expected_revision is not None and (type(expected_revision)is not int or expected_revision<1):raise ValueError('전사 버전을 확인하세요')
+    if expected_revision is not None and row['revision']!=expected_revision:raise TranscriptConflict('선택한 전사가 변경되었습니다. 수정 내용을 복사한 뒤 다시 선택하세요')
     if not isinstance(text,str) or not text.strip() or len(text)>10000: raise ValueError("전사 문장을 입력하세요")
     start,end=bounds or (row['start_ms'],row['end_ms'])
     chunk=range_row(db,row['chunk_id']);record=get_recording(db,row['recording_id'])
+    if not chunk['final'] or chunk['recording_id']!=record['id'] or record['session_id']!=row['session_id']:raise ValueError('확정 전사 소속을 확인하세요')
     first=record['offset_ms']+round(chunk['start_frame']*1000/record['sample_rate'])
     last=record['offset_ms']+round(chunk['end_frame']*1000/record['sample_rate'])
     if type(start)is not int or type(end)is not int or not first<=start<end<=last:raise ValueError('전사 구간이 원음 범위를 벗어납니다')
     revision=row["revision"]+1
     ref=SourceRef(id=ident+":v"+str(revision),kind="transcript",session_id=row["session_id"],version=revision,start_ms=start,end_ms=end)
     with db if not db.in_transaction else nullcontext():
-        db.execute("UPDATE transcripts SET text=?,revision=?,start_ms=?,end_ms=? WHERE id=?",(text.strip(),revision,start,end,ident))
+        if not db.execute("UPDATE transcripts SET text=?,revision=?,start_ms=?,end_ms=? WHERE id=? AND revision=?",(text.strip(),revision,start,end,ident,row['revision'])).rowcount:raise TranscriptConflict('전사가 변경되었습니다. 다시 선택하세요')
         db.execute("INSERT INTO sources(id,ref,text_snapshot) VALUES (?,?,?)",(ref.id,ref.model_dump_json(),text.strip()))
         index_source(db,ref,text.strip())
     return dict(db.execute("SELECT * FROM transcripts WHERE id=?",(ident,)).fetchone())
+
+
+def edit_segments(db,sid,segments):
+    from .db import session
+    session(db,sid)
+    if not isinstance(segments,list) or not 1<=len(segments)<=200:raise ValueError('한 번에 1~200개 확정 문장을 수정하세요')
+    if len({s['id'] for s in segments})!=len(segments):raise ValueError('같은 문장을 중복 수정할 수 없습니다')
+    if any(not isinstance(s['text'],str) for s in segments) or sum(len(s['text']) for s in segments)>200000:raise ValueError('선택한 전사는 전체 200,000자까지 수정할 수 있습니다')
+    with db:
+        if not db.in_transaction:db.execute('BEGIN IMMEDIATE')
+        for item in segments:
+            row=db.execute('SELECT session_id FROM transcripts WHERE id=?',(item['id'],)).fetchone()
+            if not row or row['session_id']!=sid:raise ValueError('선택한 회차의 전사만 수정할 수 있습니다')
+        return [edit_segment(db,item['id'],item['text'],expected_revision=item['expected_revision']) for item in segments]
+
+
+def export_transcript(db,sid,format,base_url):
+    from .db import session
+    from .lifecycle import resolve_source
+    from html import escape
+    owner=session(db,sid)
+    rows=[row for row in list_transcripts(db,sid) if row['final']]
+    if format=='txt':return owner['title']+'\n\n'+' '.join(row['text'] for row in rows)+'\n'
+    if format!='md':raise ValueError('TXT 또는 Markdown 형식을 선택하세요')
+    def safe(text):
+        return re.sub(r'([\\`*_{}\[\]()#+.!|>~-])',r'\\\1',escape(text,quote=False))
+    def stamp(ms):
+        return f'{ms//60000}:{ms//1000%60:02}.{ms%1000:03}'
+    lines=['# '+safe(owner['title']),'',
+        '> 원음 링크는 로컬 앱 실행 및 해당 앱의 인증이 필요합니다. 현재 포트가 바뀌거나 원음이 삭제되면 열리지 않습니다. 이 파일에는 원음이 포함되지 않으며 다른 기기에서 그대로 재생되는 오디오 묶음이 아닙니다.',
+        '> 시각은 확정 전사 구간 기준입니다. 단어별 시각은 제공하지 않습니다.','']
+    for row in rows:
+        ident=row['id']+':v'+str(row['revision'])
+        source=resolve_source(db,SourceRef(id=ident,kind='transcript'))
+        link='원음 없음'
+        if source['open_url'] and source['seek_seconds'] is not None and source['end_seconds'] is not None:
+            positions=','.join(f'{value:.9f}'.rstrip('0').rstrip('.') for value in (source['seek_seconds'],source['end_seconds']))
+            url=base_url.rstrip('/')+source['open_url']+'#t='+positions
+            link='[원음 듣기]('+url+')'
+        lines.extend([f"**{stamp(row['start_ms'])}–{stamp(row['end_ms'])}** · `{ident}` · {link}",'',safe(row['text']),''])
+    return '\n'.join(lines)
 
 
 def transcription_status(db,rid):

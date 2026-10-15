@@ -186,7 +186,7 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
     async def test_material_membership_and_changed_page_version(self):
         aid=new_id();other=new_id()
         with self.db:
-            for ident in (aid,other): self.db.execute("INSERT INTO assets(id,filename,kind,sha256,size,status,created_at) VALUES (?,?,'txt','fixture',1,'ready',?)",(ident,'연결자료.txt',now()))
+            for ident in (aid,other): self.db.execute("INSERT INTO assets(id,filename,kind,sha256,size,status,created_at,extraction_sha256) VALUES (?,?,'txt','fixture',1,'ready',?,'fixture')",(ident,'연결자료.txt',now()))
             self.db.execute('INSERT INTO session_assets VALUES (?,?)',(self.previous,aid))
             self.db.execute('INSERT INTO session_assets VALUES (?,?)',(self.unrelated,other))
             refs=[SourceRef(id=ident+':v1:page:1',kind='material',asset_id=ident,page=1) for ident in (aid,other)]
@@ -196,8 +196,10 @@ class RetrievalTests(unittest.IsolatedAsyncioTestCase):
         found=await retrieve(self.db,'교착',self.scope,None)
         self.assertIn(refs[0].id,{e.ref.id for e in found.evidence})
         self.assertNotIn(refs[1].id,{e.ref.id for e in found.evidence})
-        self.assertIn('1회차',next(e.label for e in found.evidence if e.ref.id==refs[0].id))
-        with self.db: self.db.execute('UPDATE assets SET version=2 WHERE id=?',(aid,))
+        self.assertEqual(next(e.label for e in found.evidence if e.ref.id==refs[0].id),'과목 · 연결자료.txt · 1쪽')
+        with self.db: self.db.execute("UPDATE assets SET sha256='changed' WHERE id=?",(aid,))
+        self.assertNotIn(refs[0].id,{e.ref.id for e in (await retrieve(self.db,'교착',self.scope,None)).evidence})
+        with self.db: self.db.execute("UPDATE assets SET version=2,sha256='fixture' WHERE id=?",(aid,))
         self.assertNotIn(refs[0].id,{e.ref.id for e in (await retrieve(self.db,'교착',self.scope,None)).evidence})
         self.assertEqual(self.db.execute('SELECT text_snapshot FROM sources WHERE id=?',(refs[0].id,)).fetchone()[0],'자료의 교착 정의')
 

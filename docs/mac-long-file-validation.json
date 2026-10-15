@@ -1,0 +1,566 @@
+{
+  "ready": true,
+  "route": "Real TCP production APIs; cached MP3 import via fixed-path file-picker substitute; native Whisper large-v3-turbo and owned Ollama Qwen3.5:4b MLX",
+  "limitations": [
+    "No physical microphone, WKWebView, browser capture or AudioWorklet validation.",
+    "Single-speaker literary narration; no meeting, lecture, diarization or transcript accuracy benchmark.",
+    "Initial overlapping summary uses an explanatory note; final summary uses the completed transcript.",
+    "Host load and memory are uncontrolled; one validation run, no performance ranking."
+  ],
+  "input": {
+    "title": "술 권하는 사회 Part 1",
+    "author": "현진건",
+    "reader": "Jessie Yun",
+    "source": "https://archive.org/download/short_stories_hyun_1411_librivox/short_stories_02_hyun_128kb.mp3",
+    "catalog": "https://librivox.org/short-stories-by-jin-geon-hyun/",
+    "license": "Public Domain Mark 1.0 / LibriVox public-domain dedication",
+    "bytes": 14058564,
+    "sha256": "68f07d5ca8677317590af0fc1dd5b8634ae0749ba1bbddc3965962f73086f1fc",
+    "reference_limit": "book text is not time-aligned ground truth; introduction and part boundary need manual checking"
+  },
+  "model": "qwen3.5:4b",
+  "context_limit": 8192,
+  "overlap_seconds": 20.990217208862305,
+  "total_seconds": 876.7617480754852,
+  "started_utc": "2026-10-15T16:45:09.537717+00:00",
+  "model_digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+  "asr_model": {
+    "name": "large-v3-turbo",
+    "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+    "vad_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987"
+  },
+  "readiness": [
+    {
+      "label": "기록 저장",
+      "ready": true
+    },
+    {
+      "label": "PDF·이미지 추출",
+      "ready": true
+    },
+    {
+      "label": "전사 · Whisper large-v3-turbo",
+      "ready": true
+    },
+    {
+      "label": "로컬 모델 연결",
+      "ready": true
+    }
+  ],
+  "transcription": {
+    "sample_rate": 44100,
+    "source_frames": 38733184,
+    "duration_seconds": 878.3034920634921,
+    "range_count": 33,
+    "all_ranges_done": true,
+    "continuous_source_coverage": true,
+    "segment_count": 301,
+    "first_segment_start_ms": 250,
+    "last_segment_end_ms": 876820,
+    "recognized_characters": 5083,
+    "recording_status": "stopped",
+    "gaps": [],
+    "error": null,
+    "elapsed_seconds_from_import": 166.28885507583618,
+    "transcription_mode": "realtime"
+  },
+  "final_summary": {
+    "section_count": 61,
+    "completed_parts": 8,
+    "covered_source_count": 301,
+    "cited_source_count": 262,
+    "source_count": 301,
+    "full_transcript_snapshot": true,
+    "covered_range_count": 301,
+    "unquoted_source_count": 39,
+    "review_required_section_count": 48,
+    "selection_incomplete_parts": [],
+    "metadata": {
+      "provider": "ollama",
+      "model": "qwen3.5:4b",
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "elapsed_ms": 708530,
+      "warning": "현재 확정 전사·자료·노트 전체 스냅샷 · 생성 요약을 확인할 항목은 원문 발췌로 표시했습니다. · 직접 인용하지 않은 원문을 별도로 보존했습니다. 요약에서 빠진 내용이 있는지 확인하세요.",
+      "content_warnings": [
+        "생성 요약을 확인할 항목은 원문 발췌로 표시했습니다.",
+        "직접 인용하지 않은 원문을 별도로 보존했습니다. 요약에서 빠진 내용이 있는지 확인하세요."
+      ],
+      "excerpted": false
+    },
+    "elapsed_seconds": 710.1574079990387,
+    "part_section_counts": [
+      8,
+      8,
+      8,
+      8,
+      9,
+      8,
+      6,
+      6
+    ]
+  },
+  "jobs": {
+    "initial_summary": {
+      "kind": "ai",
+      "status": "done",
+      "error": null
+    },
+    "transcription": {
+      "kind": "transcribe",
+      "status": "done",
+      "error": null
+    },
+    "final_summary": {
+      "kind": "ai",
+      "status": "done",
+      "error": null
+    }
+  },
+  "asr_calls": [
+    {
+      "status": "done",
+      "start_frame": 0,
+      "end_frame": 1072512,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 3.143664836883545,
+      "ended_seconds": 18.087363958358765,
+      "elapsed_seconds": 14.94369912147522
+    },
+    {
+      "status": "done",
+      "start_frame": 1072512,
+      "end_frame": 2226168,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 18.089498043060303,
+      "ended_seconds": 24.604450941085815,
+      "elapsed_seconds": 6.514952898025513
+    },
+    {
+      "status": "done",
+      "start_frame": 2226168,
+      "end_frame": 3415986,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 24.60542392730713,
+      "ended_seconds": 28.961589813232422,
+      "elapsed_seconds": 4.356165885925293
+    },
+    {
+      "status": "done",
+      "start_frame": 3415986,
+      "end_frame": 4661370,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 28.96256995201111,
+      "ended_seconds": 35.03465485572815,
+      "elapsed_seconds": 6.072084903717041
+    },
+    {
+      "status": "done",
+      "start_frame": 4661370,
+      "end_frame": 5837076,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 35.03570508956909,
+      "ended_seconds": 39.38867497444153,
+      "elapsed_seconds": 4.3529698848724365
+    },
+    {
+      "status": "done",
+      "start_frame": 5837076,
+      "end_frame": 6909588,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 39.3898389339447,
+      "ended_seconds": 43.448354959487915,
+      "elapsed_seconds": 4.058516025543213
+    },
+    {
+      "status": "done",
+      "start_frame": 6909588,
+      "end_frame": 7973280,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 43.44932699203491,
+      "ended_seconds": 47.3941388130188,
+      "elapsed_seconds": 3.9448118209838867
+    },
+    {
+      "status": "done",
+      "start_frame": 7973280,
+      "end_frame": 9094302,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 47.39514493942261,
+      "ended_seconds": 51.49225902557373,
+      "elapsed_seconds": 4.097114086151123
+    },
+    {
+      "status": "done",
+      "start_frame": 9094302,
+      "end_frame": 10270890,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 51.49323487281799,
+      "ended_seconds": 55.42278599739075,
+      "elapsed_seconds": 3.929551124572754
+    },
+    {
+      "status": "done",
+      "start_frame": 10270890,
+      "end_frame": 11395440,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 55.4239559173584,
+      "ended_seconds": 59.420044898986816,
+      "elapsed_seconds": 3.996088981628418
+    },
+    {
+      "status": "done",
+      "start_frame": 11395440,
+      "end_frame": 12680514,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 59.42105484008789,
+      "ended_seconds": 65.07035207748413,
+      "elapsed_seconds": 5.64929723739624
+    },
+    {
+      "status": "done",
+      "start_frame": 12680514,
+      "end_frame": 13977936,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 65.07139086723328,
+      "ended_seconds": 70.8921446800232,
+      "elapsed_seconds": 5.820753812789917
+    },
+    {
+      "status": "done",
+      "start_frame": 13977936,
+      "end_frame": 15181866,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 70.8932249546051,
+      "ended_seconds": 74.93256998062134,
+      "elapsed_seconds": 4.039345026016235
+    },
+    {
+      "status": "done",
+      "start_frame": 15181866,
+      "end_frame": 16486344,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 74.93362712860107,
+      "ended_seconds": 80.9297080039978,
+      "elapsed_seconds": 5.9960808753967285
+    },
+    {
+      "status": "done",
+      "start_frame": 16486344,
+      "end_frame": 17685864,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 80.93075180053711,
+      "ended_seconds": 85.29865884780884,
+      "elapsed_seconds": 4.3679070472717285
+    },
+    {
+      "status": "done",
+      "start_frame": 17685864,
+      "end_frame": 18966528,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 85.2997260093689,
+      "ended_seconds": 89.45831799507141,
+      "elapsed_seconds": 4.158591985702515
+    },
+    {
+      "status": "done",
+      "start_frame": 18966528,
+      "end_frame": 20201328,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 89.45943689346313,
+      "ended_seconds": 93.73705792427063,
+      "elapsed_seconds": 4.277621030807495
+    },
+    {
+      "status": "done",
+      "start_frame": 20201328,
+      "end_frame": 21512862,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 93.73830604553223,
+      "ended_seconds": 99.68025183677673,
+      "elapsed_seconds": 5.941945791244507
+    },
+    {
+      "status": "done",
+      "start_frame": 21512862,
+      "end_frame": 22670046,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 99.68140387535095,
+      "ended_seconds": 104.01784682273865,
+      "elapsed_seconds": 4.336442947387695
+    },
+    {
+      "status": "done",
+      "start_frame": 22670046,
+      "end_frame": 23845752,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 104.0190839767456,
+      "ended_seconds": 108.38724398612976,
+      "elapsed_seconds": 4.368160009384155
+    },
+    {
+      "status": "done",
+      "start_frame": 23845752,
+      "end_frame": 25038216,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 108.38845300674438,
+      "ended_seconds": 112.68721771240234,
+      "elapsed_seconds": 4.298764705657959
+    },
+    {
+      "status": "done",
+      "start_frame": 25038216,
+      "end_frame": 26151300,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 112.68846201896667,
+      "ended_seconds": 116.73800086975098,
+      "elapsed_seconds": 4.049538850784302
+    },
+    {
+      "status": "done",
+      "start_frame": 26151300,
+      "end_frame": 27289080,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 116.73950982093811,
+      "ended_seconds": 121.01762986183167,
+      "elapsed_seconds": 4.278120040893555
+    },
+    {
+      "status": "done",
+      "start_frame": 27289080,
+      "end_frame": 28577682,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 121.01887893676758,
+      "ended_seconds": 126.95091772079468,
+      "elapsed_seconds": 5.9320387840271
+    },
+    {
+      "status": "done",
+      "start_frame": 28577682,
+      "end_frame": 29822184,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 126.9522180557251,
+      "ended_seconds": 132.80348777770996,
+      "elapsed_seconds": 5.851269721984863
+    },
+    {
+      "status": "done",
+      "start_frame": 29822184,
+      "end_frame": 30994362,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 132.80476474761963,
+      "ended_seconds": 137.08332681655884,
+      "elapsed_seconds": 4.278562068939209
+    },
+    {
+      "status": "done",
+      "start_frame": 30994362,
+      "end_frame": 32144490,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 137.08453583717346,
+      "ended_seconds": 141.3206489086151,
+      "elapsed_seconds": 4.23611307144165
+    },
+    {
+      "status": "done",
+      "start_frame": 32144490,
+      "end_frame": 33310494,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 141.32202005386353,
+      "ended_seconds": 145.3873257637024,
+      "elapsed_seconds": 4.065305709838867
+    },
+    {
+      "status": "done",
+      "start_frame": 33310494,
+      "end_frame": 34462386,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 145.3885838985443,
+      "ended_seconds": 149.55507397651672,
+      "elapsed_seconds": 4.166490077972412
+    },
+    {
+      "status": "done",
+      "start_frame": 34462386,
+      "end_frame": 35625744,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 149.55635499954224,
+      "ended_seconds": 153.78317093849182,
+      "elapsed_seconds": 4.226815938949585
+    },
+    {
+      "status": "done",
+      "start_frame": 35625744,
+      "end_frame": 36837612,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 153.7844259738922,
+      "ended_seconds": 157.96979093551636,
+      "elapsed_seconds": 4.1853649616241455
+    },
+    {
+      "status": "done",
+      "start_frame": 36837612,
+      "end_frame": 37918062,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 157.97109699249268,
+      "ended_seconds": 163.24734687805176,
+      "elapsed_seconds": 5.276249885559082
+    },
+    {
+      "status": "done",
+      "start_frame": 37918062,
+      "end_frame": 38733184,
+      "final": 1,
+      "revision": 1,
+      "started_seconds": 163.24900197982788,
+      "ended_seconds": 168.09930181503296,
+      "elapsed_seconds": 4.850299835205078
+    }
+  ],
+  "generation_calls": [
+    {
+      "usage": {
+        "prompt_eval_count": 932,
+        "eval_count": 122
+      },
+      "provider_elapsed_ms": 21567,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 2.6082568168640137,
+      "ended_seconds": 24.136016130447388,
+      "elapsed_seconds": 21.527759313583374
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2450,
+        "eval_count": 1117
+      },
+      "provider_elapsed_ms": 89186,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 169.47474193572998,
+      "ended_seconds": 258.58901810646057,
+      "elapsed_seconds": 89.11427617073059
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2708,
+        "eval_count": 934
+      },
+      "provider_elapsed_ms": 89500,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 258.6474506855011,
+      "ended_seconds": 348.10483980178833,
+      "elapsed_seconds": 89.45738911628723
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2670,
+        "eval_count": 944
+      },
+      "provider_elapsed_ms": 94416,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 348.1748631000519,
+      "ended_seconds": 442.5451250076294,
+      "elapsed_seconds": 94.37026190757751
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2695,
+        "eval_count": 1022
+      },
+      "provider_elapsed_ms": 97912,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 442.66094398498535,
+      "ended_seconds": 540.4831867218018,
+      "elapsed_seconds": 97.8222427368164
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2564,
+        "eval_count": 864
+      },
+      "provider_elapsed_ms": 86726,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 540.5545678138733,
+      "ended_seconds": 627.2351417541504,
+      "elapsed_seconds": 86.6805739402771
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2780,
+        "eval_count": 1205
+      },
+      "provider_elapsed_ms": 112170,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 627.3023009300232,
+      "ended_seconds": 739.4312360286713,
+      "elapsed_seconds": 112.12893509864807
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 2951,
+        "eval_count": 808
+      },
+      "provider_elapsed_ms": 80521,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 739.502063035965,
+      "ended_seconds": 819.9769058227539,
+      "elapsed_seconds": 80.47484278678894
+    },
+    {
+      "usage": {
+        "prompt_eval_count": 1755,
+        "eval_count": 685
+      },
+      "provider_elapsed_ms": 58099,
+      "digest": "7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13",
+      "started_seconds": 820.0484719276428,
+      "ended_seconds": 878.0991928577423,
+      "elapsed_seconds": 58.05072093009949
+    }
+  ],
+  "post_run": {
+    "all_jobs_done": true,
+    "original_audio_sha256_unchanged": true,
+    "owned_runtime_disconnected": true,
+    "api_server_kept_running_for_export": true,
+    "summary_model_digest_verified": true,
+    "no_model_retry": true,
+    "no_model_change": true
+  },
+  "measurement_notes": [
+    "overlap_seconds sums intersections of generation admission-to-response intervals and process_chunk execution intervals; not a GPU kernel trace or first-token measurement.",
+    "source coverage means all original frames were assigned to completed contiguous ASR ranges; it does not establish word accuracy.",
+    "summary snapshot coverage and citation counts do not establish summary accuracy."
+  ]
+}

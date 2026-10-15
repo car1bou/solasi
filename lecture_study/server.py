@@ -34,7 +34,7 @@ from .answers import freeze_request,run_ai_request,get_artifact,capture_request,
 from .outputs import cached_summary_parts,public_artifact,submit_attempt,save_attempt,grade_attempt,quiz_question,override_attempt,review_attempts,related_quizzes,list_participants,save_participants,edit_artifact,export_markdown
 from .models import AIRequest
 from .retrieval import backfill_sources,retrieve,list_terms,save_term,concept_detail,rebuild_embeddings,index_status,capture_search
-from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,get_asr_terms,save_asr_terms,asr_prompt,engine_paths,verify_model,MODEL_NAME,VAD_SHA
+from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,edit_segments,export_transcript,TranscriptConflict,get_asr_terms,save_asr_terms,asr_prompt,engine_paths,verify_model,MODEL_NAME,VAD_SHA
 from .asr_review import queue_review,process_review,apply_review,public_reviews,empty_ranges,unchanged
 from .audio import start_recording, append_pcm, stop_recording, get_recording, interrupt_recording, recover_recordings
 
@@ -157,6 +157,10 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.exception_handler(ValueError)
     async def bad_input(request, exc):
         return JSONResponse({"detail": str(exc)}, status_code=422)
+
+    @app.exception_handler(TranscriptConflict)
+    async def transcript_conflict(request,exc):
+        return JSONResponse({'detail':str(exc)},status_code=409)
 
     @app.exception_handler(OSError)
     async def inaccessible_file(request,exc):
@@ -1052,10 +1056,28 @@ def create_app(config: AppConfig) -> FastAPI:
 
     class TranscriptEdit(Input):
         text: str = Field(min_length=1,max_length=10000)
+        expected_revision: int | None = Field(default=None,ge=1,strict=True)
+
+    class TranscriptBatchItem(Input):
+        id: str = Field(min_length=1,max_length=100)
+        expected_revision: int = Field(ge=1,strict=True)
+        text: str = Field(min_length=1,max_length=10000)
+
+    class TranscriptBatchEdit(Input):
+        segments: list[TranscriptBatchItem] = Field(min_length=1,max_length=200)
+
+    @app.patch('/api/sessions/{ident}/transcripts')
+    async def update_transcripts(ident:str,body:TranscriptBatchEdit):
+        return {'segments':edit_segments(db,ident,[item.model_dump() for item in body.segments])}
+
+    @app.get('/api/sessions/{ident}/transcripts/export')
+    async def download_transcript(ident:str,request:Request,format:Literal['txt','md']='txt'):
+        text=export_transcript(db,ident,format,str(request.base_url))
+        return PlainTextResponse(text,media_type='text/markdown' if format=='md' else 'text/plain',headers={'Content-Disposition':f'attachment; filename="transcript-{ident}.{format}"'})
 
     @app.patch("/api/transcripts/{ident}")
     async def update_transcript(ident: str,body: TranscriptEdit):
-        return edit_segment(db,ident,body.text)
+        return edit_segment(db,ident,body.text,expected_revision=body.expected_revision)
 
     @app.post('/api/transcript-ranges/{ident}/review',status_code=202)
     async def request_review(ident:str):
