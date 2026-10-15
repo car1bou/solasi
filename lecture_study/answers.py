@@ -3,7 +3,7 @@ import json
 import time
 from pydantic import Field,ValidationError
 from .models import Input,AIRequest,Evidence,GeneratedArtifact,SourceRef,SearchResult
-from .db import new_id,now,session
+from .db import new_id,now,session,course,request_owner
 from .retrieval import retrieve,scope_ids,eligible_chunks,label_for,capture_search,snapshot_rows,list_terms
 from .providers import generate
 from .web_search import search_web
@@ -68,18 +68,18 @@ def snapshot_evidence(db,request,cutoff,snapshot=None):
         if row['source_id'] in seen: continue
         seen.add(row['source_id']);ref=SourceRef.model_validate_json(row['ref'])
         text=db.execute('SELECT text_snapshot FROM sources WHERE id=?',(ref.id,)).fetchone()[0]
-        evidence.append(Evidence(ref=ref,text=text,label=label_for(db,ref,ids)))
+        evidence.append(Evidence(ref=ref,text=text,label=label_for(db,ref,ids,snapshot.get('course_id'))))
     evidence.sort(key=lambda e:(ids.index(e.ref.session_id) if e.ref.session_id in ids else len(ids),e.ref.start_ms if e.ref.start_ms is not None else 2**63,e.ref.asset_id or '',e.ref.page or 0,e.ref.id))
     return evidence
 
 
 def capture_request(db,request):
-    session(db,request.session_id)
-    if request.scope.session_id!=request.session_id: raise ValueError('질문 기록과 검색 범위가 일치하지 않습니다')
+    request_owner(db,request)
+    if (request.scope.session_id,request.scope.course_id)!=(request.session_id,request.course_id): raise ValueError('질문 소유자와 검색 범위가 일치하지 않습니다')
     if request.kind not in ('answer','explain','summary','quiz','minutes','vision','note','candidates'): raise ValueError('아직 연결되지 않은 생성 기능입니다')
     if not request.prompt.strip(): raise ValueError('질문을 입력하세요')
     if request.web and not request.web_query: raise ValueError('Exa로 전송할 웹 검색어를 직접 입력하세요')
-    cutoff=db.execute('SELECT max(end_ms) FROM transcripts WHERE session_id=? AND final=1 AND superseded_by IS NULL',(request.session_id,)).fetchone()[0]
+    cutoff=db.execute('SELECT max(end_ms) FROM transcripts WHERE session_id=? AND final=1 AND superseded_by IS NULL',(request.session_id,)).fetchone()[0] if request.session_id else None
     from .outputs import list_participants
     extra={}
     if request.kind in ('note','candidates'):
@@ -92,7 +92,7 @@ def capture_request(db,request):
 
 async def freeze_request(db,request,embedding_client=None,web_secret=None,snapshot=None,runtime_dir=None):
     snapshot=snapshot or capture_request(db,request);cutoff=snapshot['cutoff_ms']
-    session_kind=session(db,request.session_id)['kind']
+    owner=request_owner(db,request);session_kind=owner['kind'] if request.session_id else 'lecture'
     if request.kind=='vision':
         from .outputs import image_evidence,VISION_SCHEMA,VISION_INSTRUCTION
         evidence,ref,_=image_evidence(db,request)
@@ -115,6 +115,8 @@ async def freeze_request(db,request,embedding_client=None,web_secret=None,snapsh
     if request.web:
         try:
             web=await search_web(request.web_query,secret=web_secret,session_id=request.session_id)
+            if request.course_id:
+                for item in web:item.ref=item.ref.model_copy(update={'course_id':request.course_id})
             web_status={'status':'ready' if web else 'no_excerpt','count':len(web),'error':None if web else '인용할 웹 본문 구절 없음'}
             with db:
                 for item in web:
@@ -167,7 +169,7 @@ async def freeze_request(db,request,embedding_client=None,web_secret=None,snapsh
 
 
 def checked_evidence(db,frozen):
-    request=AIRequest.model_validate(frozen['request']);session(db,request.session_id)
+    request=AIRequest.model_validate(frozen['request']);request_owner(db,request)
     evidence=[Evidence.model_validate(e) for e in frozen['evidence']]
     for item in evidence:
         row=db.execute('SELECT ref,text_snapshot,deleted FROM sources WHERE id=?',(item.ref.id,)).fetchone()
@@ -179,7 +181,8 @@ def checked_evidence(db,frozen):
 def get_artifact(db,ident):
     row=db.execute('SELECT * FROM artifacts WHERE id=?',(ident,)).fetchone()
     if row is None: raise KeyError('저장 결과를 찾을 수 없습니다')
-    session(db,row['session_id'])
+    if row['session_id']:session(db,row['session_id'])
+    else:course(db,row['course_id'])
     result=dict(row)
     for key in ('body','evidence','metadata'): result[key]=json.loads(result[key])
     revisions=[dict(r) for r in db.execute('SELECT revision,body,confirmed,created_at FROM artifact_revisions WHERE artifact_id=? ORDER BY revision',(ident,))]
@@ -195,13 +198,13 @@ def artifact_model(saved):
 
 
 def save_artifact(db,job_id,body,evidence,metadata):
-    job=db.execute('SELECT session_id FROM jobs WHERE id=?',(job_id,)).fetchone()
+    job=db.execute('SELECT session_id,course_id FROM jobs WHERE id=?',(job_id,)).fetchone()
     if job is None: raise KeyError('작업을 찾을 수 없습니다')
     old=db.execute('SELECT id FROM artifacts WHERE job_id=?',(job_id,)).fetchone()
     if old: return artifact_model(get_artifact(db,old['id']))
     ident=new_id()
     with db:
-        db.execute('INSERT INTO artifacts(id,job_id,session_id,kind,body,evidence,metadata,created_at) VALUES (?,?,?,?,?,?,?,?)',(ident,job_id,job['session_id'],metadata['kind'],json.dumps(body,ensure_ascii=False),json.dumps([e.model_dump() for e in evidence],ensure_ascii=False),json.dumps(metadata,ensure_ascii=False),now()))
+        db.execute('INSERT INTO artifacts(id,job_id,session_id,course_id,kind,body,evidence,metadata,created_at) VALUES (?,?,?,?,?,?,?,?,?)',(ident,job_id,job['session_id'],job['course_id'],metadata['kind'],json.dumps(body,ensure_ascii=False),json.dumps([e.model_dump() for e in evidence],ensure_ascii=False),json.dumps(metadata,ensure_ascii=False),now()))
     return artifact_model(get_artifact(db,ident))
 
 

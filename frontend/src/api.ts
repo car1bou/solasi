@@ -1,3 +1,7 @@
+export class ApiError extends Error {
+  status:number;
+  constructor(message:string,status:number){super(message);this.name='ApiError';this.status=status;}
+}
 let csrf = '';
 let connection: Promise<void> | null = null;
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -8,7 +12,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   const response = await fetch('/api' + path, {...options, headers, credentials: 'same-origin'});
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(typeof error.detail === 'string' ? error.detail : '입력 정보를 확인하세요.');
+    throw new ApiError(typeof error.detail === 'string' ? error.detail : '입력 정보를 확인하세요.', response.status);
   }
   if (response.status === 204) return undefined as T;
   return response.json();

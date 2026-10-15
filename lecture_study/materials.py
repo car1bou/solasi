@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
-from .db import data_dir, new_id, now, session
+from .db import data_dir, new_id, now, session,course
 from .models import SourceRef
 from .retrieval import index_source
 
@@ -88,8 +88,9 @@ def inspect_file(path):
     return {"path":str(path),"filename":path.name,"kind":kind,"sha256":digest.hexdigest(),"size":info.st_size,"mtime_ns":info.st_mtime_ns}
 
 
-def register_file(db,session_id,inspected):
-    session(db,session_id)
+def register_file(db,session_id,inspected,course_id=None):
+    owner=session(db,session_id) if session_id else course(db,course_id)
+    course_id=owner.get('course_id') if session_id else course_id
     if Path(inspected["path"]).is_relative_to(data_dir(db).resolve()):
         raise ValueError("앱 관리 폴더 밖의 원본 파일을 선택하세요")
     existing = db.execute("SELECT id FROM assets WHERE external_path=?",(inspected["path"],)).fetchone()
@@ -100,7 +101,8 @@ def register_file(db,session_id,inspected):
         if not existing:
             db.execute("INSERT INTO assets(id,filename,kind,sha256,size,status,created_at,external_path,mtime_ns) VALUES (?,?,?,?,?,'queued',?,?,?)",
                        (ident,inspected["filename"],inspected["kind"],inspected["sha256"],inspected["size"],now(),inspected["path"],inspected["mtime_ns"]))
-        db.execute("INSERT OR IGNORE INTO session_assets VALUES (?,?)",(session_id,ident))
+        if session_id:db.execute("INSERT OR IGNORE INTO session_assets VALUES (?,?)",(session_id,ident))
+        if course_id:db.execute('INSERT OR IGNORE INTO course_assets VALUES (?,?)',(course_id,ident))
     return asset_dir(db,ident)[1]
 
 
@@ -121,6 +123,18 @@ def original_path(db,asset):
         labels = {"missing":"원본 파일을 찾을 수 없습니다","denied":"파일 접근 권한이 없습니다","changed":"원본 파일이 변경되었습니다. 재추출하세요"}
         raise HTTPException(409,labels[state])
     return Path(asset["external_path"]) if asset["external_path"] else data_dir(db)/"assets"/asset["id"]/f'original.{asset["kind"]}'
+
+
+def material_sha256(asset,ref=None):
+    if ref and ref.document_sha256:return ref.document_sha256
+    return asset['extraction_sha256'] if ref is None or ref.version==asset['version'] else None
+
+
+def checked_material_path(db,asset,ref=None):
+    from .course_materials import checked_document_path
+    digest=material_sha256(asset,ref)
+    if not digest:raise HTTPException(409,'추출 자료의 원본 버전을 확인할 수 없습니다. 페이지를 다시 선택하세요')
+    return checked_document_path(db,asset['id'],digest)
 
 
 def public_asset(db,asset):
@@ -191,8 +205,8 @@ async def ingest_asset(db, asset_id, runtime_dir):
             raise ValueError("추출 중 원본이 변경되었습니다. 재추출하세요")
         result = Extraction.model_validate_json((folder/"extraction.json").read_text())
         with db:
-            db.execute("UPDATE assets SET status=?,extraction=?,error=NULL,sha256=?,size=?,mtime_ns=?,version=?,kind=? WHERE id=?",
-                       (result.status,result.model_dump_json(),inspected["sha256"],inspected["size"],inspected["mtime_ns"],version,inspected["kind"],asset_id))
+            db.execute("UPDATE assets SET status=?,extraction=?,error=NULL,sha256=?,size=?,mtime_ns=?,version=?,kind=?,extraction_sha256=? WHERE id=?",
+                       (result.status,result.model_dump_json(),inspected["sha256"],inspected["size"],inspected["mtime_ns"],version,inspected["kind"],inspected['sha256'],asset_id))
             for p in result.pages:
                 db.execute("INSERT OR REPLACE INTO sources(id,ref,text_snapshot) VALUES (?,?,?)",
                            (p.ref.id,p.ref.model_dump_json(),p.text))
@@ -208,17 +222,21 @@ async def ingest_asset(db, asset_id, runtime_dir):
         raise
 
 
-async def render_page(db, asset_id, page, runtime_dir):
+async def render_page(db, asset_id, page, runtime_dir,document_sha256=None):
+    from .course_materials import document_metadata,checked_document_path
     folder,asset = asset_dir(db,asset_id)
     if asset["kind"] not in ("pdf","png","jpg"):
         raise ValueError("페이지 이미지가 없는 자료입니다")
-    extraction = json.loads(asset["extraction"] or "{}")
-    if page<1 or page>extraction.get("total_pages",0):
+    metadata=await document_metadata(db,asset_id,runtime_dir)
+    if document_sha256 and metadata['sha256']!=document_sha256:
+        raise HTTPException(409,'원본 문서가 변경되었습니다. 이전 필기를 새 문서에 표시하지 않습니다')
+    if page<1 or page>metadata['total_pages']:
         raise KeyError("페이지를 찾을 수 없습니다")
-    source = original_path(db,asset)
-    path = folder/f"v{asset['version']}-page-{page}.png"
+    source = checked_document_path(db,asset_id,metadata['sha256'])
+    path = folder/f"document-{metadata['sha256']}-page-{page}.png"
     if not path.is_file():
         await worker(["render",source,path,runtime_dir,asset_id,asset["version"],asset["kind"],page])
+    checked_document_path(db,asset_id,metadata['sha256'])
     if not path.is_file():
         raise ValueError("페이지 렌더링 실패")
     return path
@@ -227,7 +245,7 @@ async def render_page(db, asset_id, page, runtime_dir):
 
 async def render_image(db,asset_id,image_id,runtime_dir):
     folder,asset = asset_dir(db,asset_id)
-    source = original_path(db,asset)
+    source = checked_material_path(db,asset)
     images = json.loads(asset["extraction"] or "{}").get("images",[])
     item = next((i for i in images if i["id"]==image_id),None)
     if item is None:
@@ -235,6 +253,7 @@ async def render_image(db,asset_id,image_id,runtime_dir):
     path = folder/item["path"]
     if not path.is_file():
         await worker(["image",source,path,runtime_dir,asset_id,asset["version"],asset["kind"],image_id])
+    checked_material_path(db,asset)
     return path
 
 
@@ -246,6 +265,7 @@ def prune_cache(db,keep=None):
             continue
         files.extend(directory.glob("v*-page-*.png"))
         files.extend(directory.glob("v*-image-*"))
+        files.extend(directory.glob('document-*-page-*.png'))
     total = sum(file.stat().st_size for file in files if file.is_file())
     for file in sorted(files,key=lambda file:file.stat().st_mtime):
         if total<=limit:
@@ -275,9 +295,9 @@ def save_note(db, session_id, text,anchor_ms=None):
 
 
 def list_materials(db, session_id):
-    session(db,session_id)
+    owner=session(db,session_id)
     assets = []
-    for row in db.execute("SELECT a.* FROM assets a JOIN session_assets sa ON sa.asset_id=a.id WHERE sa.session_id=? ORDER BY a.created_at",(session_id,)):
+    for row in db.execute("SELECT a.* FROM assets a WHERE a.id IN (SELECT asset_id FROM session_assets WHERE session_id=? UNION SELECT asset_id FROM course_assets WHERE course_id=?) ORDER BY a.created_at",(session_id,owner['course_id'])):
         item = public_asset(db,dict(row))
         assets.append(item)
     note = db.execute("SELECT text,version,source_id,anchor_ms FROM notes WHERE session_id=? ORDER BY version DESC LIMIT 1",(session_id,)).fetchone()

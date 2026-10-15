@@ -3,7 +3,7 @@ import json
 import re
 from pydantic import Field,ValidationError
 from typing import Literal
-from .db import new_id,now,session
+from .db import new_id,now,session,course
 from contextlib import nullcontext
 from pathlib import Path
 from .models import Input,Evidence,AIRequest,Scope,SourceRef
@@ -212,7 +212,8 @@ def cached_summary_parts(db,job_id):
     from .jobs import get_job
     job=get_job(db,job_id)
     if job['kind']!='ai' or job['request'].get('request',{}).get('kind')!='summary':raise ValueError('요약 작업이 아닙니다')
-    session(db,job['session_id'])
+    if job['session_id']:session(db,job['session_id'])
+    else:course(db,job['course_id'])
     if 'summary_parts' not in job['request']:return {'parts':[],'total_parts':0,'evidence':[]}
     _,evidence=checked_evidence(db,job['request']);parts=job['request']['summary_parts'];result=[]
     for saved in db.execute('SELECT part_no,body FROM artifact_parts WHERE job_id=? AND part_no>=0 ORDER BY part_no',(job_id,)):
@@ -478,7 +479,7 @@ def edit_artifact(db,ident,body,confirmed):
 
 
 def export_markdown(db,ident):
-    saved=public_artifact(db,ident);lines=['# '+session(db,saved['session_id'])['title'],'','상태: '+('사용자 확인됨' if saved['confirmed'] else '사용자 편집·미확인' if saved['edited'] else 'AI 초안·미확인'),'모델: '+saved['metadata']['model'],'']
+    saved=public_artifact(db,ident);owner=session(db,saved['session_id']) if saved['session_id'] else course(db,saved['course_id']);lines=['# '+owner['title'],'','상태: '+('사용자 확인됨' if saved['confirmed'] else '사용자 편집·미확인' if saved['edited'] else 'AI 초안·미확인'),'모델: '+saved['metadata']['model'],'']
     if saved['kind']=='minutes':
         for key,title in (('topics','주제별 요약'),('decisions','결정 사항'),('unresolved','미결 사항'),('actions','후속 할 일')):
             lines.extend(['## '+title,''])
@@ -520,16 +521,28 @@ class Vision(Input):
 
 
 def image_evidence(db,request):
-    from .retrieval import scope_ids
-    from .materials import asset_dir,original_path
+    from .retrieval import ref_in_scope,scope_course
+    from .materials import asset_dir
+    from .course_materials import current_document
     row=db.execute('SELECT ref FROM sources WHERE id=? AND deleted=0',(request.image_id,)).fetchone()
     if not row: raise KeyError('그림 출처를 찾을 수 없습니다')
     ref=SourceRef.model_validate_json(row[0])
-    ids=scope_ids(db,request.scope)
-    if ref.kind!='material' or not ref.asset_id or not db.execute('SELECT 1 FROM session_assets WHERE asset_id=? AND session_id IN (SELECT value FROM json_each(?))',(ref.asset_id,json.dumps(ids))).fetchone(): raise ValueError('범위 밖의 그림입니다')
+    if ref.kind!='material' or not ref.asset_id or not ref_in_scope(db,ref,request.scope):raise ValueError('범위 밖의 그림입니다')
     _,asset=asset_dir(db,ref.asset_id)
-    if asset['version']!=ref.version: raise ValueError('그림 버전이 변경되었습니다. 다시 선택하세요')
-    original_path(db,asset)
+    _,_,inspected=current_document(db,ref.asset_id)
+    if ref.document_sha256:
+        if inspected['sha256']!=ref.document_sha256:raise ValueError('원본 문서가 변경되었습니다. 페이지를 다시 선택하세요')
+        saved=db.execute('SELECT metadata FROM asset_documents WHERE asset_id=? AND sha256=?',(ref.asset_id,ref.document_sha256)).fetchone()
+        managed=json.loads(saved[0]) if saved else {}
+        if not any(p['ref']['id']==ref.id for p in managed.get('pages',[])):raise ValueError('관리된 페이지를 선택하세요')
+        evidence=[Evidence(ref=ref,text='',label=asset['filename']+' · '+str(ref.page)+'쪽')]
+        extraction=json.loads(asset['extraction'] or '{}')
+        page=next((p for p in extraction.get('pages',[]) if p['page']==ref.page),None) if asset['extraction_sha256']==ref.document_sha256 else None
+        if page:evidence.append(Evidence(ref=SourceRef.model_validate(page['ref']),text=page['text'],label=asset['filename']+' · 주변 OCR'))
+        note=db.execute('SELECT s.ref,s.text_snapshot FROM page_documents d JOIN page_document_revisions r ON r.document_id=d.id AND r.revision=d.revision JOIN sources s ON s.id=r.source_id WHERE d.course_id=? AND d.asset_id=? AND d.document_sha256=? AND d.page=?',(scope_course(db,request.scope),ref.asset_id,ref.document_sha256,ref.page)).fetchone()
+        if note and note['text_snapshot'].strip():evidence.append(Evidence(ref=SourceRef.model_validate_json(note['ref']),text=note['text_snapshot'],label=asset['filename']+' · 페이지 메모'))
+        return evidence,ref,None
+    if asset['version']!=ref.version or inspected['sha256']!=asset['extraction_sha256']: raise ValueError('그림 버전이 변경되었습니다. 다시 선택하세요')
     if asset['kind'] not in ('pdf','png','jpg'): raise ValueError('이미지 또는 PDF 페이지를 선택하세요')
     extraction=json.loads(asset['extraction'] or '{}');page=next((p for p in extraction.get('pages',[]) if p['page']==ref.page),None)
     if not page: raise ValueError('페이지 추출 정보가 없습니다')
@@ -542,19 +555,20 @@ def image_evidence(db,request):
 
 
 async def explain_image(db,frozen,job_id,*,runtime_dir,**kwargs):
-    from .materials import render_page,render_image,asset_dir,original_path,prune_cache
+    from .materials import render_page,render_image,asset_dir,material_sha256,prune_cache
     request,evidence=checked_evidence(db,frozen)
     status=await model_status(request.provider,**kwargs)
     if not status['vision']: raise ValueError('선택한 모델은 이미지 입력을 지원하지 않습니다. OCR 텍스트 질문은 사용할 수 있습니다')
     request=request.model_copy(update={'provider':request.provider.model_copy(update={'vision':True})})
     _,ref,image_id=image_evidence(db,request)
-    path=await render_image(db,ref.asset_id,image_id,runtime_dir) if image_id is not None else await render_page(db,ref.asset_id,ref.page,runtime_dir)
+    _,asset=asset_dir(db,ref.asset_id)
+    path=await render_image(db,ref.asset_id,image_id,runtime_dir) if image_id is not None else await render_page(db,ref.asset_id,ref.page,runtime_dir,material_sha256(asset,ref))
     try:
         messages=output_messages(request,evidence,VISION_INSTRUCTION);schema=evidence_schema(VISION_SCHEMA,evidence);check_budget(request.provider,messages,schema)
         result=await generate(request.provider,messages,[path],schema,**kwargs)
         body=parsed(Vision,result.text);check_ids(body['evidence_ids'],evidence)
         if ref.id not in body['evidence_ids']: raise ValueError('선택 이미지의 인용이 없습니다')
-        checked_evidence(db,frozen);_,asset=asset_dir(db,ref.asset_id);original_path(db,asset)
+        checked_evidence(db,frozen);image_evidence(db,request)
         body['label']='AI 해석';metadata=metadata_for(request,frozen,result,'vision');metadata['image_ref']=ref.model_dump()
         return save_artifact(db,job_id,body,evidence,metadata)
     finally:

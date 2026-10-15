@@ -2,9 +2,10 @@ import json
 import re
 import shutil
 from pathlib import Path
+from fastapi import HTTPException
 from .db import data_dir,session
 from .models import SourceRef
-from .materials import source_status
+from .materials import source_status,material_sha256
 from .audio import get_recording,recording_path
 from .transcription import external_audio_path
 
@@ -14,6 +15,9 @@ def cleanup_files(db):
     for task in db.execute("SELECT * FROM file_cleanup").fetchall():
         try:
             if task["kind"] not in ("audio","assets") or not re.fullmatch("[a-f0-9]{32}",task["resource_id"]): raise ValueError("관리 경로가 유효하지 않습니다")
+            if task['kind']=='assets' and db.execute('SELECT 1 FROM course_assets WHERE asset_id=? UNION ALL SELECT 1 FROM page_documents WHERE asset_id=? LIMIT 1',(task['resource_id'],task['resource_id'])).fetchone():
+                with db:db.execute('DELETE FROM file_cleanup WHERE kind=? AND resource_id=?',(task['kind'],task['resource_id']))
+                continue
             path=root/task["kind"]/task["resource_id"]
             if not path.parent.resolve().is_relative_to(root): raise ValueError("관리 경로 밖의 파일입니다")
             if path.is_symlink(): path.unlink()
@@ -45,8 +49,9 @@ def delete_session(db,sid,confirmed):
         db.execute("UPDATE sources SET deleted=1,text_snapshot='' WHERE json_extract(ref,'$.session_id')=?",(sid,))
         db.execute("DELETE FROM session_assets WHERE session_id=?",(sid,))
         for aid in assets:
-            if not db.execute("SELECT 1 FROM session_assets WHERE asset_id=?",(aid,)).fetchone():
+            if not db.execute("SELECT 1 FROM session_assets WHERE asset_id=? UNION ALL SELECT 1 FROM course_assets WHERE asset_id=? UNION ALL SELECT 1 FROM page_documents WHERE asset_id=? LIMIT 1",(aid,aid,aid)).fetchone():
                 db.execute("UPDATE sources SET deleted=1,text_snapshot='' WHERE json_extract(ref,'$.asset_id')=?",(aid,))
+                db.execute('DELETE FROM asset_documents WHERE asset_id=?',(aid,))
                 db.execute("DELETE FROM assets WHERE id=?",(aid,))
                 db.execute("INSERT OR IGNORE INTO file_cleanup(kind,resource_id) VALUES ('assets',?)",(aid,))
         deleted={row[0] for row in db.execute('SELECT id FROM sources WHERE deleted=1')}
@@ -107,16 +112,30 @@ def resolve_source(db,ref):
     actual=SourceRef.model_validate_json(saved["ref"])
     result={"status":"deleted" if saved["deleted"] else "current","ref":actual.model_dump(),"text_snapshot":saved["text_snapshot"],"open_url":None,"seek_seconds":None,"end_seconds":None}
     if saved["deleted"]: return result
-    if actual.kind=="material":
+    if actual.kind in ('material','page_note'):
         asset=db.execute("SELECT * FROM assets WHERE id=?",(actual.asset_id,)).fetchone()
         if not asset: result["status"]="deleted";return result
         original=source_status(db,dict(asset))
+        digest=material_sha256(asset,actual)
+        if digest:
+            from .course_materials import current_document
+            try:
+                _,_,inspected=current_document(db,actual.asset_id)
+                original='current' if inspected['sha256']==digest else 'changed'
+            except (HTTPException,OSError,ValueError):original='missing'
+        elif original=='current':original='changed'
         result["original_status"]=original
-        if original=="missing": result["status"]="deleted"
-        elif original!="current" or actual.version!=asset["version"]: result["status"]="changed"
-        if result["status"]=="current":
-            result["open_url"]="/api/assets/"+actual.asset_id+"/original"+("#page="+str(actual.page) if asset["kind"]=="pdf" and actual.page else "")
-            if actual.page and asset["kind"] in ("pdf","png","jpg"): result["image_url"]="/api/assets/"+actual.asset_id+"/pages/"+str(actual.page)
+        if original=="missing": result["status"]="changed" if actual.document_sha256 else "deleted"
+        elif original!="current" or not actual.document_sha256 and actual.version!=asset["version"]: result["status"]="changed"
+        if actual.kind=='page_note':
+            document=db.execute('SELECT revision FROM page_documents WHERE id=?',(actual.document_id,)).fetchone()
+            if not document:result['status']='deleted';return result
+            if document['revision']!=actual.version:result['status']='changed'
+            result['document_url']=f'/api/courses/{actual.course_id}/assets/{actual.asset_id}/pages/{actual.page}/document?document_sha256={actual.document_sha256}&revision={actual.version}'
+        if result["status"]=="current" or actual.kind=='page_note' and original=='current':
+            query='?document_sha256='+digest if digest else ''
+            result["open_url"]="/api/assets/"+actual.asset_id+"/original"+query+("#page="+str(actual.page) if asset["kind"]=="pdf" and actual.page else "")
+            if actual.page and asset["kind"] in ("pdf","png","jpg"): result["image_url"]="/api/assets/"+actual.asset_id+"/pages/"+str(actual.page)+query
     elif actual.kind in ("note","transcript"):
         if not db.execute("SELECT 1 FROM sessions WHERE id=? AND deleted=0",(actual.session_id,)).fetchone(): result["status"]="deleted";return result
         if actual.kind=="note":

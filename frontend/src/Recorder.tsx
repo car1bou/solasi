@@ -2,14 +2,14 @@ import React,{useEffect,useRef,useState} from 'react';
 import {RecordingCapture} from './recording-capture';
 import type {RecordingState,TranscriptionMode} from './recording-capture';
 
-export default function Recorder({sessionId}:{sessionId:string}){
+export default function Recorder({sessionId,onActiveChange}:{sessionId:string;onActiveChange?:(active:boolean)=>void}){
   const [state,setState]=useState<RecordingState>({phase:'idle',seconds:0,pending:0,error:'',recovered:false});
   const [mode,setMode]=useState<TranscriptionMode>('after_stop');
   const active=useRef<RecordingCapture|null>(null),mounted=useRef(true);
   useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;void active.current?.stop(true);active.current=null;};},[sessionId]);
   function start(){
-    const capture=new RecordingCapture(sessionId,next=>{if(mounted.current&&active.current===capture){setState(next);if(next.phase==='idle')active.current=null;}},mode);
-    active.current=capture;void capture.start();
+    const capture=new RecordingCapture(sessionId,next=>{if(mounted.current&&active.current===capture){setState(next);if(next.phase==='idle'){active.current=null;onActiveChange?.(false);}}},mode);
+    active.current=capture;onActiveChange?.(true);void capture.start();
   }
   const {phase,seconds,pending,error,recovered}=state;
   return <section className="card recorder">

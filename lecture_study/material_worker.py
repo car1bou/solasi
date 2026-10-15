@@ -1,4 +1,6 @@
 import sys
+import subprocess
+import tempfile
 from pathlib import Path
 from .materials import Extraction, PageContent, normalize_result
 from .models import SourceRef
@@ -8,6 +10,32 @@ def main():
     mode, source, output, runtime, ident, version, kind, *rest = sys.argv[1:]
     version = int(version)
     source,output,runtime = Path(source),Path(output),Path(runtime)
+    if mode=='metadata':
+        if sys.platform!='darwin':raise ValueError('원본 페이지 정보는 현재 Mac에서 지원합니다')
+        script='''import Foundation
+import PDFKit
+import AppKit
+let url = URL(fileURLWithPath: CommandLine.arguments.last!)
+var pages: [[String: Any]] = []
+if let document = PDFDocument(url: url) {
+    guard !document.isLocked else { exit(2) }
+    for index in 0..<document.pageCount {
+        guard let page = document.page(at: index) else { exit(3) }
+        let bounds = page.bounds(for: .cropBox)
+        let rotation = (page.rotation % 360 + 360) % 360
+        let sideways = rotation == 90 || rotation == 270
+        pages.append(["page": index + 1, "width": sideways ? bounds.height : bounds.width, "height": sideways ? bounds.width : bounds.height, "rotation": rotation])
+    }
+} else if let data = try? Data(contentsOf: url), let image = NSBitmapImageRep(data: data) {
+    pages.append(["page": 1, "width": image.pixelsWide, "height": image.pixelsHigh, "rotation": 0])
+} else { exit(4) }
+guard !pages.isEmpty else { exit(5) }
+FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: pages))
+'''
+        cache=Path(tempfile.gettempdir())/'solasi-swift-module-cache'
+        result=subprocess.run(['/usr/bin/swift','-module-cache-path',str(cache),'-e',script,str(source)],capture_output=True,timeout=90,check=True)
+        output.write_bytes(result.stdout)
+        return
     if mode=="parse" and kind in ("txt","md"):
         text = source.read_text(encoding="utf-8-sig")
         ref = SourceRef(id=f"{ident}:v{version}:page:1",kind="material",asset_id=ident,version=version,page=1)

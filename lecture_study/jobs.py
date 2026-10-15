@@ -1,6 +1,6 @@
 import asyncio
 import json
-from .db import new_id, now, session
+from .db import new_id, now, session,course
 
 
 async def wait_for_transcription(db,job_id):
@@ -36,13 +36,15 @@ def active_candidate(db,sid,exclude=None):
     return None
 
 
-def submit_job(db, session_id, kind, request, retry_job_id=None):
+def submit_job(db, session_id, kind, request, retry_job_id=None,course_id=None):
+    if session_id and course_id:raise ValueError('회차 또는 과목 한 곳을 지정하세요')
     if session_id is not None:session(db,session_id)
+    if course_id is not None:course(db,course_id)
     if kind=='ai' and request.get('request',{}).get('kind')=='candidates' and active_candidate(db,session_id,retry_job_id):
         raise ValueError('이 기록의 질문 후보 추출이 이미 진행 중입니다')
     if retry_job_id:
         old = get_job(db,retry_job_id)
-        if old["session_id"]!=session_id or old["kind"]!=kind or old["request"]!=request:
+        if old["session_id"]!=session_id or old['course_id']!=course_id or old["kind"]!=kind or old["request"]!=request:
             raise ValueError("재시도 작업이 일치하지 않습니다")
         if old["status"] not in ("failed","cancelled","interrupted"):
             return old
@@ -51,8 +53,8 @@ def submit_job(db, session_id, kind, request, retry_job_id=None):
         return get_job(db,retry_job_id)
     ident = new_id()
     with db:
-        db.execute("INSERT INTO jobs(id,session_id,kind,status,request,created_at,updated_at) VALUES (?,?,?,'queued',?,?,?)",
-                   (ident,session_id,kind,json.dumps(request,ensure_ascii=False),now(),now()))
+        db.execute("INSERT INTO jobs(id,session_id,course_id,kind,status,request,created_at,updated_at) VALUES (?,?,?,?,'queued',?,?,?)",
+                   (ident,session_id,course_id,kind,json.dumps(request,ensure_ascii=False),now(),now()))
     return get_job(db,ident)
 
 

@@ -19,8 +19,9 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from .config import AppConfig,acquire_data_lock
 from .runtime import probe_runtime,prepare_runtime,component_status
-from .db import open_db, now, new_id, create_session, session
-from .models import CourseInput, SessionInput, Input
+from .db import open_db, now, new_id, create_session, session,course
+from .models import CourseInput, SessionInput, Input,OwnerInput,PageDocumentInput
+from .course_materials import list_course_materials,linked_asset,document_metadata,page_document,save_page_document,checked_document_path
 from .file_access import select_files
 from .materials import render_image, prune_cache, inspect_file, register_file, public_asset, original_path, ingest_asset, render_page, asset_dir, save_note, list_materials
 from .jobs import submit_job, get_job, launch_job,wait_for_transcription
@@ -132,6 +133,12 @@ def create_app(config: AppConfig) -> FastAPI:
                 return JSONResponse({"detail": "요청 origin을 확인할 수 없습니다"}, status_code=403)
             if request.url.path != "/api/bootstrap" and not token_matches(request.headers.get("x-session-token", ""), app.state.csrf):
                 return JSONResponse({"detail": "요청 토큰이 유효하지 않습니다"}, status_code=403)
+        if request.method=='PUT' and '/pages/' in request.url.path and request.url.path.endswith('/document'):
+            body=bytearray()
+            async for chunk in request.stream():
+                if len(body)+len(chunk)>10*1024*1024:return JSONResponse({'detail':'페이지 문서는 10 MiB까지 전송할 수 있습니다'},status_code=413)
+                body.extend(chunk)
+            request._body=bytes(body)
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
@@ -339,8 +346,7 @@ def create_app(config: AppConfig) -> FastAPI:
         finally:
             if provider=='ollama' and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
 
-    class AIInput(Input):
-        session_id:str
+    class AIInput(OwnerInput):
         kind:str=Field(default='answer')
         prompt:str=Field(min_length=1,max_length=10000)
         scope:Scope
@@ -374,7 +380,7 @@ def create_app(config: AppConfig) -> FastAPI:
         try: request=AIRequest(**body.model_dump(),provider=provider_config())
         except ValidationError: raise ValueError('생성 요청을 확인하세요') from None
         frozen=await freeze_request(db,request) if request.kind=='vision' else {'request':request.model_dump(),'snapshot':capture_request(db,request)}
-        return launch_ai(submit_job(db,body.session_id,'ai',frozen))
+        return launch_ai(submit_job(db,body.session_id,'ai',frozen,course_id=body.course_id))
 
     @app.get('/api/artifacts/{ident}')
     async def artifact(ident:str):
@@ -538,7 +544,7 @@ def create_app(config: AppConfig) -> FastAPI:
         selected=selected.model_copy(update={'vision':status['vision']})
         frozen=old['request'];frozen['request']['provider']=selected.model_dump()
         with db: db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(frozen,ensure_ascii=False),ident))
-        return launch_ai(submit_job(db,old['session_id'],'ai',frozen,ident))
+        return launch_ai(submit_job(db,old['session_id'],'ai',frozen,ident,course_id=old['course_id']))
 
     class SearchInput(Input):
         query: str = Field(min_length=1,max_length=2000)
@@ -613,6 +619,33 @@ def create_app(config: AppConfig) -> FastAPI:
             db.execute("INSERT INTO courses VALUES (?,?,?,?)", (ident,body.title,body.description,now()))
         return dict(db.execute("SELECT * FROM courses WHERE id=?", (ident,)).fetchone())
 
+    @app.get('/api/courses/{ident}/materials')
+    async def materials_for_course(ident:str):
+        return list_course_materials(db,ident)
+
+    @app.get('/api/courses/{ident}/jobs')
+    async def course_jobs(ident:str):
+        course(db,ident)
+        return [get_job(db,row[0]) for row in db.execute('SELECT id FROM jobs WHERE course_id=? ORDER BY created_at DESC',(ident,))]
+
+    @app.get('/api/courses/{ident}/artifacts')
+    async def course_artifacts(ident:str):
+        course(db,ident)
+        return [public_artifact(db,row[0]) for row in db.execute('SELECT id FROM artifacts WHERE course_id=? ORDER BY created_at DESC',(ident,))]
+
+    @app.get('/api/courses/{ident}/terms')
+    async def course_terms(ident:str):
+        return list_terms(db,Scope(course_id=ident))
+
+    @app.post('/api/courses/{ident}/search')
+    async def search_course(ident:str,body:SearchInput):
+        if body.scope.course_id!=ident:raise ValueError('검색 과목이 일치하지 않습니다')
+        if app.state.ollama_url and index_status(db)['ready']:
+            job=submit_job(db,None,'search',body.model_dump()|{'snapshot':capture_search(db,body.scope,None)},course_id=ident)
+            launch_search(job)
+            return JSONResponse(job,status_code=202)
+        async with local_embedding_client() as client:return await retrieve(db,body.query,body.scope,None,client=client)
+
     @app.get("/api/sessions")
     async def sessions():
         return [dict(row) for row in db.execute("SELECT * FROM sessions WHERE deleted=0 ORDER BY started_at DESC")]
@@ -635,38 +668,55 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post("/api/sessions/{ident}/files/select",status_code=201)
     async def connect_files(ident: str):
         session(db,ident)
+        return await connect_owner_files(session_id=ident)
+
+    @app.post('/api/courses/{ident}/files/select',status_code=201)
+    async def connect_course_files(ident:str):
+        course(db,ident)
+        return await connect_owner_files(course_id=ident)
+
+    async def connect_owner_files(session_id=None,course_id=None):
         async with app.state.file_selection:
             paths = await select_files(config.runtime_dir)
         result = []
         for path in paths:
             inspected = await asyncio.to_thread(inspect_file,path)
-            asset = register_file(db,ident,inspected)
+            asset = register_file(db,session_id,inspected,course_id)
             job = None
             if asset["status"] not in ("ready","partial") or public_asset(db,asset)["source_status"]!="current":
-                job = submit_job(db,ident,"parse",{"asset_id":asset["id"]})
+                job = submit_job(db,session_id,"parse",{"asset_id":asset["id"]},course_id=course_id)
                 launch_job(app,job,lambda ident=asset["id"]:parse_asset(ident))
             result.append({"asset":public_asset(db,asset),"job":job})
         return result
 
     @app.post("/api/sessions/{ident}/assets/{asset_id}", status_code=201)
     async def link_asset(ident: str, asset_id: str):
-        session(db,ident)
+        owner=session(db,ident)
         asset_dir(db,asset_id)
         with db:
             db.execute("INSERT OR IGNORE INTO session_assets VALUES (?,?)",(ident,asset_id))
+            if owner['course_id']:db.execute('INSERT OR IGNORE INTO course_assets VALUES (?,?)',(owner['course_id'],asset_id))
         return {"linked":True}
 
 
     @app.post("/api/sessions/{ident}/assets/{asset_id}/extract",status_code=201)
     async def reextract(ident: str,asset_id: str):
-        session(db,ident)
-        if not db.execute("SELECT 1 FROM session_assets WHERE session_id=? AND asset_id=?",(ident,asset_id)).fetchone():
+        owner=session(db,ident)
+        if not db.execute("SELECT 1 FROM session_assets WHERE session_id=? AND asset_id=? UNION ALL SELECT 1 FROM course_assets WHERE course_id=? AND asset_id=?",(ident,asset_id,owner['course_id'],asset_id)).fetchone():
             raise KeyError("연결된 자료가 아닙니다")
-        for row in db.execute("SELECT id FROM jobs WHERE session_id=? AND kind='parse' AND status IN ('queued','running')",(ident,)):
+        return queue_extraction(asset_id,session_id=ident)
+
+    @app.post('/api/courses/{ident}/assets/{asset_id}/extract',status_code=201)
+    async def reextract_course(ident:str,asset_id:str):
+        linked_asset(db,ident,asset_id)
+        return queue_extraction(asset_id,course_id=ident)
+
+    def queue_extraction(asset_id,session_id=None,course_id=None):
+        for row in db.execute("SELECT id FROM jobs WHERE kind='parse' AND status IN ('queued','running')"):
             old = get_job(db,row["id"])
             if old["request"]["asset_id"]==asset_id:
                 return old
-        job = submit_job(db,ident,"parse",{"asset_id":asset_id})
+        job = submit_job(db,session_id,"parse",{"asset_id":asset_id},course_id=course_id)
         launch_job(app,job,lambda:parse_asset(asset_id))
         return job
 
@@ -675,15 +725,28 @@ def create_app(config: AppConfig) -> FastAPI:
         return list_materials(db,ident)
 
     @app.get("/api/assets/{ident}/pages/{page}")
-    async def page_image(ident: str, page: int):
+    async def page_image(ident: str, page: int,document_sha256:str|None=None):
         async with app.state.parse_lock:
-            path = await render_page(db,ident,page,config.runtime_dir)
+            path = await render_page(db,ident,page,config.runtime_dir,document_sha256)
         return cached_image(path,"image/png")
 
+    @app.get('/api/assets/{ident}/document')
+    async def asset_document(ident:str):
+        async with app.state.parse_lock:return await document_metadata(db,ident,config.runtime_dir)
+
+    @app.get('/api/courses/{ident}/assets/{asset_id}/pages/{page}/document')
+    async def get_page_document(ident:str,asset_id:str,page:int,document_sha256:str,revision:int|None=None):
+        return page_document(db,ident,asset_id,page,document_sha256,revision)
+
+    @app.put('/api/courses/{ident}/assets/{asset_id}/pages/{page}/document')
+    async def put_page_document(ident:str,asset_id:str,page:int,body:PageDocumentInput):
+        return save_page_document(db,ident,asset_id,page,body)
+
     @app.get("/api/assets/{ident}/original")
-    async def original_material(ident: str):
+    async def original_material(ident: str,document_sha256:str|None=None):
         folder,asset = asset_dir(db,ident)
-        return FileResponse(original_path(db,asset),filename=asset["filename"],media_type={"pdf":"application/pdf","png":"image/png","jpg":"image/jpeg","txt":"text/plain; charset=utf-8","md":"text/plain; charset=utf-8"}[asset["kind"]],content_disposition_type="inline")
+        source=checked_document_path(db,ident,document_sha256) if document_sha256 else original_path(db,asset)
+        return FileResponse(source,filename=asset["filename"],media_type={"pdf":"application/pdf","png":"image/png","jpg":"image/jpeg","txt":"text/plain; charset=utf-8","md":"text/plain; charset=utf-8"}[asset["kind"]],content_disposition_type="inline")
 
     def cached_image(path,media_type):
         handle = path.open("rb")
@@ -739,11 +802,11 @@ def create_app(config: AppConfig) -> FastAPI:
             kick_transcription()
             return job
         if old['kind']=='ai':
-            job=submit_job(db,old['session_id'],'ai',old['request'],ident)
+            job=submit_job(db,old['session_id'],'ai',old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks: launch_ai(job)
             return job
         if old['kind'] in ('grade','search'):
-            job=submit_job(db,old['session_id'],old['kind'],old['request'],ident)
+            job=submit_job(db,old['session_id'],old['kind'],old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks:
                 (launch_grade if old['kind']=='grade' else launch_search)(job)
             return job
@@ -754,7 +817,7 @@ def create_app(config: AppConfig) -> FastAPI:
             return job
         if old["kind"]!="parse":
             raise ValueError("재시도할 수 없는 작업입니다")
-        job = submit_job(db,old["session_id"],old["kind"],old["request"],ident)
+        job = submit_job(db,old["session_id"],old["kind"],old["request"],ident,course_id=old['course_id'])
         if job["status"]=="queued" and ident not in app.state.job_tasks:
             launch_job(app,job,lambda:parse_asset(old["request"]["asset_id"]))
         return job

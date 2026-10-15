@@ -6,7 +6,7 @@ import struct
 import sqlite3
 from contextlib import closing
 import unicodedata
-from .db import now,new_id,session,data_dir
+from .db import now,new_id,session,data_dir,course
 from .models import Scope,SourceRef,Evidence,SearchResult
 
 
@@ -15,7 +15,7 @@ def normalize(text):
 
 
 def index_source(db,ref,text):
-    if ref.kind not in ('material','note','transcript') or not text.strip(): return
+    if ref.kind not in ('material','note','page_note','transcript') or not text.strip(): return
     saved=db.execute('SELECT ref,text_snapshot FROM sources WHERE id=? AND deleted=0',(ref.id,)).fetchone()
     if not saved or SourceRef.model_validate_json(saved['ref'])!=ref or saved['text_snapshot']!=text:
         raise ValueError('출처 스냅샷이 일치하지 않습니다')
@@ -38,6 +38,9 @@ def backfill_sources(db):
 
 
 def scope_ids(db,scope):
+    if scope.course_id:
+        course(db,scope.course_id)
+        return []
     owner=session(db,scope.session_id)
     ids=[owner['id']]
     if owner['kind']=='lecture' and owner['course_id']:
@@ -50,7 +53,45 @@ def scope_ids(db,scope):
     return ids
 
 
+def scope_course(db,scope):
+    if scope.course_id:
+        course(db,scope.course_id)
+        return scope.course_id
+    return session(db,scope.session_id)['course_id']
+
+
+def scope_assets(db,scope,ids=None):
+    ids=scope_ids(db,scope) if ids is None else ids
+    cid=scope_course(db,scope)
+    assets={r[0] for r in db.execute('SELECT asset_id FROM session_assets WHERE session_id IN (SELECT value FROM json_each(?)) UNION SELECT asset_id FROM course_assets WHERE course_id=?',(json.dumps(ids),cid))}
+    if scope.asset_id:
+        if scope.asset_id not in assets:raise ValueError('범위 밖의 자료입니다')
+        return {scope.asset_id}
+    return assets
+
+
+def ref_in_scope(db,ref,scope,ids=None,assets=None):
+    ids=scope_ids(db,scope) if ids is None else ids
+    assets=scope_assets(db,scope,ids) if assets is None else assets
+    if ref.kind in ('material','page_note'):
+        if ref.asset_id not in assets:return False
+        if ref.kind=='page_note' and ref.course_id!=scope_course(db,scope):return False
+    elif ref.session_id not in ids:return False
+    if scope.asset_id and ref.asset_id!=scope.asset_id:return False
+    if scope.page is not None and ref.page!=scope.page:return False
+    if scope.document_sha256:
+        digest=ref.document_sha256
+        if ref.kind=='material' and not digest:
+            asset=db.execute('SELECT extraction_sha256 FROM assets WHERE id=?',(ref.asset_id,)).fetchone()
+            digest=asset[0] if asset else None
+        if digest!=scope.document_sha256:return False
+    return True
+
+
 def scope_key(db,sid):
+    if isinstance(sid,Scope):
+        if sid.course_id:course(db,sid.course_id);return 'course:'+sid.course_id
+        sid=sid.session_id
     owner=session(db,sid)
     return 'course:'+owner['course_id'] if owner['kind']=='lecture' and owner['course_id'] else 'session:'+sid
 
@@ -75,7 +116,7 @@ def save_term(db,sid,canonical,aliases,explanation,evidence,term_id=None):
     for ref in evidence:
         saved=db.execute('SELECT * FROM sources WHERE id=? AND deleted=0',(ref.id,)).fetchone()
         if not saved or SourceRef.model_validate_json(saved['ref'])!=ref: raise ValueError('근거가 실제 출처와 다릅니다')
-        belongs=ref.session_id in ids if ref.kind in ('note','transcript','web') else ref.kind=='material' and db.execute('SELECT 1 FROM session_assets WHERE asset_id=? AND session_id IN (SELECT value FROM json_each(?))',(ref.asset_id,json.dumps(ids))).fetchone()
+        belongs=ref_in_scope(db,ref,Scope(session_id=sid),ids)
         if not belongs: raise ValueError('범위 밖의 근거입니다')
         checked.append(ref.model_dump())
     if term_id and not db.execute('SELECT 1 FROM terms WHERE id=? AND scope_key=?',(term_id,key)).fetchone(): raise KeyError('개념을 찾을 수 없습니다')
@@ -87,16 +128,30 @@ def save_term(db,sid,canonical,aliases,explanation,evidence,term_id=None):
     return ident
 
 
-def eligible_chunks(db,ids,cutoff,cutoff_session_id=None):
-    rows=db.execute("SELECT * FROM searchable_chunks WHERE json_extract(ref,'$.session_id') IN (SELECT value FROM json_each(?)) OR json_extract(ref,'$.asset_id') IN (SELECT asset_id FROM session_assets WHERE session_id IN (SELECT value FROM json_each(?)))",(json.dumps(ids),json.dumps(ids))).fetchall()
-    return [dict(row) for row in rows if cutoff is None or json.loads(row['ref'])['kind']!='transcript' or cutoff_session_id is not None and json.loads(row['ref'])['session_id']!=cutoff_session_id or json.loads(row['ref'])['end_ms']<=cutoff]
+def eligible_chunks(db,ids,cutoff,cutoff_session_id=None,scope=None):
+    if scope is None:
+        if not ids:return []
+        scope=Scope(session_id=ids[0])
+    assets=scope_assets(db,scope,ids)
+    rows=db.execute("SELECT * FROM searchable_chunks WHERE json_extract(ref,'$.session_id') IN (SELECT value FROM json_each(?)) OR json_extract(ref,'$.asset_id') IN (SELECT value FROM json_each(?))",(json.dumps(ids),json.dumps(list(assets)))).fetchall()
+    result=[]
+    for row in rows:
+        ref=SourceRef.model_validate_json(row['ref'])
+        if not ref_in_scope(db,ref,scope,ids,assets):continue
+        if cutoff is not None and ref.kind=='transcript' and (cutoff_session_id is None or ref.session_id==cutoff_session_id) and ref.end_ms>cutoff:continue
+        result.append(dict(row))
+    return result
 
 
-def label_for(db,ref,ids):
-    if ref.kind=='material':
+def label_for(db,ref,ids,course_id=None):
+    if ref.kind in ('material','page_note'):
         asset=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone()
         owner=db.execute('SELECT s.title,s.lecture_no FROM sessions s JOIN session_assets sa ON s.id=sa.session_id WHERE sa.asset_id=? AND s.id IN (SELECT value FROM json_each(?)) ORDER BY s.lecture_no,s.started_at LIMIT 1',(ref.asset_id,json.dumps(ids))).fetchone()
+        if course_id:owner=db.execute('SELECT title,NULL AS lecture_no FROM courses WHERE id=?',(course_id,)).fetchone()
+        if ref.course_id:owner=db.execute('SELECT title,NULL AS lecture_no FROM courses WHERE id=?',(ref.course_id,)).fetchone()
+        if owner is None:owner=db.execute('SELECT c.title,NULL AS lecture_no FROM courses c JOIN course_assets ca ON ca.course_id=c.id WHERE ca.asset_id=? ORDER BY c.created_at LIMIT 1',(ref.asset_id,)).fetchone()
         tail=(asset[0] if asset else '자료')+((' · '+str(ref.page)+'쪽') if ref.page else '')
+        if ref.kind=='page_note':tail+=' · 페이지 메모'
     else:
         owner=db.execute('SELECT title,lecture_no FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
         tail='노트' if ref.kind=='note' else str(ref.start_ms//60000)+':'+str(ref.start_ms//1000%60).zfill(2)
@@ -144,7 +199,7 @@ def diverse_evidence(evidence,limit):
     return (unique+deferred)[:limit]
 
 
-def collect_evidence(db,ranked,rows,ids,limit):
+def collect_evidence(db,ranked,rows,ids,limit,course_id=None):
     by_id={row['id']:row for row in rows};selected={};by_source={}
     for row in rows: by_source.setdefault(row['source_id'],{})[row['ordinal']]=row
     for ident in ranked:
@@ -156,7 +211,7 @@ def collect_evidence(db,ranked,rows,ids,limit):
     result=[]
     for source,chunks in selected.items():
         row=next(iter(by_source[source].values()));ref=SourceRef.model_validate_json(row['ref'])
-        result.append(Evidence(ref=ref,text='\n\n'.join(chunks[n] for n in sorted(chunks)),label=label_for(db,ref,ids)))
+        result.append(Evidence(ref=ref,text='\n\n'.join(chunks[n] for n in sorted(chunks)),label=label_for(db,ref,ids,course_id)))
     return diverse_evidence(result,limit)
 
 
@@ -232,7 +287,7 @@ async def rebuild_embeddings(db,model,client,job_id=None):
                     with db: db.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps({'paused_reason':'녹음·전사 중 · 색인 대기','completed_chunks':i,'total_chunks':len(rows)},ensure_ascii=False),job_id))
                 await asyncio.sleep(.5)
             ref=SourceRef.model_validate_json(row['ref'])
-            title=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone() if ref.kind=='material' else db.execute('SELECT title FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
+            title=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone() if ref.kind in ('material','page_note') else db.execute('SELECT title FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
             parts=await embed_parts(client,model,row['text'],title[0] if title else '')
             for part in parts:
                 dim=dim or len(part)
@@ -268,11 +323,12 @@ def semantic_rank(db,index,rows,query_vectors,limit):
 
 def capture_search(db,scope,cutoff_ms):
     ids=scope_ids(db,scope)
-    return {'session_ids':ids,'chunk_ids':[r['id'] for r in eligible_chunks(db,ids,cutoff_ms,scope.session_id)]}
+    return {'session_ids':ids,'course_id':scope_course(db,scope),'chunk_ids':[r['id'] for r in eligible_chunks(db,ids,cutoff_ms,scope.session_id,scope)]}
 
 
 def snapshot_rows(db,snapshot):
     for sid in snapshot['session_ids']:session(db,sid)
+    if snapshot.get('course_id'):course(db,snapshot['course_id'])
     rows=[dict(r) for r in db.execute("SELECT c.*,s.ref FROM chunks c JOIN sources s ON s.id=c.source_id WHERE s.deleted=0 AND c.id IN (SELECT value FROM json_each(?))",(json.dumps(snapshot['chunk_ids']),))]
     if len(rows)!=len(snapshot['chunk_ids']):raise ValueError('고정한 근거가 삭제되었습니다. 새 요청을 실행하세요')
     return rows
@@ -282,7 +338,7 @@ async def retrieve(db,query,scope,cutoff_ms,limit=8,client=None,snapshot=None):
     if not query.strip() or len(query)>2000 or not 1<=limit<=32: raise ValueError('검색어와 결과 수를 확인하세요')
     snapshot=snapshot or capture_search(db,scope,cutoff_ms)
     ids=snapshot['session_ids'];rows=snapshot_rows(db,snapshot)
-    ranked=keyword_rank(db,query,scope.session_id,rows,limit);index=index_status(db);warning='로컬 임베딩 연결 필요 · 키워드 검색' if index['ready'] else '의미 검색 준비 전 · 키워드 검색';mode='keyword'
+    ranked=keyword_rank(db,query,scope,rows,limit);index=index_status(db);warning='로컬 임베딩 연결 필요 · 키워드 검색' if index['ready'] else '의미 검색 준비 전 · 키워드 검색';mode='keyword'
     if not rows: warning='검색할 자료·확정 전사 없음'
     if client is not None and index['ready'] and rows:
         try:
@@ -298,4 +354,4 @@ async def retrieve(db,query,scope,cutoff_ms,limit=8,client=None,snapshot=None):
             warning='새 원문은 키워드 검색으로 포함 · 의미 검색 재색인 필요' if index['unindexed_chunks'] else None
         except Exception as exc: warning='의미 검색 실패 · 키워드 검색: '+str(exc)[:200]
     snapshot_rows(db,snapshot)
-    return SearchResult(evidence=collect_evidence(db,ranked,rows,ids,limit),mode=mode,warning=warning)
+    return SearchResult(evidence=collect_evidence(db,ranked,rows,ids,limit,snapshot.get('course_id')),mode=mode,warning=warning)

@@ -1,55 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { api, connect } from './api';
-import type { Course, Session } from './types';
+import React,{useEffect,useState} from 'react';
+import {api,connect} from './api';
+import type {Course,Session} from './types';
 import SessionView from './SessionView';
+import CourseView from './CourseView';
 import Readiness from './Readiness';
 import SettingsView from './SettingsView';
-
-export default function App() {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [error, setError] = useState('');
-  const [ready, setReady] = useState(false);
-  const [settings,setSettings]=useState(false);
-  const [creating, setCreating] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [kind, setKind] = useState<'lecture' | 'meeting'>('lecture');
-  const [title, setTitle] = useState('');
-  const [courseId, setCourseId] = useState('');
-  const [lectureNo, setLectureNo] = useState('1');
-  const [courseTitle, setCourseTitle] = useState('');
-  async function refresh() {
-    const [c, s] = await Promise.all([api<Course[]>('/courses'), api<Session[]>('/sessions')]);
-    setCourses(c); setSessions(s);
-  }
-  useEffect(() => {connect().then(refresh).then(() => setReady(true)).catch(e => setError(e.message));}, []);
-  const session = sessions.find(s => s.id === selected);
-  async function createCourse(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
-    try {const c = await api<Course>('/courses', {method: 'POST', body: JSON.stringify({title: courseTitle})}); setCourseId(c.id); setCourseTitle(''); await refresh();}
-    catch (e) {setError((e as Error).message);} finally {setBusy(false);}
-  }
-  async function createSession(event: React.FormEvent) {
-    event.preventDefault(); setBusy(true); setError('');
-    try {const s = await api<Session>('/sessions', {method: 'POST', body: JSON.stringify({kind, title, course_id: kind === 'lecture' ? courseId || null : null, lecture_no: kind === 'lecture' ? Number(lectureNo) : null})}); await refresh(); setSelected(s.id); setCreating(false);setSettings(false); setTitle('');}
-    catch (e) {setError((e as Error).message);} finally {setBusy(false);}
-  }
-  return <div className="app-shell">
-    <aside className="sidebar"><button className="brand" onClick={() => {setSelected(null);setSettings(false);}}><span className="brand-symbol" aria-hidden="true">◒</span><span>기록실</span></button>
-      <button className="primary new-button" onClick={() => {setCreating(true); setSelected(null);setSettings(false);}} disabled={!ready}>＋ 새 기록</button>
-      <div className="sidebar-label">최근 기록 <span>{sessions.length}</span></div>
-      <nav aria-label="기록 목록">{sessions.map(s => <button key={s.id} className={'session-link ' + (selected === s.id ? 'active' : '')} onClick={() => {setSelected(s.id); setCreating(false);setSettings(false);}}><span className="session-type">{s.kind === 'lecture' ? '수업' : '회의'}</span><span>{s.title}<small>{new Date(s.started_at).toLocaleDateString('ko-KR')}</small></span></button>)}</nav><button className="settings-button" disabled={!ready} onClick={()=>{setSettings(true);setSelected(null);setCreating(false);}}>모델·키 설정</button>
-    </aside>
-    <main>
-      {error && <div className="error-banner" role="alert">{error}<button aria-label="오류 메시지 닫기" onClick={() => setError('')}>×</button></div>}
-      {!ready && !error && <p role="status">연결 중…</p>}
-      {settings ? <SettingsView/> : session ? <SessionView key={session.id} session={session} onDeleted={async(pending)=>{setSelected(null);await refresh();if(pending)setError('일부 앱 파일 정리 대기 · 재실행 시 재시도');}}/> : <div className="home">
-        <div className="section-heading"><h1>기록</h1></div>
-        {creating ? <section className="card creation"><h2>새 기록</h2><form onSubmit={createSession}><div className="segmented"><button type="button" aria-pressed={kind === 'lecture'} onClick={() => setKind('lecture')}>수업</button><button type="button" aria-pressed={kind === 'meeting'} onClick={() => setKind('meeting')}>회의</button></div><label>제목<input value={title} onChange={e => setTitle(e.target.value)} required maxLength={200}/></label>
-          {kind === 'lecture' && <div className="form-row"><label>과목<select value={courseId} onChange={e => setCourseId(e.target.value)}><option value="">미지정</option>{courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label><label>회차<input type="number" min="1" value={lectureNo} onChange={e => setLectureNo(e.target.value)} required/></label></div>}<div className="actions"><button type="button" onClick={() => setCreating(false)}>취소</button><button className="primary" disabled={busy}>기록 만들기</button></div></form></section> : <section className="welcome-grid"><button className="welcome-card" onClick={() => {setKind('lecture');setCreating(true);}} disabled={!ready}><h2>수업</h2></button><button className="welcome-card" onClick={() => {setKind('meeting');setCreating(true);}} disabled={!ready}><h2>회의</h2></button></section>}
-        <section className="card"><div className="subheading"><h2>과목</h2><span className="muted">{courses.length}개</span></div>{courses.length ? <div className="course-list">{courses.map(c => <div key={c.id}><span className="course-icon" aria-hidden="true">▤</span><strong>{c.title}</strong><span className="muted">{sessions.filter(s => s.course_id === c.id).length}개 기록</span></div>)}</div> : null}<form className="inline-form" onSubmit={createCourse}><label className="sr-only" htmlFor="course-title">과목 이름</label><input id="course-title" value={courseTitle} onChange={e => setCourseTitle(e.target.value)} placeholder="과목 이름" required maxLength={200}/><button disabled={!ready || busy}>과목 추가</button></form></section><Readiness/>
-      </div>}
-    </main>
-  </div>;
+export default function App(){
+  const [courses,setCourses]=useState<Course[]>([]),[sessions,setSessions]=useState<Session[]>([]),[selected,setSelected]=useState<string|null>(null),[selectedCourse,setSelectedCourse]=useState<string|null>(null),[recording,setRecording]=useState<string[]>([]),[expanded,setExpanded]=useState<string[]>([]);
+  const [error,setError]=useState(''),[ready,setReady]=useState(false),[settings,setSettings]=useState(false),[creating,setCreating]=useState(false),[busy,setBusy]=useState(false),[kind,setKind]=useState<'lecture'|'meeting'>('lecture'),[title,setTitle]=useState(''),[courseId,setCourseId]=useState(''),[lectureNo,setLectureNo]=useState('1'),[courseTitle,setCourseTitle]=useState('');
+  async function refresh(){const [c,s]=await Promise.all([api<Course[]>('/courses'),api<Session[]>('/sessions')]);setCourses(c);setSessions(s);}
+  useEffect(()=>{connect().then(refresh).then(()=>setReady(true)).catch(e=>setError(e.message));},[]);
+  function home(){setSelected(null);setSelectedCourse(null);setSettings(false);setCreating(false);}
+  function openSession(id:string){setSelected(id);setSelectedCourse(null);setCreating(false);setSettings(false);}
+  function openCourse(id:string){setSelectedCourse(id);setSelected(null);setSettings(false);setCreating(false);setExpanded(current=>current.includes(id)?current:[...current,id]);}
+  function newSession(nextKind:'lecture'|'meeting',cid=''){setKind(nextKind);setCourseId(cid);setTitle('');setLectureNo(String(Math.max(0,...sessions.filter(s=>s.course_id===cid).map(s=>s.lecture_no||0))+1));setCreating(true);setSelected(null);setSelectedCourse(null);setSettings(false);}
+  async function createCourse(event:React.FormEvent){event.preventDefault();setBusy(true);setError('');try{const course=await api<Course>('/courses',{method:'POST',body:JSON.stringify({title:courseTitle})});setCourseTitle('');await refresh();openCourse(course.id);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  async function createSession(event:React.FormEvent){event.preventDefault();setBusy(true);setError('');try{const session=await api<Session>('/sessions',{method:'POST',body:JSON.stringify({kind,title,course_id:kind==='lecture'?courseId||null:null,lecture_no:kind==='lecture'?Number(lectureNo):null})});await refresh();openSession(session.id);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  const course=courses.find(c=>c.id===selectedCourse),visibleSession=!!selected&&!creating&&!settings;
+  function sessionLink(session:Session){return <button key={session.id} className={'session-link '+(selected===session.id?'active':'')} onClick={()=>openSession(session.id)}><span className="session-type">{recording.includes(session.id)?'● 녹음':session.kind==='lecture'?(session.lecture_no?session.lecture_no+'회':'수업'):'회의'}</span><span>{session.title}<small>{new Date(session.started_at).toLocaleDateString('ko-KR')}</small></span></button>;}
+  return <div className="app-shell"><aside className="sidebar"><button className="brand" onClick={home}><span className="brand-symbol" aria-hidden="true">◒</span><span>Solasi</span></button><button className="primary new-button" disabled={!ready} onClick={()=>newSession('lecture',selectedCourse||'')}>＋ 새 기록</button>
+    <div className="sidebar-label">과목 <span>{courses.length}</span></div><nav aria-label="과목 목록" className="course-navigation">{courses.map(row=><div key={row.id} className="sidebar-course"><div className="course-nav-heading"><button className="course-expand" aria-label={row.title+' 강의 목록'} aria-expanded={expanded.includes(row.id)} onClick={()=>setExpanded(current=>current.includes(row.id)?current.filter(id=>id!==row.id):[...current,row.id])}>{expanded.includes(row.id)?'▾':'▸'}</button><button className={'course-nav-link '+(selectedCourse===row.id?'active':'')} onClick={()=>openCourse(row.id)}>▤ {row.title}</button></div>{expanded.includes(row.id)&&<div className="course-nav-children"><button className={'session-link '+(selectedCourse===row.id?'active':'')} onClick={()=>openCourse(row.id)}>자료·필기</button>{sessions.filter(s=>s.kind==='lecture'&&s.course_id===row.id).map(sessionLink)}<button className="session-link new-lecture" onClick={()=>newSession('lecture',row.id)}>＋ 강의 기록</button></div>}</div>)}</nav>
+    <div className="sidebar-label">회의 기록 <button className="sidebar-add" aria-label="새 회의" disabled={!ready} onClick={()=>newSession('meeting')}>＋</button></div><nav aria-label="회의 기록">{sessions.filter(s=>s.kind==='meeting').map(sessionLink)}</nav><div className="sidebar-label">미지정 강의</div><nav aria-label="미지정 강의 기록">{sessions.filter(s=>s.kind==='lecture'&&!s.course_id).map(sessionLink)}</nav><button className="settings-button" disabled={!ready} onClick={()=>{home();setSettings(true);}}>모델·키 설정</button></aside>
+    <main>{error&&<div className="error-banner" role="alert">{error}<button aria-label="오류 메시지 닫기" onClick={()=>setError('')}>×</button></div>}{!ready&&!error&&<p role="status">연결 중…</p>}
+      {recording.filter(id=>id!==selected).length>0&&<div className="recording-navigation" role="status">녹음이 계속되고 있습니다.{recording.filter(id=>id!==selected).map(id=><button key={id} onClick={()=>openSession(id)}>{sessions.find(s=>s.id===id)?.title} 녹음으로 이동</button>)}</div>}
+      {sessions.filter(session=>session.id===selected||recording.includes(session.id)).map(session=><div key={session.id} hidden={!visibleSession||selected!==session.id}><SessionView session={session} course={courses.find(c=>c.id===session.course_id)} onRecordingChange={active=>setRecording(current=>active?(current.includes(session.id)?current:[...current,session.id]):current.filter(id=>id!==session.id))} onDeleted={async pending=>{setRecording(current=>current.filter(id=>id!==session.id));home();await refresh();if(pending)setError('일부 앱 파일 정리 대기 · 재실행 시 재시도');}}/></div>)}
+      {settings?<SettingsView/>:course?<CourseView key={course.id} course={course} sessions={sessions.filter(s=>s.kind==='lecture'&&s.course_id===course.id)} onNewLecture={()=>newSession('lecture',course.id)} onSession={openSession}/>:!visibleSession&&<div className="home"><div className="section-heading"><h1>{creating?'새 기록':'과목과 기록'}</h1></div>{creating?<section className="card creation"><form onSubmit={createSession}><div className="segmented"><button type="button" aria-pressed={kind==='lecture'} onClick={()=>setKind('lecture')}>수업</button><button type="button" aria-pressed={kind==='meeting'} onClick={()=>setKind('meeting')}>회의</button></div><label>제목<input value={title} onChange={e=>setTitle(e.target.value)} required maxLength={200}/></label>{kind==='lecture'&&<div className="form-row"><label>과목<select value={courseId} onChange={e=>setCourseId(e.target.value)}><option value="">미지정</option>{courses.map(c=><option key={c.id} value={c.id}>{c.title}</option>)}</select></label><label>회차<input type="number" min="1" value={lectureNo} onChange={e=>setLectureNo(e.target.value)} required/></label></div>}<div className="actions"><button type="button" onClick={home}>취소</button><button className="primary" disabled={busy}>기록 만들기</button></div></form></section>:<section className="welcome-grid"><button className="welcome-card" onClick={()=>newSession('lecture')} disabled={!ready}><h2>강의 기록</h2><p>과목을 선택하고 원음·전사·회차 노트를 남기세요.</p></button><button className="welcome-card" onClick={()=>newSession('meeting')} disabled={!ready}><h2>회의 기록</h2><p>독립된 회의 녹음과 회의록을 보관하세요.</p></button></section>}
+      <section className="card"><div className="subheading"><h2>과목</h2><span className="muted">{courses.length}개</span></div><div className="course-list">{courses.map(c=><button key={c.id} onClick={()=>openCourse(c.id)}><strong>▤ {c.title}</strong><span className="muted">{sessions.filter(s=>s.course_id===c.id).length}개 강의 기록 · 자료·필기 열기</span></button>)}</div><form className="inline-form" onSubmit={createCourse}><label className="sr-only" htmlFor="course-title">과목 이름</label><input id="course-title" value={courseTitle} onChange={e=>setCourseTitle(e.target.value)} placeholder="과목 이름" required maxLength={200}/><button disabled={!ready||busy}>과목 추가</button></form></section><Readiness/></div>}
+    </main></div>;
 }

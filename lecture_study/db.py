@@ -18,7 +18,7 @@ def open_db(data_dir: Path) -> sqlite3.Connection:
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("PRAGMA synchronous=FULL")
     version = db.execute("PRAGMA user_version").fetchone()[0]
-    if version>16:
+    if version>17:
         db.close()
         raise ValueError("더 최신 앱의 데이터입니다")
     migration=""
@@ -49,8 +49,25 @@ def open_db(data_dir: Path) -> sqlite3.Connection:
         for name,definition in (('transcription_mode',"TEXT NOT NULL DEFAULT 'realtime' CHECK(transcription_mode IN ('realtime','after_stop'))"),('transcription_released','INTEGER NOT NULL DEFAULT 1 CHECK(transcription_released IN (0,1))'),('capture_id',"TEXT NOT NULL DEFAULT ''")):
             if columns and name not in columns:migration+='ALTER TABLE recordings ADD COLUMN '+name+' '+definition+';\n'
         if columns:migration+="UPDATE recordings SET capture_id=id WHERE capture_id='';\n"
+    if version<17:
+        columns={row['name'] for row in db.execute('PRAGMA table_info(assets)')}
+        if columns and 'extraction_sha256' not in columns:
+            migration+="ALTER TABLE assets ADD COLUMN extraction_sha256 TEXT; UPDATE assets SET extraction_sha256=sha256 WHERE extraction IS NOT NULL;\n"
+        columns={row['name'] for row in db.execute('PRAGMA table_info(jobs)')}
+        if columns and 'course_id' not in columns:migration+="ALTER TABLE jobs ADD COLUMN course_id TEXT REFERENCES courses(id);\n"
+        if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='artifacts'").fetchone():
+            db.execute('PRAGMA foreign_keys=OFF')
+            migration+="""CREATE TABLE artifacts_v17(id TEXT PRIMARY KEY,job_id TEXT NOT NULL UNIQUE REFERENCES jobs(id) ON DELETE CASCADE,session_id TEXT REFERENCES sessions(id),kind TEXT NOT NULL,body TEXT NOT NULL,evidence TEXT NOT NULL,metadata TEXT NOT NULL,edited INTEGER NOT NULL DEFAULT 0,confirmed INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,course_id TEXT REFERENCES courses(id),CHECK((session_id IS NULL)!=(course_id IS NULL)));
+INSERT INTO artifacts_v17 SELECT *,NULL FROM artifacts;
+DROP TABLE artifacts;
+ALTER TABLE artifacts_v17 RENAME TO artifacts;
+"""
+        migration+="DROP VIEW IF EXISTS searchable_chunks;\n"
     try:
-        db.executescript("BEGIN IMMEDIATE;\n"+migration+Path(__file__).with_name("schema.sql").read_text()+"\nCOMMIT;")
+        backfill="INSERT OR IGNORE INTO course_assets SELECT s.course_id,sa.asset_id FROM session_assets sa JOIN sessions s ON s.id=sa.session_id WHERE s.course_id IS NOT NULL AND s.kind='lecture';" if version<17 else ""
+        db.executescript("BEGIN IMMEDIATE;\n"+migration+Path(__file__).with_name("schema.sql").read_text()+backfill)
+        if db.execute('PRAGMA foreign_key_check').fetchone():raise ValueError('데이터의 참조 관계를 확인하세요')
+        db.commit()
     except BaseException:
         db.rollback();db.close();raise
     db.execute('PRAGMA foreign_keys=ON')
@@ -65,6 +82,16 @@ def session(db, session_id: str):
     if row is None:
         raise KeyError("기록을 찾을 수 없습니다")
     return dict(row)
+
+
+def course(db, course_id: str):
+    row=db.execute('SELECT * FROM courses WHERE id=?',(course_id,)).fetchone()
+    if row is None:raise KeyError('과목을 찾을 수 없습니다')
+    return dict(row)
+
+
+def request_owner(db, request):
+    return session(db,request.session_id) if request.session_id else course(db,request.course_id)
 
 def create_session(db, kind: str, title: str, course_id: str|None, lecture_no: int|None, started_at: str|None = None, description: str = "") -> Session:
     if course_id and not db.execute("SELECT 1 FROM courses WHERE id=?", (course_id,)).fetchone():
