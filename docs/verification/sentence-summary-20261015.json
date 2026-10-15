@@ -1,0 +1,391 @@
+{
+  "completed": true,
+  "hardware": "Apple M4 16GiB, shared host, serial native model cases",
+  "scope": "Aggregates and hashes only; raw audio, human text and exact model responses stay local",
+  "model": "qwen3.5:4b",
+  "long_cases": [
+    {
+      "case": "interview",
+      "raw_reports": {
+        "baseline": {
+          "path": "/private/tmp/sentence-interview-summary-20261015.json",
+          "sha256": "677342b52ba2de8c4181dff4740fe0be7cf71ee5025bba64e7adf4a57246f3e0"
+        },
+        "native": {
+          "path": "/private/tmp/sentence-ship-interview-20261015.json",
+          "sha256": "72c7542944eacd618fa6806db2f37d6bb76001b144b80a998e0bb00b62bb5f26"
+        },
+        "final_guard": {
+          "path": "/private/tmp/sentence-final-interview-guard-20261015.json",
+          "sha256": "c394ad2c6e82a8d16d84c46eb9dac68fca673a916887c9938819a99f07ce736a"
+        }
+      },
+      "same_frozen_transcripts": true,
+      "transcript_snapshot_sha256": "9d92eb282d048f427d860ba795fa86099f7696b5d24de9f60d3c262bd8c6e417",
+      "cutoff_ms": 666330,
+      "context_limit": 8192,
+      "baseline": {
+        "seconds": 219.53225962503348,
+        "provider_calls": 7,
+        "validated": true,
+        "sections": 35,
+        "review_required": 29,
+        "unquoted_source_units": 26,
+        "selection_incomplete_parts": [],
+        "completed_parts": 7,
+        "covered_transcript_sources": 179,
+        "cited_source_count": 155,
+        "state_counts": {
+          "example": 2,
+          "expectation": 1,
+          "fact": 17,
+          "hypothesis": 5,
+          "proposal": 1,
+          "unclear": 9
+        }
+      },
+      "native_copy_v1": {
+        "seconds": 258.3740802920074,
+        "provider_calls": 7,
+        "validated": true,
+        "sections": 39,
+        "review_required": 35,
+        "unquoted_source_units": 6,
+        "selection_incomplete_parts": [],
+        "completed_parts": 7,
+        "covered_transcript_sources": 179,
+        "cited_source_count": 175,
+        "state_counts": {
+          "condition": 2,
+          "expectation": 1,
+          "fact": 19,
+          "hypothesis": 4,
+          "unclear": 13
+        }
+      },
+      "final_guard": {
+        "verification_mode": "Exact real native response replay through current production guard and artifact-save path; no fresh model inference or new full-pipeline latency",
+        "seconds_guard_replay_only": 0.958470249956008,
+        "replayed_native_responses": 7,
+        "exact_native_messages_and_schema": true,
+        "all_final_quotes_are_source_substrings": true,
+        "all_processed_transcript_ranges_retained": true,
+        "validated": true,
+        "sections": 39,
+        "review_required": 36,
+        "unquoted_source_units": 6,
+        "selection_incomplete_parts": [],
+        "completed_parts": 7,
+        "covered_transcript_sources": 179,
+        "cited_source_count": 175,
+        "state_counts": {
+          "condition": 2,
+          "expectation": 1,
+          "fact": 19,
+          "hypothesis": 4,
+          "unclear": 13
+        }
+      },
+      "known_source_checks": {
+        "self_only_child": {
+          "final_item_quote_matches": 1,
+          "review_excerpt_matches": 1,
+          "unquoted_supplement_matches": 0,
+          "model_state_labels": [
+            "expectation"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        },
+        "parent_loss": {
+          "final_item_quote_matches": 1,
+          "review_excerpt_matches": 1,
+          "unquoted_supplement_matches": 0,
+          "model_state_labels": [
+            "unclear"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        },
+        "late_health": {
+          "final_item_quote_matches": 2,
+          "review_excerpt_matches": 2,
+          "unquoted_supplement_matches": 0,
+          "model_state_labels": [
+            "hypothesis",
+            "unclear"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        }
+      }
+    },
+    {
+      "case": "narration",
+      "raw_reports": {
+        "baseline": {
+          "path": "/private/tmp/sentence-narration-summary-20261015.json",
+          "sha256": "a00bfe3c5146c16c646f40c1ebc2c3fb1dab4845b49df6d3f640717b0f75d706"
+        },
+        "native": {
+          "path": "/private/tmp/sentence-ship-narration-20261015.json",
+          "sha256": "fde301381e6e99a039bda8437741e5bfbaae31896844b38a6d2d291f24b6303d"
+        },
+        "final_guard": {
+          "path": "/private/tmp/sentence-final-narration-guard-20261015.json",
+          "sha256": "647ef3238e42e5cbe12b7481c461422e34e06265199bed17cb8dd8009062720a"
+        }
+      },
+      "same_frozen_transcripts": true,
+      "transcript_snapshot_sha256": "fc3d7d6b09d39727ac9a71120a08e888979c2db04853f8bb2df174dcfe56faa2",
+      "cutoff_ms": 876050,
+      "context_limit": 8192,
+      "baseline": {
+        "seconds": 272.38205195905175,
+        "provider_calls": 9,
+        "validated": true,
+        "sections": 40,
+        "review_required": 40,
+        "unquoted_source_units": 49,
+        "selection_incomplete_parts": [],
+        "completed_parts": 9,
+        "covered_transcript_sources": 292,
+        "cited_source_count": 245,
+        "state_counts": {
+          "condition": 1,
+          "expectation": 1,
+          "fact": 21,
+          "hypothesis": 2,
+          "unclear": 15
+        }
+      },
+      "native_copy_v1": {
+        "seconds": 517.1523135000025,
+        "provider_calls": 9,
+        "validated": true,
+        "sections": 60,
+        "review_required": 37,
+        "unquoted_source_units": 53,
+        "selection_incomplete_parts": [],
+        "completed_parts": 9,
+        "covered_transcript_sources": 292,
+        "cited_source_count": 240,
+        "state_counts": {
+          "example": 1,
+          "fact": 43,
+          "hypothesis": 3,
+          "unclear": 13
+        }
+      },
+      "final_guard": {
+        "verification_mode": "Exact real native response replay through current production guard and artifact-save path; no fresh model inference or new full-pipeline latency",
+        "seconds_guard_replay_only": 2.2300870409817435,
+        "replayed_native_responses": 9,
+        "exact_native_messages_and_schema": true,
+        "all_final_quotes_are_source_substrings": true,
+        "all_processed_transcript_ranges_retained": true,
+        "validated": true,
+        "sections": 60,
+        "review_required": 39,
+        "unquoted_source_units": 53,
+        "selection_incomplete_parts": [],
+        "completed_parts": 9,
+        "covered_transcript_sources": 292,
+        "cited_source_count": 240,
+        "state_counts": {
+          "example": 1,
+          "fact": 43,
+          "hypothesis": 3,
+          "unclear": 13
+        }
+      },
+      "known_source_checks": {
+        "late_cold_water": {
+          "final_item_quote_matches": 1,
+          "review_excerpt_matches": 1,
+          "unquoted_supplement_matches": 0,
+          "model_state_labels": [
+            "fact"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        },
+        "late_fall": {
+          "final_item_quote_matches": 8,
+          "review_excerpt_matches": 5,
+          "unquoted_supplement_matches": 1,
+          "model_state_labels": [
+            "fact"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        },
+        "late_room": {
+          "final_item_quote_matches": 15,
+          "review_excerpt_matches": 11,
+          "unquoted_supplement_matches": 4,
+          "model_state_labels": [
+            "example",
+            "fact",
+            "hypothesis",
+            "unclear"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        },
+        "late_departure": {
+          "final_item_quote_matches": 1,
+          "review_excerpt_matches": 1,
+          "unquoted_supplement_matches": 0,
+          "model_state_labels": [
+            "unclear"
+          ],
+          "check_limit": "Source quotation/excerpt retention, not a claim that every model state label or paraphrase is semantically correct"
+        }
+      }
+    }
+  ],
+  "native_authored_controls": {
+    "raw_report": {
+      "path": "/private/tmp/sentence-release-controls-20261015.json",
+      "sha256": "c5555b926656c3c7fd3f1940503d767588411c1bf48e11be794cd7cd8f29861a"
+    },
+    "actual_wire_sampling_observed": true,
+    "native_calls": 6,
+    "cases": [
+      {
+        "kind": "summary",
+        "validated": true,
+        "seconds": 71.52732358302455,
+        "all_checks": false,
+        "content_checks": {
+          "budget120": true,
+          "correction3_vs4": true,
+          "not_confirmed": true,
+          "no_contract": true,
+          "local_condition": true,
+          "clear_lecture_assumption": false,
+          "clear_lecture_example": true
+        }
+      },
+      {
+        "kind": "minutes",
+        "validated": true,
+        "seconds": 108.5895438750158,
+        "all_checks": true,
+        "content_checks": {
+          "budget120": true,
+          "correction3_vs4": true,
+          "not_confirmed": true,
+          "no_contract": true,
+          "local_condition": true,
+          "owner_is_seoyeon": true,
+          "minsu_not_assigned": true
+        }
+      }
+    ],
+    "limits": "Authored transcript controls do not measure acoustic accuracy or all semantics. A clear condition copied as a full subject clause remains a source excerpt with review=True.",
+    "final_summary_guard_equivalent": true,
+    "final_minutes_validation_passed": true
+  },
+  "prior_control_trials": [
+    {
+      "raw_report": {
+        "path": "/private/tmp/sentence-summary-controls-20261015.json",
+        "sha256": "fc35cac8dcabe1c0f6135e029d14e036869aa5172918bd3aadde2c965bb4fc26"
+      },
+      "completed": true,
+      "cases": [
+        {
+          "kind": "summary",
+          "validated": true,
+          "all_checks": false,
+          "seconds": 52.869153709034435
+        },
+        {
+          "kind": "minutes",
+          "validated": false,
+          "error": "생성 결과 형식·문제 수·길이가 유효하지 않습니다",
+          "seconds": 11.954652832995635
+        }
+      ]
+    },
+    {
+      "raw_report": {
+        "path": "/private/tmp/sentence-sampling-controls-20261015.json",
+        "sha256": "32a9bf77161f0bfa305a30199df4d55a93ffe5493916fff1c419077580a75588"
+      },
+      "completed": true,
+      "cases": [
+        {
+          "kind": "summary",
+          "validated": true,
+          "all_checks": false,
+          "seconds": 56.48705699999118
+        },
+        {
+          "kind": "minutes",
+          "validated": false,
+          "error": "기한의 원문 표현이 없습니다",
+          "seconds": 44.399962041003164
+        }
+      ]
+    },
+    {
+      "raw_report": {
+        "path": "/private/tmp/sentence-final-controls-20261015.json",
+        "sha256": "f748b0b6ac6854cc2f5355295b18d6ad214891a955ceecb57de14f10b8c53881"
+      },
+      "completed": true,
+      "cases": [
+        {
+          "kind": "summary",
+          "validated": true,
+          "all_checks": false,
+          "seconds": 53.16163195803529
+        },
+        {
+          "kind": "minutes",
+          "validated": false,
+          "error": "날짜는 원문 ISO 날짜만 사용하세요",
+          "seconds": 48.39299124997342
+        }
+      ]
+    },
+    {
+      "raw_report": {
+        "path": "/private/tmp/sentence-ship-controls-20261015.json",
+        "sha256": "497c70e9c40d161f4c4a34cd1f144bae73985faee5ae2b7814d51b640a4e736b"
+      },
+      "completed": true,
+      "cases": [
+        {
+          "kind": "summary",
+          "validated": true,
+          "all_checks": true,
+          "seconds": 55.41901358298492
+        },
+        {
+          "kind": "minutes",
+          "validated": false,
+          "error": "기한의 원문 표현이 없습니다",
+          "seconds": 79.26608654198935
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Same actual ASR transcripts, not new ASR in the summary runs",
+    "No whole-interview word ground truth or semantic completeness proof",
+    "Native model generation and final deterministic guard replay are separated",
+    "Prompt/schema/sampling and host conditions differ from the baseline; no controlled speedup or isolated sampling-effect claim",
+    "Checking source excerpts or lexical guards does not validate all generated semantics; conservative false warnings and role/state errors remain",
+    "Known cold-water request is matched against the actual frozen ASR word and reviewed time span, not an assumed spelling from the story"
+  ],
+  "final_guard_recheck": [
+    {
+      "case": "interview",
+      "parts": 7,
+      "same_final_postprocessing": true
+    },
+    {
+      "case": "narration",
+      "parts": 9,
+      "same_final_postprocessing": true
+    }
+  ]
+}

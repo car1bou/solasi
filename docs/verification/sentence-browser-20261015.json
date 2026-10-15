@@ -1,0 +1,182 @@
+{
+  "completed": true,
+  "hardware": "Apple M4 16GiB, serial cases on shared host",
+  "evidence_scope": "Aggregates and hashes only; human transcripts/audio remain local",
+  "source": "Seoul Corpus adult interviewer/respondent s12m23f1 with real DEMAND OOFFICE/ch08 ambience mixed globally10dB; not a complete word-labeled meeting",
+  "source_manifest": "<local-project>/.local-state/runtime/conversation-20261014/manifest.json",
+  "public_sources": [
+    "https://www.openslr.org/113/",
+    "https://zenodo.org/records/1227121"
+  ],
+  "raw_comparison": "/private/tmp/sentence-browser-comparison-20261015.json",
+  "raw_comparison_sha256": "1295531f8764a0b4405e9e3010a08194adefe144438e378f662c31c0d5ffce25",
+  "cases": [
+    {
+      "fixture": "/private/tmp/sentence-browser-baseline-20261015",
+      "raw_trace_sha256": "b278631c19bba78ce08993a25a77c85b83774c101eebe2b675d98b6df9a1fa03",
+      "input_sha256": "f2853174c62403390654010eac174f1a30af64893ff991179954e98316e700cc",
+      "input_seconds": 666.3299375,
+      "preview_interval_seconds": 3,
+      "route": "Independent AudioContexts connected through MediaStream bridge",
+      "trace_ready": false,
+      "trace_ready_definition": "Length tolerance and job completion only, not proof of zero gaps or normal recording status",
+      "recording_status": "stopped",
+      "stored_seconds": 664.4099773242631,
+      "source_seconds": 664.4273922902495,
+      "gaps_ms": [
+        17.41496598639456
+      ],
+      "packets": 2659,
+      "packet_frame_sum_matches_wav": true,
+      "jobs": [
+        {
+          "kind": "ai",
+          "status": "done",
+          "count": 12
+        },
+        {
+          "kind": "transcribe",
+          "status": "done",
+          "count": 1
+        }
+      ],
+      "all_jobs_done": true,
+      "preview_calls": 193,
+      "final_calls": 26,
+      "asr_call_wall_seconds_sum": 619.7930097579956,
+      "asr_call_time_limit": "Includes cancelled/obsolete attempts and work inside wrapper, not device compute time",
+      "generation_during_capture": 11,
+      "waveform": {
+        "method": "1000 Hz waveform, 2s correlations every 30s within +/-90s, plus global correlation at median high-confidence offset; sampled diagnostic, not word ground truth",
+        "sample_points": 22,
+        "sample_min_correlation": 0.86799,
+        "sample_offset_min_ms": 0.0,
+        "sample_offset_max_ms": 2000.0,
+        "global_correlation_at_single_median_offset": -0.010683163567291622,
+        "uncovered_source_seconds": 1.92
+      },
+      "final_asr_call_seconds": null,
+      "last_final_after_stop_seconds": null,
+      "all_jobs_after_stop_seconds": null,
+      "final_telemetry_limit": "Final telemetry POST failed before save; raw WAV, stopped DB and completion-failure.json confirm completion/short capture; no post-stop timing claim"
+    },
+    {
+      "fixture": "/private/tmp/sentence-browser-final-20261015",
+      "raw_trace_sha256": "84784030ef8ac65ca926d744799dfc2d5d327fecacd2feda5c442a382578da43",
+      "input_sha256": "f2853174c62403390654010eac174f1a30af64893ff991179954e98316e700cc",
+      "input_seconds": 666.3299375,
+      "preview_interval_seconds": 10,
+      "route": "BufferSource substituted directly in production capture AudioContext; no actual MediaStream input/recovery",
+      "trace_ready": true,
+      "trace_ready_definition": "Length tolerance and job completion only, not proof of zero gaps or normal recording status",
+      "recording_status": "interrupted",
+      "stored_seconds": 666.3314285714285,
+      "source_seconds": 666.3720634920635,
+      "gaps_ms": [
+        11.609977324263038,
+        29.024943310657598
+      ],
+      "packets": 2667,
+      "packet_frame_sum_matches_wav": true,
+      "jobs": [
+        {
+          "kind": "ai",
+          "status": "done",
+          "count": 12
+        },
+        {
+          "kind": "transcribe",
+          "status": "done",
+          "count": 1
+        }
+      ],
+      "all_jobs_done": true,
+      "preview_calls": 50,
+      "final_calls": 26,
+      "asr_call_wall_seconds_sum": 227.46433424949646,
+      "asr_call_time_limit": "Includes cancelled/obsolete attempts and work inside wrapper, not device compute time",
+      "generation_during_capture": 11,
+      "waveform": {
+        "method": "1000 Hz waveform, 2s correlations every 30s within +/-90s, plus global correlation at median high-confidence offset; sampled diagnostic, not word ground truth",
+        "sample_points": 22,
+        "sample_min_correlation": 0.99991,
+        "sample_offset_min_ms": 0.0,
+        "sample_offset_max_ms": 0.0,
+        "global_correlation_at_single_median_offset": 0.9999999993522776,
+        "uncovered_source_seconds": 0.0
+      },
+      "final_asr_call_seconds": {
+        "count": 26,
+        "min": 2.2467708587646484,
+        "median": 3.223620891571045,
+        "p95": 4.780961990356445,
+        "max": 5.405609846115112
+      },
+      "last_final_after_stop_seconds": 4.790699005126953,
+      "all_jobs_after_stop_seconds": 6.298
+    },
+    {
+      "fixture": "/private/tmp/sentence-browser-bridge10-20261015",
+      "raw_trace_sha256": "3081390028ed298090875050cf5b763cccd8a1fc0b548669feda0e9a53729fb8",
+      "input_sha256": "f2853174c62403390654010eac174f1a30af64893ff991179954e98316e700cc",
+      "input_seconds": 666.3299375,
+      "preview_interval_seconds": 10,
+      "route": "Independent AudioContexts connected through MediaStream bridge",
+      "trace_ready": true,
+      "trace_ready_definition": "Length tolerance and job completion only, not proof of zero gaps or normal recording status",
+      "recording_status": "stopped",
+      "stored_seconds": 666.2907936507936,
+      "source_seconds": 666.3024036281179,
+      "gaps_ms": [
+        11.609977324263038
+      ],
+      "packets": 2667,
+      "packet_frame_sum_matches_wav": true,
+      "jobs": [
+        {
+          "kind": "ai",
+          "status": "done",
+          "count": 12
+        },
+        {
+          "kind": "transcribe",
+          "status": "done",
+          "count": 1
+        }
+      ],
+      "all_jobs_done": true,
+      "preview_calls": 50,
+      "final_calls": 26,
+      "asr_call_wall_seconds_sum": 224.41602492332458,
+      "asr_call_time_limit": "Includes cancelled/obsolete attempts and work inside wrapper, not device compute time",
+      "generation_during_capture": 11,
+      "waveform": {
+        "method": "1000 Hz waveform, 2s correlations every 30s within +/-90s, plus global correlation at median high-confidence offset; sampled diagnostic, not word ground truth",
+        "sample_points": 22,
+        "sample_min_correlation": 0.96481,
+        "sample_offset_min_ms": -5.0,
+        "sample_offset_max_ms": 25.0,
+        "global_correlation_at_single_median_offset": 0.34506885207741794,
+        "uncovered_source_seconds": 0.039
+      },
+      "final_asr_call_seconds": {
+        "count": 26,
+        "min": 2.275209903717041,
+        "median": 3.2288920879364014,
+        "p95": 4.572491884231567,
+        "max": 4.961639165878296
+      },
+      "last_final_after_stop_seconds": 4.8379127979278564,
+      "all_jobs_after_stop_seconds": 6.24
+    }
+  ],
+  "limitations": [
+    "No physical microphone/driver/permissions/sleep-recovery test; getUserMedia substituted in both browser routes",
+    "Only one run per condition; baseline also overlapped54.6s backend regression suite; do not claim a controlled speedup or preview-causal fix",
+    "ASR tracing wrapper was corrected to preserve original return before final two runs; baseline activity review observation is not comparable",
+    "Shared-clock direct case preserves audio waveform but DB status interrupted with40.6ms edge gaps; not a clean-gap-free capture claim",
+    "Bridge10 local sampled matches remain high with-5to25ms time variation and39ms length difference; low single-offset global correlation is not an audio-loss fraction",
+    "Historical renderer/tab destruction cause remains unproven; this comparison does not establish OOM or who closed a tab",
+    "No whole-conversation CER, semantic hallucination rate, or diarization claim; generation questions use the same authored procedural note"
+  ]
+}

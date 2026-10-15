@@ -1,0 +1,425 @@
+{
+  "completed": true,
+  "hardware": "Apple M4 16GiB, serial native diagnostic; Qwen already installed, no downloads",
+  "normalization": "NFKC/lowercase letters/numbers only; punctuation/spaces excluded, filler/repetition kept; not official corpus metric",
+  "raw_reports": [
+    {
+      "path": "/private/tmp/sentence-asr-probe-20261015.json",
+      "sha256": "091a7533fc408733913cdcde7c7c753ec8f1b529f27840e102b25711ccafd6ff"
+    },
+    {
+      "path": "/private/tmp/sentence-qwen-full-20261015.json",
+      "sha256": "e234091cac7ab1c2b463b92c1b27c2a1060e154a5645b3780730a77874c301ca"
+    }
+  ],
+  "whisper_all90": {
+    "clips": 90,
+    "reference_chars": 1829,
+    "edits": 185,
+    "cer": 0.10114816839803172,
+    "substitutions": 88,
+    "deletions": 86,
+    "insertions": 11,
+    "seconds": 142.0020528313471
+  },
+  "qwen_all90": {
+    "clips": 90,
+    "reference_chars": 1829,
+    "edits": 137,
+    "cer": 0.07490431930016403,
+    "substitutions": 95,
+    "deletions": 29,
+    "insertions": 13,
+    "seconds": 40.06722441263264
+  },
+  "qwen_better_clips": 28,
+  "qwen_worse_clips": 15,
+  "groups": [
+    {
+      "group": "cafeteria-adult",
+      "whisper": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 28,
+        "cer": 0.18421052631578946,
+        "substitutions": 20,
+        "deletions": 6,
+        "insertions": 2,
+        "seconds": 20.653267207962926
+      },
+      "qwen": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 16,
+        "cer": 0.10526315789473684,
+        "substitutions": 14,
+        "deletions": 2,
+        "insertions": 0,
+        "seconds": 3.9088424590299837
+      }
+    },
+    {
+      "group": "clean-adult",
+      "whisper": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 13,
+        "cer": 0.08552631578947369,
+        "substitutions": 6,
+        "deletions": 7,
+        "insertions": 0,
+        "seconds": 22.049174710176885
+      },
+      "qwen": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 9,
+        "cer": 0.05921052631578947,
+        "substitutions": 7,
+        "deletions": 1,
+        "insertions": 1,
+        "seconds": 5.5205757088260725
+      }
+    },
+    {
+      "group": "clean5",
+      "whisper": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 13,
+        "cer": 0.05829596412556054,
+        "substitutions": 10,
+        "deletions": 3,
+        "insertions": 0,
+        "seconds": 9.020292374014389
+      },
+      "qwen": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 13,
+        "cer": 0.05829596412556054,
+        "substitutions": 10,
+        "deletions": 3,
+        "insertions": 0,
+        "seconds": 4.504180582938716
+      }
+    },
+    {
+      "group": "lowgain5",
+      "whisper": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 22,
+        "cer": 0.09865470852017937,
+        "substitutions": 10,
+        "deletions": 12,
+        "insertions": 0,
+        "seconds": 9.418998792069033
+      },
+      "qwen": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 17,
+        "cer": 0.07623318385650224,
+        "substitutions": 12,
+        "deletions": 5,
+        "insertions": 0,
+        "seconds": 4.3636786240385845
+      }
+    },
+    {
+      "group": "office-adult",
+      "whisper": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 13,
+        "cer": 0.08552631578947369,
+        "substitutions": 6,
+        "deletions": 7,
+        "insertions": 0,
+        "seconds": 20.445912665920332
+      },
+      "qwen": {
+        "clips": 15,
+        "reference_chars": 152,
+        "edits": 10,
+        "cer": 0.06578947368421052,
+        "substitutions": 8,
+        "deletions": 1,
+        "insertions": 1,
+        "seconds": 3.9130004998878576
+      }
+    },
+    {
+      "group": "public-interview",
+      "whisper": {
+        "clips": 6,
+        "reference_chars": 103,
+        "edits": 13,
+        "cer": 0.1262135922330097,
+        "substitutions": 3,
+        "deletions": 10,
+        "insertions": 0,
+        "seconds": 10.2915844580275
+      },
+      "qwen": {
+        "clips": 6,
+        "reference_chars": 103,
+        "edits": 6,
+        "cer": 0.05825242718446602,
+        "substitutions": 3,
+        "deletions": 3,
+        "insertions": 0,
+        "seconds": 2.1691372070345096
+      }
+    },
+    {
+      "group": "rooms6",
+      "whisper": {
+        "clips": 6,
+        "reference_chars": 213,
+        "edits": 1,
+        "cer": 0.004694835680751174,
+        "substitutions": 1,
+        "deletions": 0,
+        "insertions": 0,
+        "seconds": 10.688708457979374
+      },
+      "qwen": {
+        "clips": 6,
+        "reference_chars": 213,
+        "edits": 7,
+        "cer": 0.03286384976525822,
+        "substitutions": 5,
+        "deletions": 0,
+        "insertions": 2,
+        "seconds": 3.6962252899538726
+      }
+    },
+    {
+      "group": "snr105",
+      "whisper": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 16,
+        "cer": 0.07174887892376682,
+        "substitutions": 13,
+        "deletions": 3,
+        "insertions": 0,
+        "seconds": 9.218806166027207
+      },
+      "qwen": {
+        "clips": 5,
+        "reference_chars": 223,
+        "edits": 17,
+        "cer": 0.07623318385650224,
+        "substitutions": 13,
+        "deletions": 3,
+        "insertions": 1,
+        "seconds": 4.4183008740074
+      }
+    },
+    {
+      "group": "spontaneous12",
+      "whisper": {
+        "clips": 12,
+        "reference_chars": 256,
+        "edits": 54,
+        "cer": 0.2109375,
+        "substitutions": 14,
+        "deletions": 37,
+        "insertions": 3,
+        "seconds": 20.180005374189932
+      },
+      "qwen": {
+        "clips": 12,
+        "reference_chars": 256,
+        "edits": 33,
+        "cer": 0.12890625,
+        "substitutions": 19,
+        "deletions": 10,
+        "insertions": 4,
+        "seconds": 5.031526917067822
+      }
+    },
+    {
+      "group": "talk6",
+      "whisper": {
+        "clips": 6,
+        "reference_chars": 132,
+        "edits": 12,
+        "cer": 0.09090909090909091,
+        "substitutions": 5,
+        "deletions": 1,
+        "insertions": 6,
+        "seconds": 10.035302624979522
+      },
+      "qwen": {
+        "clips": 6,
+        "reference_chars": 132,
+        "edits": 9,
+        "cer": 0.06818181818181818,
+        "substitutions": 4,
+        "deletions": 1,
+        "insertions": 4,
+        "seconds": 2.541756249847822
+      }
+    }
+  ],
+  "whisper_selected13_decoder_trials": {
+    "baseline": {
+      "clips": 13,
+      "reference_chars": 332,
+      "edits": 38,
+      "cer": 0.1144578313253012,
+      "substitutions": 5,
+      "deletions": 32,
+      "insertions": 1,
+      "seconds": 23.94837741611991
+    },
+    "beam8": {
+      "clips": 13,
+      "reference_chars": 332,
+      "edits": 38,
+      "cer": 0.1144578313253012,
+      "substitutions": 5,
+      "deletions": 32,
+      "insertions": 1,
+      "seconds": 22.986221542174462
+    },
+    "greedy": {
+      "clips": 13,
+      "reference_chars": 332,
+      "edits": 39,
+      "cer": 0.11746987951807229,
+      "substitutions": 3,
+      "deletions": 35,
+      "insertions": 1,
+      "seconds": 21.43990803998895
+    }
+  },
+  "unsupported_trials": [
+    "beam10 rejected: pinned native max decoders is 8; reran beam8",
+    "length penalty CLI option unavailable in pinned build; no lp2 inference or quality claim"
+  ],
+  "token_scores": {
+    "correct_nonempty_clips": 32,
+    "incorrect_nonempty_clips": 49,
+    "empty_output_clips": 9,
+    "any_probability_below_point2_correct": 1,
+    "any_probability_below_point2_incorrect": 2
+  },
+  "input_hashes": [
+    "1329dd6fc3840b1182c38d4e2b0394f8566c1e2e250794b5f2b88c59b9aad38c",
+    "3c38336f5dd9efeeb1938831e7cb048970a82347050d2cd0f69d0fbaaeb251c7",
+    "44596e2d46df813a135667b251c9ded4111aa96c0d93ca5ffec5787458b40f6c",
+    "bdad742fb40c7c9826f2f85c2db7277e4c2e5575c6c6cb485a84e960e98b0d0b",
+    "811be593811d37c6067ebeca97cdcebcd51770bb846dadd20f10f4c0c41ce9d2",
+    "3d6c73749e4a6442352eefca4db362f0d9a483582992d3f9f6c570144ce745c8",
+    "17c017c5775eff691e221797e7b45e7f1696cc7409d82b0aa711b98956b4a02d",
+    "dcdbcc93fd0c5d09beb7153a03ddafb82b31c486533c624c60be3c0cb07b7c97",
+    "81b7452be94b5c19d47a6c1ae57af7243190eb0e22a8de7889b7b9f89f91f61e",
+    "0d2c5a58eac07d450600b3250b0c4b651efc4d80f09324ce1083a5e5b75b8903",
+    "894b199db5c0f4c71f5ca3de8ca6d9ea447283e25315edb06b582c0556a0ee1c",
+    "ce1ce139127e9484f6a627f8b66fb46b43adc6bd26c940653d3df18e03c7916e",
+    "9e992de59913df7f930aadd768625620b2fbd1a55ed657f236864d648b450abb",
+    "85ede175e418b02d812eafc68502309ecc361ecc476871d561ef1f38cf543129",
+    "0bf4bc2bb9f4ccd9e873d5aae109c39d41290c807f9ea2e6e7ebb29b2d096a15",
+    "da77814f7c32b14b350513c3125cd24176c4345ef029e51fd58d4a8d768e2195",
+    "2033295cd88be6f9eb73564e129211657ed84f861c2e0087461c4c2a361ee9b6",
+    "6d7308f1097efa90dcd65463177b49ebbe21a2488c94eff282843a524427e54e",
+    "5d9fad826264af004a1f7d9f03efd70873ce938c1e35fb6cb2eae205a31f2612",
+    "db0cec05f3bf0334055cfa7cbd30c3482dabb41c0771ca9f5f7d55fc29190fc5",
+    "7254707f4cd0233ee6f3759921cb98e58bb3f724b6319a762cc04b030a7884cf",
+    "27eeaad0fe5d9d2d06f9bba14be163f0a5797c02a5bea100bd70d608731210fc",
+    "64d14c12f0236b9cd6104249cac6afd2f7484d035a64bb116b8e6a2a65bcc187",
+    "9cc839a57cdfa738bfce190ad4664fb08e48237332093fa2dbd7cc0e7b87c2c4",
+    "1682cc9edf09aa69de37613f12514458eab3c7c972c5b66966c715c80dbec8b0",
+    "a75f0784fabc2ef25ee1436e3eba19f9cd34d7ba74f7630ce9d7b19eb558a72f",
+    "7e84d9d76805fd7738b906cbd4da3fef14de7a6d972a111603b49f5adb3fec55",
+    "d233aea76211e58264df543b4624108aa81942cd4ffd56c6f6f03ccdb8a826cf",
+    "29c3c4b564009bf752e4635d729c983c78f07ff8be525c12d2f3620156cb6af8",
+    "dbe18dde7063be21f5626d14a4b98b1b626f1dcb779f8508c798b164cc55edbd",
+    "a61245520aad3af26063e56ead5f4dbd403cc4dbbc07d23a55c69e9d08c0e6bf",
+    "7dde1deb07a2444e19bc2ef45e9cc1fdf2b4e4b6e890ab84bced4ddd72351281",
+    "fa3b5789d17ffc6aed91d2504ddc3308ab8f6f107a63730a5ef88037a02a9102",
+    "edf1678e35c11df9703a4fe98852529d5e04c805e4a437a0e561f684ee61b804",
+    "f1c0e49996309153f9d4d805d87a679c58cc57c832dd5eb86445dc7af0be2d68",
+    "9e78b448784f8544d1d705cc1be7992434b4d398c1af963536a35c6ec7da5f81",
+    "74e9196587484498b5eb681abdbda0fa6737346199af9d69711083dfc8b567c2",
+    "57643f339d1ea6b2e179de9858cb329127c295b6d587f580bfbf8112d73cfe45",
+    "3fea748c35a281b23831477a7f7bf197ef117071032a4799de30e68688848dff",
+    "229ddae534113b9ccf78bc9fbcae05477e6b2270644ef93bc6c092a519a9e523",
+    "a2af10faf68e3949dbf7b68836f932cea9b14f65c302d0b815d58630621f393f",
+    "2da6c17893b25790d3cd942d52e442e38b822b0dfd97fb4762aeeaaed595d7d6",
+    "76b5322bb6a32f0a790142d2b15ae07ec740fcdbbbb4e4f5598e5364fe78cc23",
+    "190f84d4d90931a93c57a1c730672c7cb941dc8d25101a134097549b96d3e7ef",
+    "d3ab9561cb370d6a17cba6527824bea6f9ebe0cd1bceb296292c65308222a607",
+    "e75f4c240908c754d8dadaf66dadebb25a02ab6c833a7824c509870a2c13a239",
+    "c8685bf9161b639551f59822f681ea2ae04671d1acad098269d67e6cc7862f24",
+    "ec1ba2bdd5f5c184d885a94ff422ad8b08d5949c75b4a98f9ad695217e7fb585",
+    "ec7dbc60d8a5b1f08c40ba9e5ab3ea1dbd65d81a6e8ce539aa9358cdd7524185",
+    "4bea3999be75e99a4d4edad7c52e850cd27190f807424618ee4047190abd239b",
+    "6444eaf08f55318d2fcfd8413d5d14930dff611557751d64d18cf04591db73f5",
+    "5b0ca779470b2e7004555af186877f23c35ca6fba8660fc9f5a3779993330aaa",
+    "6e28dedb610c8b2b0872a90e1c37362b940cacd2b0264f95ec848d6e37d4b9bf",
+    "af0c64e7c7de09af8318be6476e9804310c544a3c99e16874f00d4c953e04a3e",
+    "8096dd00e8dab644f99a44938ed33bf6d9b1a9034500e7b87a5c2b828fa10ce7",
+    "32ff6af58fc63095ae4228a411b975a1aa70e603b3176a6e51920e722fbde90f",
+    "5fdbaa528b60542ec19c1d74f87932db46347b3f8af92be4ae993a7c1f8c0b85",
+    "874ea032a407129edb90b26c30adeb978e3fa89b0ac2c7381691642b2ac6f04c",
+    "4e836fb92297063399e93e44d3aea377f2bb0b8ebc1785b69233285549b07ae7",
+    "0b6a04deafb234669567e4e7825592beae3bab7b046699ac1321dca27e62f1b9",
+    "9ff7bf0c926432526b19a3fc74ebcfe0a35027e24d92e85148ef8010b37cc574",
+    "8789b3767aad91c71007004ae70224ea9851e1e003420a438290cbf2b0cc13e4",
+    "63788a03e3348b86cdf58e35e5fd556df8284f9498a928f1969658ef4bbc345b",
+    "7bde9bd32ed3b8dda65cec8661a9436670b6601b28b0c5d27f8693cb0b17a483",
+    "7cee91594b9a2296ae9f88c56b23ae68077fe0e07860aec1552349fc29bf9187",
+    "43bf36da4a79222aad4074a7275b013c855b129b5b19880304621f305c99684a",
+    "e4f0abd24be179203831082147a9411d83adaab5c9408f92ab18aa5d1b25aab6",
+    "e674f971e8ebf2e43c542b8914a276f96df9c470b89d44aceddecf7801fb6e87",
+    "0aabae18705f0ee7384554b583a3ac11b6ccf79d9c3be688057e9eb7864ce192",
+    "f3737c9d937bebbb41e47490310a9295bf5c5cb70493ab1ba7adfa2ef8fb5e3c",
+    "d1677f8a0c98af912035705acf2a8fd39c0fc59f3b2555b4eaa8bfba640b902c",
+    "b98977bc097c0463007f1bb44ee1a785997f097cd21285ae86c741e3e0439976",
+    "b4f492f42553af713fd64fceabd261f01a154bf013089bc79cac6983c841a9a9",
+    "c04410fc2cf9533cfb8de628c610c90fc873be3656f62d3dc041d75d087a9217",
+    "9478300b60ae7c1a591fa7af420d4cc4fe9ec6d0dc408fbe3d3a6f54dad9f743",
+    "62752b0b60c34c32b3d615ff90377f8a64515f5c4426c58cdf27cf96200daca0",
+    "df8041d50dab8eb9edf9126225bbaa5a528abb2ab3154762d631e0c9d1fb0ee5",
+    "56a72cdb7b9d3b09da1a54c9a4f872e0b9266831042dfa97ee6b3c8eedc0f6ae",
+    "5a2081a1276409b507f99f56b3c7f8f62dc37e4b45799735ad007371f709a794",
+    "191f624a0e9862e3ce7b3d2e25f79a99336e98aa464608a2adf349ec052f4ea4",
+    "52bf8281e30fadb8a5e21597c9de5806138e378fdcd6835d78183eccb690731d",
+    "f9029f73764e28e2bbce366962c64e38a08e30cd5c029da546a7666c32bae752",
+    "cb96a3fb5f6653fa8604578fd86b9c091d22e8a7b83d2a47b5b89646c944ee9c",
+    "02679d913601100797e02972f005584095f15219c6160240789802b8e1f23dbd",
+    "e9871f19d640618e0de51b7c48ed30761b1dd7f8bd92c9630d3120f5a9a20412",
+    "fa6bcc629f2af0be22335c82b0d676819a808cdfefda4939316fb71f7d57053e",
+    "f557b447ad27f39628cb51721f37d812f9fc74a35e729901a7daf2409c71c160",
+    "bb4ec56e402876fb391f24867e470e244dc3eb1f3888dd0b88dfa5a9e849a0fa",
+    "06b7f4ef2cc1c6091929d55cd9968e71d103f849ec96874ee59df24207b36867",
+    "15fefaeba9cc0886a4526f4bb4538353cfe020fd47d6c234fab0003e15f13e31"
+  ],
+  "limitations": [
+    "Fixed small diagnostic set, repeated source speech across clean/noisy conditions, not independent 90 utterances",
+    "Seoul spontaneous12 includes one male16 speaker; adult15 response turns span3speakers with interviewer speech excluded from lexical scoring",
+    "Complete continuous-conversation ground truth unavailable; no whole-meeting CER or semantic hallucination rate",
+    "Token score is emitted-token probability, not correctness probability, and omitted words have no score",
+    "Whisper options match current native production padding1000/minspeech250 without hints; Qwen community MLX4bit Korean temperature0 batch1 max_tokens256",
+    "Native time includes different lifecycles: Whisper reload/preprocess perclip, Qwen resident-model generation; not a controlled speed ranking",
+    "No blind heldout generalization, no model default change or automatic replacement; room/noise regressions retained"
+  ],
+  "models": {
+    "whisper": {
+      "model": "large-v3-turbo",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
+    },
+    "qwen": {
+      "model": "mlx-community/Qwen3-ASR-1.7B-4bit",
+      "revision": "78a389c776a5483b2d0d4ea5494e11012e0d6159",
+      "artifact_kind": "Community MLX conversion,4-bit affine/group64 text weights; audio tower not quantized",
+      "license": "Apache-2.0"
+    }
+  }
+}

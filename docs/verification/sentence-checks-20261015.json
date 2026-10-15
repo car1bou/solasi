@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "backend_tests": 320,
+  "frontend_tests": 27,
+  "backend_seconds": 16.546,
+  "typescript_and_vite_build": true,
+  "python_compileall": true,
+  "pip_check": true,
+  "git_diff_check": true,
+  "logs": [
+    {
+      "path": "/private/tmp/sentence-final-backend-complete.log",
+      "sha256": "15909b9d10f90f06fdfe97e2734e0aba80b3b05cc6e1e83e709e5e4fa43e8921"
+    },
+    {
+      "path": "/private/tmp/sentence-release-frontend-tests.log",
+      "sha256": "d89a6a5bd905af840bdb5e34032707226b05916805371bc618950d171d1316aa"
+    },
+    {
+      "path": "/private/tmp/sentence-release-frontend-build.log",
+      "sha256": "fc9944e84e7583ea8c0f7c80fec47b4fdb7f5b74ee4879fcf75e1b4799588c6b"
+    },
+    {
+      "path": "/private/tmp/sentence-release-pip-check.log",
+      "sha256": "9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09"
+    }
+  ],
+  "source_sha256": {
+    "lecture_study/transcription.py": "a43dd800511beeb4cea7ddbe70c8f4bb3a311eed954eacefc2b83a13ee5e47cc",
+    "lecture_study/asr_review.py": "b5c26dfe371a825ec6e457bc7317d548be38b51db83a266832d5239137941a97",
+    "lecture_study/summary_grounding.py": "4e898dcaed1709c953f61be5b48862834ae29df08c2ea2e3cab866889330fcae",
+    "lecture_study/providers.py": "a899e5ff9b14e50aded8909d834e2bb1a0ca58ca967833703c6013e32c5f4d43",
+    "lecture_study/answers.py": "9b9cd8aca896cc547a0ddbf93465730a89a47ff39180e8b4c88952b32986e80b",
+    "lecture_study/outputs.py": "cdf2a44334a55aeb938b0305ceefb9d32ba6d05bf832cd64224e2f580412038b",
+    "lecture_study/merging.py": "b153136fc49b3514cf368c4384a6174d2ec45a05b109248d37cd7156e657b12f",
+    "frontend/src/SummarySection.tsx": "1fba7e5a55e49e72ddb1ea378b4f62889dd1b9f0514588f1b0b06f5359a9be82",
+    "frontend/tests/long-recording-fixture.tsx": "2b6ec998f5c5e840bb14104546da7f6f9833f15cbd2c7580057a4b75be546ea9"
+  },
+  "limits": [
+    "Unit/fixture success is not proof of general acoustic or semantic quality",
+    "Native ASR, browser concurrency and summary evidence are documented separately",
+    "No new external API or physical microphone/30-60minute test this round"
+  ]
+}

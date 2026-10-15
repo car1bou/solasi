@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lecture-study"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi==0.143.0", "uvicorn[standard]==0.53.0", "httpx==0.28.1", "liteparse==2.16.0", "keyring==25.6.0", "tokenizers==0.23.3"]
+
+[project.scripts]
+lecture-study = "lecture_study.launcher:main"
+
+[tool.setuptools.package-data]
+lecture_study = ["schema.sql", "FilePicker.swift"]
+
+[tool.setuptools.packages.find]
+include = ["lecture_study*"]

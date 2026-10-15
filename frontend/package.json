@@ -1,0 +1,22 @@
+{
+  "name": "lecture-study-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}
