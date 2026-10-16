@@ -29,7 +29,7 @@ export default function SessionView({session,course,onDeleted,onRecordingChange}
     {error&&<p role="alert">{error}</p>}
     <Recorder sessionId={session.id} onActiveChange={onRecordingChange}/>
     <div className="session-utilities"><TranscriptionTerms sessionId={session.id}/><QuestionCards session={session}/></div>
-    <div className="segmented session-tabs" role="tablist" aria-label="기록 내용">{([['transcript','전사'],['material','자료'],['note','노트'],['concept','검색·개념'],['question','질문'],...(session.kind==='lecture'?([['study','학습']] as const):([['minutes','회의록']] as const))] as const).map(([value,label])=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{label}</button>)}</div>
+    <div className="segmented session-tabs" role="tablist" aria-label="기록 내용">{([['transcript','전사'],['material','자료'],['note','노트'],['concept','검색·개념'],['question','질문'],...(session.kind==='lecture'?([['study','요약·학습']] as const):([['minutes','회의록']] as const))] as const).map(([value,label])=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{label}</button>)}</div>
     <div hidden={tab!=='transcript'}><TranscriptView sessionId={session.id}/></div>
     <div hidden={tab!=='material'&&tab!=='note'}><MaterialView session={session} course={course} mode={tab==='material'?'material':'note'}/></div>
     <div hidden={tab!=='concept'}><ConceptView session={session} onQuestion={prompt=>{setQuestion(prompt);setTab('question');}} onQuiz={id=>{setQuiz(id);setTab('study');}}/></div>
