@@ -24,13 +24,12 @@ export default function SessionView({session,course,onDeleted,onRecordingChange}
     }catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   return <section className="session-workspace">
-    <div className="section-heading"><div><span className="eyebrow">{session.kind==='lecture'?'수업':'회의'}</span><h1>{session.title}</h1><p>{new Date(session.started_at).toLocaleString('ko-KR')}{session.lecture_no?' · '+session.lecture_no+'회차':''}</p></div><div><button onClick={()=>setConfirm('audio')}>원음 삭제·연결 해제</button><button onClick={()=>setConfirm('session')}>기록 삭제</button></div></div>
+    <div className="section-heading"><div><span className="eyebrow">{course?.title||(session.kind==='lecture'?'수업':'회의')}</span><h1>{session.title}</h1><p>{new Date(session.started_at).toLocaleString('ko-KR')}{session.lecture_no?' · '+session.lecture_no+'회차':''}</p></div><div className="session-management"><button onClick={()=>setConfirm('audio')}>원음 삭제·연결 해제</button><button onClick={()=>setConfirm('session')}>기록 삭제</button></div></div>
     {confirm&&<section className="card" role="alertdialog" aria-label="삭제 확인"><h2>{confirm==='session'?'기록 삭제':'원음 삭제·연결 해제'}</h2><p>{confirm==='session'?'앱의 녹음·전사·노트·결과물을 삭제합니다.':'앱 녹음을 삭제하고 외부 오디오 연결을 해제합니다. 전사·노트는 보관합니다.'} 연결한 외부 원본 파일은 유지됩니다.</p><button disabled={busy} onClick={()=>setConfirm(null)}>취소</button><button disabled={busy} onClick={()=>void remove()}>확인하고 삭제</button></section>}
     {error&&<p role="alert">{error}</p>}
-    <TranscriptionTerms sessionId={session.id}/>
     <Recorder sessionId={session.id} onActiveChange={onRecordingChange}/>
-    <QuestionCards session={session}/>
-    <div className="segmented" role="tablist" aria-label="기록 내용">{([['transcript','전사'],['material','자료'],['note','노트'],['concept','검색·개념'],['question','질문'],...(session.kind==='lecture'?([['study','학습']] as const):([['minutes','회의록']] as const))] as const).map(([value,label])=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{label}</button>)}</div>
+    <div className="session-utilities"><TranscriptionTerms sessionId={session.id}/><QuestionCards session={session}/></div>
+    <div className="segmented session-tabs" role="tablist" aria-label="기록 내용">{([['transcript','전사'],['material','자료'],['note','노트'],['concept','검색·개념'],['question','질문'],...(session.kind==='lecture'?([['study','학습']] as const):([['minutes','회의록']] as const))] as const).map(([value,label])=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{label}</button>)}</div>
     <div hidden={tab!=='transcript'}><TranscriptView sessionId={session.id}/></div>
     <div hidden={tab!=='material'&&tab!=='note'}><MaterialView session={session} course={course} mode={tab==='material'?'material':'note'}/></div>
     <div hidden={tab!=='concept'}><ConceptView session={session} onQuestion={prompt=>{setQuestion(prompt);setTab('question');}} onQuiz={id=>{setQuiz(id);setTab('study');}}/></div>

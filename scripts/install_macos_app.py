@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import platform
 import plistlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -73,7 +74,8 @@ def main():
             existing_identity = (stat.st_dev, stat.st_ino)
         except (OSError, ValueError, TypeError, plistlib.InvalidFileException) as exc:
             parser.error(str(exc))
-        running = subprocess.run(["/usr/sbin/lsof", "-t", "--", str(target / "Contents/MacOS/Solasi")], capture_output=True, text=True)
+        # Permission services can hold a read handle after the app quits; only executable mappings count.
+        running = subprocess.run(["/usr/sbin/lsof", "-t", "-a", "-d", "txt", "--", str(target / "Contents/MacOS/Solasi")], capture_output=True, text=True)
         if running.returncode not in (0, 1):
             parser.error("기존 앱의 실행 여부를 확인할 수 없습니다. 앱을 종료하고 다시 실행하세요")
         if running.stdout.strip():
@@ -89,7 +91,7 @@ def main():
         if args.data_dir is None or args.runtime_dir is None:
             parser.error("처음 설치할 때는 --data-dir와 --runtime-dir가 필요합니다")
         settings = {"python": sys.executable, "source": str(source), "data": str(args.data_dir.expanduser().resolve()), "runtime": str(args.runtime_dir.expanduser().resolve()), "port": args.port if args.port is not None else 62434}
-    for path in (Path(settings["python"]), Path(settings["source"]) / "frontend/dist/index.html", Path(settings["data"]), Path(settings["runtime"])):
+    for path in (Path(settings["python"]), Path(settings["source"]) / "frontend/dist/index.html", source / "macos/Solasi.icns", Path(settings["data"]), Path(settings["runtime"])):
         if not path.exists():
             parser.error(f"필요한 파일이나 폴더가 없습니다: {path}")
     subprocess.run([settings["python"], "-c", "import fastapi, uvicorn, lecture_study"], cwd=settings["source"], env={**os.environ, "PYTHONPATH": settings["source"], "PYTHONDONTWRITEBYTECODE": "1"}, check=True)
@@ -106,8 +108,9 @@ def main():
         resources.mkdir(parents=True)
         binary.parent.mkdir()
         (resources / "launch.json").write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
+        shutil.copyfile(source / "macos/Solasi.icns", resources / "Solasi.icns")
         with (contents / "Info.plist").open("wb") as handle:
-            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": BUNDLE_ID, "CFBundleName": "Solasi", "CFBundleDisplayName": "Solasi", "CFBundlePackageType": "APPL", "CFBundleShortVersionString": "0.2.0", "CFBundleVersion": "2", "LSMinimumSystemVersion": "13.0", "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.", "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True}}, handle)
+            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": BUNDLE_ID, "CFBundleName": "Solasi", "CFBundleDisplayName": "Solasi", "CFBundlePackageType": "APPL", "CFBundleIconFile": "Solasi.icns", "CFBundleShortVersionString": "0.2.1", "CFBundleVersion": "8", "LSMinimumSystemVersion": "13.0", "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.", "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True}}, handle)
         subprocess.run(["/usr/bin/xcrun", "swiftc", "-O", "-target", f"{architecture}-apple-macosx13.0", "-module-cache-path", str(Path(folder) / "module-cache"), str(source / "macos/Solasi.swift"), "-o", str(binary)], check=True)
         subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(bundle)], check=True)
         subprocess.run(["/usr/bin/codesign", "--verify", "--strict", "--verbose=2", str(bundle)], check=True)
@@ -115,7 +118,7 @@ def main():
             stat = target.stat()
             if target.is_symlink() or (stat.st_dev, stat.st_ino) != existing_identity or read_existing_settings(target) != existing_settings:
                 parser.error("빌드 중 기존 앱이 변경되었습니다. 교체하지 않습니다")
-            running = subprocess.run(["/usr/sbin/lsof", "-t", "--", str(target / "Contents/MacOS/Solasi")], capture_output=True, text=True)
+            running = subprocess.run(["/usr/sbin/lsof", "-t", "-a", "-d", "txt", "--", str(target / "Contents/MacOS/Solasi")], capture_output=True, text=True)
             if running.returncode not in (0, 1) or running.stdout.strip():
                 parser.error("기존 앱이 실행되었거나 실행 여부를 확인할 수 없습니다. 앱을 종료한 뒤 다시 교체하세요")
             backup = target.with_name(f".{target.name}.backup-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:8]}")

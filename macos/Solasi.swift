@@ -21,14 +21,17 @@ private final class AppWindow {
 
     init(configuration: WKWebViewConfiguration) {
         webView = WKWebView(frame: .zero, configuration: configuration)
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1200, height: 820), styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         window.title = "Solasi"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.titlebarSeparatorStyle = .none
         window.minSize = NSSize(width: 680, height: 480)
         window.isReleasedWhenClosed = false
         let notice = NSStackView(views: [status, retry])
         notice.orientation = .horizontal
         notice.spacing = 12
-        notice.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        notice.edgeInsets = NSEdgeInsets(top: 32, left: 12, bottom: 8, right: 12)
         status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         retry.isHidden = true
         let content = NSStackView(views: [notice, webView])
@@ -40,6 +43,8 @@ private final class AppWindow {
         webView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             notice.widthAnchor.constraint(equalTo: content.widthAnchor),
+            status.topAnchor.constraint(equalTo: notice.topAnchor, constant: 32),
+            status.bottomAnchor.constraint(lessThanOrEqualTo: notice.bottomAnchor, constant: -8),
             webView.widthAnchor.constraint(equalTo: content.widthAnchor),
             webView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200)
         ])
@@ -71,7 +76,10 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installMenu()
-        NSApp.applicationIconImage = NSImage(systemSymbolName: "waveform", accessibilityDescription: "Solasi")
+        // Dock can retain the generic icon after replacing an existing local app bundle.
+        if let iconURL = Bundle.main.url(forResource: "Solasi", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) {
+            NSApp.applicationIconImage = icon
+        }
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.userContentController.add(self, contentWorld: clickWorld, name: "userClick")
