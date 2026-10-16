@@ -17,14 +17,14 @@
 | 범위 | 현재 확인한 결과 | 남은 관문 |
 | --- | --- | --- |
 | Tasks 1–2 | 설치 모델 직접 실행·bounded pipe 구현 및 검사 | 미확인 최초 RED 이력을 완료로 소급 표시하지 않음 |
-| Tasks 3–4 | 네이티브 화면/오디오 코드, Swift fixture, 합성 10분 PCM·599초 seek | 실제 앱의 전체 UI 흐름, 물리 마이크·절전/복귀 |
+| Tasks 3–4 | 네이티브 화면/오디오, 합성 10분 PCM, 실제 13초 마이크·선택 재생·메모 저장·재시작 | 전체 실패 UI 흐름, 장시간 입력·물리 절전/복귀 |
 | Task 5 | 직접 provider·별도 임베딩 색인 코드, 실제 frozen 모델·짧은 음성→요약 | 기존 앱 대비 장시간 품질·cold/warm·메모리 비교 |
-| Task 6 | frozen 번들, raw 초안 export, 복사한 보관함의 import·재시작 대조 | 실제 보관함 import, 제품 앱 교체·재실행 |
-| Task 7 | 회귀 검사와 일부 통합 실행, 중간 코드 검토 | 최종 앱/권한/수명 검증, 최종 검토·커밋·푸시 |
+| Task 6 | 실제 raw 초안 import·제품 앱 교체·실제 PDF/메모 표시·39개 테이블 및 원음 8개 보존 | 실제 저장 실패/충돌·강제 종료 흐름 |
+| Task 7 | 회귀 검사, 제품 앱 포트 독립 실행·내보내기·종료, fresh migration 검토, 구현 커밋·푸시 | 장시간·물리 절전·동시 부하와 성능 비교 |
 
 최신 통합 기록 기준 백엔드 **총 440개 중 435개 통과·5개 선택적 실제 모델 검사 skip**, 프런트엔드 **70개 통과**, TypeScript·Vite 빌드 통과다. 선택적 skip과 별도로 frozen v3의 실제 모델 호출 8건 및 v5의 실제 한국어 음성→Whisper→Qwen 원문 발췌 요약을 확인했다. 이전 SDD/TASK_STATE에 남은 388·436개 수치와 초기 Gemma 실패는 이전 시점 기록이다.
 
-정리 시점 HEAD는 `b1644a7`(구현 계획 커밋)이다. Task 1–6의 아래 코드 커밋은 아직 실행 기록이 없으며 변경 사항은 작업 트리에 있다. 구현 완료를 커밋·푸시 완료로 표시하지 않는다.
+Tasks 1–6의 구현은 예정된 개별 커밋 대신 `69f82ff`에 통합했고, 검증 문서는 `593c604`에 기록했다. 두 커밋은 `origin/codex/serverless-mac`에 푸시했다. 아래에서 아직 확인하지 않은 물리 시험과 전체 UI 실패 분기는 계속 미완료로 남긴다.
 
 **근거 문서:** [통합 실행 기록](../../mac-internal-runtime-validation.md), [직접 Gemma·frozen 모델 실행](../../direct-gemma-models.md), [직접 임베딩](../../embedding-worker.md), [Swift 화면·오디오 fixture](../../native-ui-bridge-validation.md), [이전 초안 보존](../../legacy-draft-migration.md). 실제 앱 설치 상태는 통합 기록의 마지막 설치 결과로 다시 확인한다.
 
@@ -60,7 +60,7 @@
 - [x] Qwen3.5 4B의 실제 한국어·JSON·이미지·출력 제한·취소를 확인했다. Gemma4 E2B/12B도 공식 template·양자화 매핑 보완 후 한국어·JSON·이미지·한도·취소를 확인했다. 초기 Gemma 반복 출력 실패를 그대로 usable로 등록하지 않았다.
 - [x] 기본 EmbeddingGemma의 직접 arm64 엔진에서 query/document prefix, 768차원·유한 값·L2 정규화와 작은 한국어 검색 순위 fixture를 확인했다. EmbeddingGemma 2는 별도 호환성 probe만 통과했으며 제품 provider에는 등록하지 않았다.
 - [x] engine·template·weight digest·지원 기능을 고정했다. frozen v3에서 Qwen/E2B/12B 한국어·JSON, 기본 임베딩, 실제 FLEURS Qwen ASR 등 8건을 다시 실행했고 원본 모델 해시가 유지됐다.
-- [ ] 작업별 계획 커밋 `feat: verify installed assets for direct model execution`은 미실행이다. 최종 통합 시 실제 커밋 범위·해시를 기록한다.
+- [x] 예정 제목 `feat: verify installed assets for direct model execution`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** `test_model_assets`의 최초 모듈 부재 RED 실행 기록은 현재 근거에서 확인하지 못했다. 현재 검사 통과와 구분한다. 별도 Gemma RED 로그(`embedding-probe/gemma-tests-red.log`)는 보존돼 있다. 이 결과만으로 원래 계획의 모든 test-first 순서를 완료했다고 표시하지 않는다.
 
@@ -74,7 +74,7 @@
 - [x] 기존 ASGI handler와 lifespan을 재사용하고 worker가 내부 자격 정보를 주입한다. `/api/` 경로·헤더·파일 선택 범위를 제한하며 bootstrap/임의 URL/외부 경로 주입을 거절한다.
 - [x] body별 ACK·취소·EOF 정리와 종료 기한을 구현했다. Swift stdin 정체와 TERM 무시를 다루는 소유 process group 회수도 별도 fixture로 보완했다.
 - [x] 현재 backend 전체 검사에 `tests.test_core`, `tests.test_audio_socket`, worker 검사가 함께 통과했다. frozen 실행의 소켓 표본과 자식 회수 결과는 Task 7에 별도로 기록한다.
-- [ ] 작업별 계획 커밋 `feat: run application worker through bounded pipes`은 미실행이다.
+- [x] 예정 제목 `feat: run application worker through bounded pipes`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** 최초 `test_native_worker` RED 실행 여부는 별도 실행 로그가 확인되기 전까지 미확인으로 둔다. 현재 성공 결과로 과거 실행 순서를 소급 확정하지 않는다.
 
@@ -88,8 +88,9 @@
 - [x] `api()`에서 개발 HTTP와 native bridge를 분기한다. 번들 화면·자료는 custom scheme, 긴 원음은 AVPlayer의 Range loader로 전달하며 전체 파일을 JSON/base64로 적재하지 않는다.
 - [x] 실제 WKWebView에서 번들 ES module·secure context·crypto API를 확인했다. custom scheme HTML audio의 `readyState=0` 정체를 재현한 후 AVPlayer로 600초 합성 WAV를 읽고 599초 seek를 확인했다.
 - [x] Swift 앱·fixture 컴파일과 프런트엔드 TypeScript·70개 검사·Vite 빌드가 통과했다. native 원음 링크의 UI 준비 대기와 재생 자원 회수 수정도 포함한다.
-- [ ] 별도 최종 앱에서 실제 PDF/새 창 렌더링, NSOpenPanel/NSSavePanel, 클릭·드래그 선택 재생·수정·내보내기의 전체 UI 동작을 확인한다. API·fixture 성공으로 이 항목을 대신하지 않는다.
-- [ ] 작업별 계획 커밋 `feat: connect bundled Mac interface to internal worker`는 미실행이다.
+- [x] 최종 앱에서 기존 PDF·메모·필기 표시, 클릭 선택 재생, NSSavePanel의 Markdown 내보내기를 직접 확인했다.
+- [ ] 새 창·NSOpenPanel·드래그 선택·대본 수정 및 내보내기 전체 UI 흐름을 확인한다. API·fixture 성공으로 이 항목을 대신하지 않는다.
+- [x] 예정 제목 `feat: connect bundled Mac interface to internal worker`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** 모든 브리지 실패 검사의 최초 RED 실행 순서는 확인되지 않았다. 작은 ready 프레임 대기와 custom scheme 미디어 실패는 실제 재현 후 수정한 기록이 있다.
 
@@ -102,9 +103,10 @@
 - [x] AVAudioEngine 입력 복사·직렬 처리·mono PCM16 변환·bounded queue·저장 ACK·30초 최초 연결 제한·종료 시 pending 입력 전달을 구현했다. tap callback에서 파일·DB·모델을 호출하지 않는다.
 - [x] native fixture에서 정상 무음·clipping·sampleTime gap·시간 역행 거절·취소한 권한 응답 거절·실제 새 입력에 한 번만 복구하는 상태 정책을 검사했다. worker의 PCM ACK·EOF·재시작 검사가 통과했다.
 - [x] 실제 Swift→Python 파이프로 600개 합성 패킷을 가속 전달해 600 ACK, 4,800,000 PCM 프레임, 9,600,044바이트 WAV와 정상 종료를 확인했다. 실제 10분 마이크 녹음 기록은 아니다.
-- [ ] 새 내장 앱에서 물리 마이크 시작·중지, 실제 권한 지연/취소, 장시간 입력과 stop 중 ACK 대기를 확인한다.
+- [x] 새 내장 앱에서 실제 마이크 시작·13초 입력·중지·후처리·선택 재생을 확인했다. 48kHz·624,000프레임과 저장 WAV가 일치하고 정상 종료·재시작 후 해시가 같았다.
+- [ ] 실제 권한 지연/취소, 장시간 입력과 stop 중 ACK 대기를 확인한다.
 - [ ] 실제 장치 변경·잠자기/복귀·강제 종료 후 원음·필기 복구를 확인한다. 이전 서버 앱의 성공 결과와 새 앱의 결과를 구분한다.
-- [ ] 작업별 계획 커밋 `feat: capture Mac audio without browser sockets`은 미실행이다.
+- [x] 예정 제목 `feat: capture Mac audio without browser sockets`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** 최초 RED 및 모든 queue/장치 변경 실패 분기의 개별 실행 로그는 확인되지 않았다. 정책 fixture 통과를 macOS 권한·물리 입력 검증 완료로 확대하지 않는다.
 
@@ -120,7 +122,7 @@
 - [x] engine/template/pooling/dimension을 구분하는 새 embedding set 생성·교체와 기존 set 보존을 구현하고 회귀 검사했다. 실제 사용자 과목 전체의 색인 재생성·검색 UI는 Task 7에서 확인한다.
 - [x] direct/provider/retrieval 회귀 검사와 실제 모델 probe가 통과했다. frozen v5의 실제 FLEURS 15.78초 입력에서 기본 Whisper 전사 10.80초, 기본 Qwen 원문 발췌 요약 15.74초가 완료됐다. 한 클립 결과이며 장기 품질·속도 개선의 근거로 확대하지 않는다.
 - [ ] 같은 weight/input/output limit의 기존 앱 대비 cold/warm 시간·peak RAM·긴 전사/생성 동시 실행을 비교한다. 현재 단일 실행의 시간·메모리 관찰과 구분한다.
-- [ ] 작업별 계획 커밋 `feat: replace managed model servers with direct workers`는 미실행이다.
+- [x] 예정 제목 `feat: replace managed model servers with direct workers`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** Task 5 모든 검사에 대한 최초 RED 실행 순서는 확인되지 않았다. 현재 provider 계약 검사와 실제 모델 결과를 각각 근거로 사용한다.
 
@@ -133,14 +135,14 @@
 - [x] native SQLite main/journal·backup, 중단된 upload, 다른 vault, 충돌 별도 보존·재시도·idempotence·transaction rollback을 구현·검사했다. sidecar 경로만 변조한 경우도 import 전 거절하도록 해시 검증을 추가했다.
 - [x] 서버 없는 별도 WK helper로 raw 초안 행을 chunk 내보내기하고 두 번 대조한다. 격리 fixture의 5행/72,352,115바이트, 일반 `backup:undefined`·중첩 객체/배열의 정확한 복원, 실패 시 원본 유지, 동명 결과·동시 실행 거절을 확인했다.
 - [x] 사용자가 기존 입력 저장·앱 종료를 확인한 뒤 실제 기존 origin에서 **1행/660바이트** raw 초안을 내보냈다. 기존 앱·보관함·원음·WebKit의 종료 후 사본과 해시를 보존했다. 사용자 확인과 raw 저장소 export를 실제 React 메모리 추출 완료로 표현하지 않는다.
-- [x] 복사한 보관함에서 실제 export 가져오기·재시작·원문 대조를 확인했다. 기존 IndexedDB는 삭제하지 않았다. 실제 사용자 보관함에는 아직 import하지 않았다.
+- [x] 복사한 보관함에서 실제 export 가져오기·재시작·원문 대조를 확인했다. 기존 IndexedDB는 삭제하지 않았다. 실제 사용자 보관함의 가져오기·대조도 아래 단계에서 완료했다.
 - [x] PyInstaller onedir와 네이티브 도우미·MLX/Metal/tokenizer/ASR/FFmpeg·라이선스를 번들했다. frozen entrypoint와 receipt 검사, 실행 중 개발 도구 불필요 경로를 구현했다.
 - [x] `/private/tmp`·system PATH·외부 Python 환경 제거 조건에서 frozen v1의 PDF/페이지/PCM, v3의 실제 모델 8건, v5의 실제 Whisper→Qwen 요약을 확인했다. v4의 외부 ffprobe 참조 실패를 재현·수정했다. 원본 모델/음성 해시는 유지됐다.
-- [ ] 최종 선택한 전체 앱 번들의 최신 코드·receipt·서명·최소 OS·실행 경계를 다시 대조한다. 현재 번들 의존성이 요구하는 최소 macOS는 27.0이며 임베딩 단독 하한 13.3과 구분한다.
+- [x] 최종 v5 엔진 receipt·서명·최소 macOS27.0을 대조하고 제품 앱0.3.0/build10으로 설치했다. launch.json은 기존 data/runtime만 보존한다.
 - [ ] 별도 최종 앱에서 페이지 필기·일반 노트·대본의 종료 대기/저장 실패/취소와 재시작 복구·409 선택 UI를 확인한다.
-- [ ] 실제 보관함의 최신 보존·종료·배타적 잠금을 다시 확인한 뒤 raw export를 import하고 내용·개수·해시를 대조한다.
-- [ ] 검증 관문 통과 후 백업을 유지한 채 제품 앱을 교체·재실행한다. 이 항목과 실제 보관함 import는 아직 완료하지 않았다.
-- [ ] 작업별 계획 커밋 `feat: preserve native drafts and bundle Mac runtime`은 미실행이다.
+- [x] 실제 보관함의 종료·배타적 잠금을 확인해 raw export1행/660바이트를 가져왔고 원문을 대조했다. 가져오기 전후와 제품 앱 종료 후 기존39개테이블·live원음5개·연결음성3개가 동일했다.
+- [x] 백업을 유지한 채 ~/Applications/Solasi.app을 교체·실행했다. 기존 과목·PDF·필기·메모를 확인했고 제품 앱 정상 종료 후 보존 검사를 다시 통과했다.
+- [x] 예정 제목 `feat: preserve native drafts and bundle Mac runtime`의 구현은 개별 커밋 대신 통합 커밋 `69f82ff`로 보존·푸시했다.
 
 **[이력 미확인]** 전체 migration/package 검사의 최초 RED 순서는 확인되지 않았다. abandoned upload, receipt 경로 탈출, frozen resource_tracker 종료 정체, ffprobe 외부 의존, undefined sidecar 변조는 재현·수정 기록이 있는 개별 문제다.
 
@@ -149,16 +151,17 @@
 **Files:** update `docs/mac-internal-runtime-validation.md`, this plan, relevant verification JSON (private 음성·전사 제외), README/사용 설명서.
 
 - [x] 현재 통합 기록의 backend 440개(435 통과·5 skip), frontend 70개·TypeScript·Vite 빌드, Swift 컴파일·정책/PCM/종료 fixture가 통과했다. 실제 모델은 Task 1의 별도 실행으로 확인했다.
-- [ ] 최종 앱 코드·패키지 변경이 끝난 뒤 필요한 회귀 검사와 빌드를 다시 실행하고 최종 결과를 고정한다.
-- [ ] 별도 앱으로 과목→자료→필기→마이크→전사→선택 재생/수정→요약/검색→내보내기를 실행한다. 기록·원음·페이지 버전·초안의 전후 hash/count를 비교한다.
+- [x] 제품 설치에서 Swift빌드·서명검사를 통과했고 백엔드를 재실행해440개 중435개통과·5개skip을 확인했다(23.202초). 프런트엔드와 엔진은 앞서 검사한 v5와 동일하다.
+- [x] 기존 과목→PDF·메모 저장→새 회의→마이크→전사→클릭 선택 재생→정상 종료·재시작을 직접 확인했다. 제품 앱의 Markdown 내보내기와 원본 보존도 대조했다.
+- [ ] 새 과목·새 파일 연결부터 대본 수정·전체 요약/검색까지 이어지는 남은 UI 흐름을 확인한다.
 - [x] isolated frozen 모델 v3에서 130회, v5 음성→요약에서 152회 Internet 소켓 표본이 비어 있었고 정상 종료·잔여 자식 0을 확인했다. 연속 패킷 캡처나 최종 앱 전체 검사로 표현하지 않는다.
-- [ ] 최종 앱을 기존 포트 점유 상태에서 기동하고 app-owned process tree의 TCP/UDP listener 0을 확인한다. 외부 API outbound와 구분한다.
+- [x] 별도 시험 프로세스가62434포트를 점유한 상태에서 최종 제품 앱을 열었다. 당시 앱·유일한소유엔진의3회표본에서 Internet소켓0개였다. 종료 후 소유프로세스가 남지 않았다.
 - [ ] 긴 실제 한국어 음성으로 동시 처리, 장시간 실제 마이크·절전/복귀·강제 종료·재시작을 확인한다. 단어 정확도와 요약 품질은 통신 변경만으로 개선됐다고 추정하지 않는다.
 - [ ] 같은 weight/input/output limit의 cold/warm 시작·메모리·전사/생성 완료시간을 비교한다. 엔진 변경과 서버 통신 제거 효과를 구분한다.
 - [x] 중간 fresh review에서 초안 임시 전송 누적, 불완전 view cache, receipt 출력 경로 탈출 등을 찾아 수정·회귀 검사했다.
-- [ ] 최종 전체 diff와 설치/미검증 경계를 fresh reviewer에게 다시 검토받고 중요한 오류를 수정·재검사한다.
-- [ ] 완료한 범위만 실제 커밋·푸시하고 해시·대상 브랜치를 기록한다. Task 1–6의 예정된 개별 커밋 제목과 실제 이력을 혼동하지 않으며 미완료 검증을 명시한다.
+- [x] fresh reviewer가 설치·이전·종료·직접 실행 경로를 재검토했고 새P0/P1은 발견하지 못했다. 별도 reviewer의 원본 보존 대조도 통과했다. 장시간·물리 절전·강제 종료 범위는 제외했다.
+- [x] 구현69f82ff·검증문서593c604를 origin/codex/serverless-mac에 푸시했다. 실제 이전·UI 확인의 후속 기록은 통합 검증 문서에서 별도로 갱신한다. 미완료 검증은 위에 명시했다.
 
 ## 실행 기록 위치
 
-재개용 상태는 `.local-state/serverless-mac-20261016/TASK_STATE.md`, task별 검증은 `.superpowers/sdd/2026-10-16-serverless-mac/progress.md`에 기록한다. 현재 앱은 Task 6 관문 전까지 교체하지 않는다. 사용자가 설계대로 계획 작성과 진행을 함께 지시했으므로 같은 범위의 일반 구현 승인을 재요청하지 않는다.
+재개용 상태는 `.local-state/serverless-mac-20261016/TASK_STATE.md`, task별 검증은 `.superpowers/sdd/2026-10-16-serverless-mac/progress.md`에 기록한다. Task 6 검증 관문을 통과한 뒤 실제 앱 교체를 완료했다. 사용자가 설계대로 계획 작성과 진행을 함께 지시했으므로 같은 범위의 일반 구현 승인을 재요청하지 않는다.
