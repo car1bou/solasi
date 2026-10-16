@@ -216,8 +216,9 @@ final class AudioCapture {
         guard packetID == nil, !packets.isEmpty, let stream=streamID else { return }
         let packet=packets.removeFirst(); pendingFrames -= packet.frames; activePacketFrames=packet.frames
         lastACK=Date()
-        packetID=worker.request(["op":"audio_packet","stream_id":stream],body:packet.data) { header,_ in
-            guard ["complete","error"].contains(header["event"] as? String ?? "") else { return }
+        var request=""
+        request=worker.request(["op":"audio_packet","stream_id":stream],body:packet.data) { header,_ in
+            guard self.packetID == request, ["complete","error"].contains(header["event"] as? String ?? "") else { return }
             self.packetID=nil; self.activePacketFrames=0; self.lastACK=Date()
             guard header["event"] as? String == "complete", let ack=header["payload"] as? [String:Any],
                   ack["type"] as? String == "ack", (ack["seq"] as? NSNumber)?.uint64Value == packet.sequence,
@@ -227,6 +228,7 @@ final class AudioCapture {
             if !self.closing && !self.guardState.finished && !self.guardState.waiting { self.phase="recording"; self.error=""; self.publish() }
             self.sendNext()
         }
+        packetID=request
     }
 
     private func health() {
@@ -268,7 +270,7 @@ final class AudioCapture {
                 self.sendNext(); DispatchQueue.main.asyncAfter(deadline:.now()+0.025,execute:drain); return
             }
             let incomplete=self.packetID != nil || !self.packets.isEmpty
-            if let request=self.packetID { self.worker.cancel(request); self.packetID=nil }
+            if let request=self.packetID { self.packetID=nil; self.worker.cancel(request) }
             self.packets.removeAll(); self.pendingFrames=0; self.activePacketFrames=0
             guard let rid=self.recordingID else { self.closing=false; completion(); return }
             let keepDeferred=deferred && !self.guardState.finished
