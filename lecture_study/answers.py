@@ -135,7 +135,7 @@ async def freeze_request(db,request,embedding_client=None,web_secret=None,snapsh
         participants=snapshot['participants'];output_limit=min(2048,request.provider.context_limit//4);profile=local_profile(request.provider,runtime_dir) if request.kind=='summary' else None
         from .summary_grounding import grounded_schema,COPY_INSTRUCTION,MODES
         summary_instruction=SUMMARY_INSTRUCTION+COPY_INSTRUCTION+MODES.get(session_kind,'')
-        excerpts=request.kind=='summary'and request.provider.provider=='ollama'
+        excerpts=request.kind=='summary'and request.provider.provider in ('ollama','local')
         if excerpts:
             from .summary_excerpts import SCHEMA,INSTRUCTION
             output_limit=min(512,request.provider.context_limit//4);summary_instruction=INSTRUCTION;summary_schema=SCHEMA
@@ -215,7 +215,7 @@ def save_artifact(db,job_id,body,evidence,metadata):
     return artifact_model(get_artifact(db,ident))
 
 
-async def run_ai_request(db,frozen,job_id,*,secret=None,ollama_url=None,runtime_dir=None,before_local=None):
+async def run_ai_request(db,frozen,job_id,*,secret=None,ollama_url=None,runtime_dir=None,before_local=None,direct_models=None):
     request,evidence=checked_evidence(db,frozen)
     old=db.execute('SELECT id FROM artifacts WHERE job_id=?',(job_id,)).fetchone()
     if old: return artifact_model(get_artifact(db,old['id']))
@@ -228,10 +228,10 @@ async def run_ai_request(db,frozen,job_id,*,secret=None,ollama_url=None,runtime_
             from .outputs import summarize_session,create_quiz,create_minutes,explain_image
             from .assistance import create_assistance
             operation={'summary':summarize_session,'quiz':create_quiz,'minutes':create_minutes,'vision':explain_image,'note':create_assistance,'candidates':create_assistance}[request.kind]
-            artifact=await operation(db,frozen,job_id,secret=secret,ollama_url=ollama_url,before_local=before_local,**({'runtime_dir':runtime_dir} if request.kind=='vision' else {}))
+            artifact=await operation(db,frozen,job_id,secret=secret,ollama_url=ollama_url,before_local=before_local,direct_models=direct_models,**({'runtime_dir':runtime_dir} if request.kind=='vision' else {}))
             metadata=get_artifact(db,artifact.id)['metadata']
         else:
-            result=await generate(request.provider,messages_for(request,evidence),[],evidence_schema(ANSWER_SCHEMA,evidence),secret=secret,ollama_url=ollama_url,before_local=before_local)
+            result=await generate(request.provider,messages_for(request,evidence),[],evidence_schema(ANSWER_SCHEMA,evidence),secret=secret,ollama_url=ollama_url,before_local=before_local,direct_models=direct_models)
             with db: db.execute('UPDATE ai_attempts SET usage=?,elapsed_ms=? WHERE id=?',(json.dumps(result.usage),result.elapsed_ms,attempt))
             checked_evidence(db,frozen)
             body=validate_generated(json.loads(result.text),evidence)

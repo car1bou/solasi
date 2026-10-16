@@ -1,4 +1,4 @@
-import {api,sessionToken} from './api.ts';
+import {api,sessionToken,nativeApp,nativeCommand} from './api.ts';
 import {encodeFrame,withinBuffer} from './audio-wire.ts';
 
 export type TranscriptionMode='after_stop'|'realtime';
@@ -26,6 +26,13 @@ export class RecordingCapture{
   private timer:ReturnType<typeof setInterval>|null=null;
   private trackEnded=()=>{void this.fail('마이크 입력이 종료됐습니다',false);};
   private trackChanged=()=>{this.checkHealth();};
+  private nativeID:string|null=null;
+  private nativeState=(event:Event)=>{
+    const state=(event as CustomEvent<RecordingState&{capture_id:string}>).detail;
+    if(!state||state.capture_id!==this.nativeID||!['idle','starting','recording','recovering','stopping'].includes(state.phase))return;
+    this.update({phase:state.phase,seconds:state.seconds,pending:state.pending,error:state.error,recovered:state.recovered});
+    if(state.phase==='idle'){this.finished=true;window.removeEventListener('solasi-recording-state',this.nativeState);}
+  };
   constructor(sessionId:string,onState:(state:RecordingState)=>void,transcriptionMode:TranscriptionMode='after_stop'){this.sessionId=sessionId;this.onState=onState;this.transcriptionMode=transcriptionMode;}
   private update(change:Partial<RecordingState>){this.state={...this.state,...change};this.onState({...this.state});}
   private current(s:Segment){return this.segment===s&&!this.finished&&!s.ending;}
@@ -36,6 +43,12 @@ export class RecordingCapture{
   }
   async start(){
     this.update({phase:'starting'});
+    if(nativeApp()){
+      this.nativeID=crypto.randomUUID();window.addEventListener('solasi-recording-state',this.nativeState);
+      try{await nativeCommand({op:'audio_start',capture_id:this.nativeID,session_id:this.sessionId,transcription_mode:this.transcriptionMode});}
+      catch(error){window.removeEventListener('solasi-recording-state',this.nativeState);this.finished=true;this.update({phase:'idle',error:(error as Error).message});}
+      return;
+    }
     try{
       // WebKit can defer a hidden page's request until a later, unrelated click.
       if(typeof document!=='undefined'&&document.visibilityState==='hidden')throw new Error('앱 창을 앞으로 연 뒤 녹음을 다시 시작하세요.');
@@ -171,6 +184,11 @@ export class RecordingCapture{
   private async terminate(reason:string){this.update({error:reason+' · 녹음 중단'});await this.stop(true);}
   stop(interrupted=false):Promise<void>{
     if(this.stopTask)return this.stopTask;
+    if(this.nativeID){
+      this.finished=true;this.update({phase:'stopping'});
+      this.stopTask=nativeCommand({op:'audio_stop',capture_id:this.nativeID,interrupted}).then(()=>{this.update({phase:'idle',pending:0});}).catch(error=>{this.update({phase:'idle',pending:0,error:(error as Error).message+' · 저장된 원음을 확인하세요'});}).finally(()=>window.removeEventListener('solasi-recording-state',this.nativeState));
+      return this.stopTask;
+    }
     this.finished=true;if(this.timer)clearInterval(this.timer);
     this.update({phase:'stopping'});
     this.stream?.getTracks().forEach(t=>{t.removeEventListener('ended',this.trackEnded);t.removeEventListener('mute',this.trackChanged);t.removeEventListener('unmute',this.trackChanged);});

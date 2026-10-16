@@ -5,6 +5,8 @@ from pathlib import Path
 MODEL='mlx-community/Qwen3-ASR-1.7B-4bit'
 REVISION='78a389c776a5483b2d0d4ea5494e11012e0d6159'
 ALTERNATIVE='qwen3-asr-1.7b-4bit'
+LEGACY_VERSIONS={'mlx-audio':'0.5.8','mlx':'0.32.3','transformers':'5.19.0','numpy':'2.5.4','huggingface_hub':'2.2.0'}
+BUNDLED_VERSIONS={**LEGACY_VERSIONS,'mlx':'0.32.4','transformers':'5.20.0'}
 FILES={
     'chat_template.json':{'bytes':1161,'sha256':'75a8cfca24f00de72d796fbfed6858fc9614ef3dabd8696684cc3bc03a9c58ff'},
     'config.json':{'bytes':7188,'sha256':'539c6c9d482349066e2e740241e39896f3bf4de0866c245f6539c85dbb19d93c'},
@@ -19,7 +21,7 @@ FILES={
 
 def available(runtime):
     runtime=Path(runtime)
-    return platform.system()=='Darwin' and platform.machine()=='arm64' and (runtime/'qwen-eval-venv/bin/python').is_file() and all((runtime/ALTERNATIVE/name).is_file()for name in FILES)
+    return platform.system()=='Darwin' and platform.machine()=='arm64' and (getattr(sys,'frozen',False) or (runtime/'qwen-eval-venv/bin/python').is_file()) and all((runtime/ALTERNATIVE/name).is_file()for name in FILES)
 
 def verify_files(folder):
     from .runtime import matches
@@ -40,7 +42,7 @@ def worker(folder,clip,output):
     verify_files(folder);pcm=read_pcm(clip)
     if not any(pcm):
         output.write_text(json.dumps({'text':'','generation_tokens':0,'mlx_peak_bytes':0,'process_peak_rss_bytes':0,'skipped_digital_silence':True}));return
-    for name,version in {'mlx-audio':'0.5.8','mlx':'0.32.3','transformers':'5.19.0','numpy':'2.5.4','huggingface_hub':'2.2.0'}.items():
+    for name,version in (BUNDLED_VERSIONS if getattr(sys,'frozen',False) else LEGACY_VERSIONS).items():
         if importlib.metadata.version(name)!=version:raise ValueError('Qwen 후보 실행 환경 버전이 다릅니다')
     import numpy as np
     import mlx.core as mx
@@ -57,7 +59,10 @@ async def transcribe(clip,runtime):
     with tempfile.TemporaryDirectory(prefix='lecture-qwen-')as temp:
         normalized=Path(temp)/'input.wav';output=Path(temp)/'result.json'
         await tr.command([ffmpeg,'-nostdin','-v','error','-y','-i',clip,'-ac','1','-ar','16000','-c:a','pcm_s16le',normalized])
-        await tr.command([runtime/'qwen-eval-venv/bin/python','-I',Path(__file__).resolve(),runtime/ALTERNATIVE,normalized,output])
+        from .execution import worker_command
+        args=[runtime/ALTERNATIVE,normalized,output]
+        argv=worker_command('qwen-worker',args) if getattr(sys,'frozen',False) else [runtime/'qwen-eval-venv/bin/python','-I',Path(__file__).resolve(),*args]
+        await tr.command(argv)
         try:
             if output.stat().st_size>65536:raise ValueError('Qwen 후보 결과가 너무 큽니다')
             body=json.loads(output.read_text())

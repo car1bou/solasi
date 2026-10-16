@@ -31,6 +31,7 @@ from .models import SourceRef,Scope,ProviderConfig
 from .providers import model_status,local_url
 from .credentials import Secrets
 from .local_models import OwnedOllama,catalog,installed_models
+from .direct_models import DirectModels,DirectEmbeddings
 from .answers import freeze_request,run_ai_request,get_artifact,capture_request,checked_evidence
 from .outputs import cached_summary_parts,public_artifact,submit_attempt,save_attempt,grade_attempt,quiz_question,override_attempt,review_attempts,related_quizzes,list_participants,save_participants,edit_artifact,export_markdown
 from .models import AIRequest
@@ -38,6 +39,7 @@ from .retrieval import backfill_sources,retrieve,list_terms,save_term,concept_de
 from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,edit_segments,export_transcript,TranscriptConflict,get_asr_terms,save_asr_terms,asr_prompt,engine_paths,verify_model,MODEL_NAME,VAD_SHA
 from .asr_review import queue_review,process_review,apply_review,public_reviews,empty_ranges,unchanged
 from .audio import start_recording, append_pcm, stop_recording, get_recording, interrupt_recording, recover_recordings
+from .native_drafts import attach_native_drafts
 
 AUDIO_IDLE_SECONDS=15
 AUDIO_RELEASE_SECONDS=30
@@ -46,7 +48,7 @@ def token_matches(value,expected):
     return isinstance(value,str) and secrets.compare_digest(value.encode('utf-8'),expected.encode('utf-8'))
 
 def create_app(config: AppConfig) -> FastAPI:
-    owner=native_owner()
+    owner=None if config.embedded else native_owner()
     instance=acquire_data_lock(config.data_dir)
     try:
         db = open_db(config.data_dir)
@@ -62,7 +64,7 @@ def create_app(config: AppConfig) -> FastAPI:
         owner_task=asyncio.create_task(watch_owner(owner)) if owner else None
         try:
             saved=db.execute("SELECT value FROM settings WHERE key='local_connection'").fetchone()
-            if saved:
+            if saved and not config.embedded:
                 choice=json.loads(saved[0])
                 try:
                     url=await app.state.local_models.start() if choice['mode']=='managed' else local_url(choice['url'])
@@ -83,6 +85,7 @@ def create_app(config: AppConfig) -> FastAPI:
                     task.cancel()
                 await asyncio.gather(*app.state.tasks,return_exceptions=True)
                 await app.state.local_models.stop()
+                await app.state.direct_models.stop()
                 app.state.secrets.memory.clear()
             finally:db.close();instance.close()
 
@@ -104,6 +107,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app.state.ollama_url = None
     app.state.local_error = None
     app.state.local_models = OwnedOllama(config.runtime_dir)
+    app.state.direct_models = DirectModels(config.runtime_dir,config.data_dir/'model-cache')
     app.state.secrets = Secrets("LectureStudy:"+hashlib.sha256(str(config.data_dir.resolve()).encode()).hexdigest()[:16])
     app.state.generation_lock = asyncio.Semaphore(1)
     app.state.external_generation_lock = asyncio.Semaphore(1)
@@ -118,6 +122,7 @@ def create_app(config: AppConfig) -> FastAPI:
         db.execute("UPDATE assets SET status='failed',error='추출이 중단되었습니다' WHERE status IN ('queued','running')")
     app.state.config = config
     app.state.db = db
+    if config.embedded: attach_native_drafts(app, db)
     app.state.bootstrap_token = secrets.token_urlsafe(32)
     app.state.bootstrap_used = False
     app.state.cookie_name='lecture_session_'+str(config.port)
@@ -199,11 +204,12 @@ def create_app(config: AppConfig) -> FastAPI:
             await asyncio.to_thread(verify_model,config.runtime_dir/"models/ggml-silero-v6.2.0.bin",VAD_SHA)
             asr_ready=True
         except (OSError,ValueError): asr_ready=False
+        direct=await app.state.direct_models.available() if config.embedded else None
         return [
             {"label": "기록 저장", "ready": True},
             {"label": "PDF·이미지 추출", "ready": importlib.util.find_spec("liteparse") is not None},
             {"label": "전사 · Whisper "+MODEL_NAME, "ready": asr_ready},
-            {"label": "로컬 모델 연결", "ready": app.state.ollama_url is not None},
+            {"label": "로컬 모델 연결", "ready": direct["connected"] if direct else app.state.ollama_url is not None},
         ]
 
     @app.get('/api/runtime/details')
@@ -236,6 +242,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post('/api/runtime/prepare',status_code=202)
     async def prepare(body:RuntimeInput):
         if not body.confirmed:raise ValueError('용량·라이선스·저장 위치를 확인하고 준비를 선택하세요')
+        if config.embedded and body.component=='ollama':raise ValueError('앱 내부 엔진을 사용합니다')
         if body.component not in ('asr','ocr','ollama'):raise ValueError('준비할 엔진을 선택하세요')
         if db.execute("SELECT 1 FROM recordings WHERE status='recording'").fetchone() or app.state.active_transcription or db.execute("SELECT 1 FROM jobs WHERE kind IN ('parse','ai') AND status IN ('queued','running')").fetchone():raise ValueError('녹음·자료 처리·생성 완료 후 엔진을 준비하세요')
         if body.component=='ollama' and app.state.local_models.process and app.state.local_models.process.returncode is None:raise ValueError('앱 엔진 연결을 종료한 후 준비하세요')
@@ -244,17 +251,21 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post('/api/local/disconnect')
     async def disconnect_local():
+        if config.embedded:
+            await app.state.direct_models.stop()
+            return {'connected':False}
         await app.state.local_models.stop();app.state.ollama_url=None
         with db:db.execute("DELETE FROM settings WHERE key='local_connection'")
         return {'connected':False}
 
     def provider_config():
         saved=db.execute("SELECT value FROM settings WHERE key='provider'").fetchone()
-        return ProviderConfig.model_validate_json(saved[0]) if saved else ProviderConfig()
+        selected=ProviderConfig.model_validate_json(saved[0]) if saved else ProviderConfig()
+        return selected.model_copy(update={'provider':'local'}) if config.embedded and selected.provider=='ollama' else selected
 
     @app.get('/api/settings')
     async def settings():
-        return {'provider':provider_config().model_dump(),'credentials':await asyncio.to_thread(app.state.secrets.status),'local_connected':app.state.ollama_url is not None}
+        return {'provider':provider_config().model_dump(),'credentials':await asyncio.to_thread(app.state.secrets.status),'local_connected':(await app.state.direct_models.available())['connected'] if config.embedded else app.state.ollama_url is not None}
 
     class ProviderInput(Input):
         provider: str
@@ -265,6 +276,8 @@ def create_app(config: AppConfig) -> FastAPI:
     async def save_settings(body:ProviderInput):
         try: selected=ProviderConfig(**body.model_dump())
         except ValidationError: raise ValueError('제공자·모델·입력 한도를 확인하세요') from None
+        if config.embedded and selected.provider=='ollama':selected=selected.model_copy(update={'provider':'local'})
+        if selected.provider=='local':await app.state.direct_models.status(selected.model)
         with db: db.execute("INSERT OR REPLACE INTO settings VALUES ('provider',?)",(selected.model_dump_json(),))
         return selected
 
@@ -285,8 +298,8 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post('/api/models/check')
     async def check_model():
         selected=provider_config()
-        key=await asyncio.to_thread(app.state.secrets.get_secret,selected.provider) if selected.provider!='ollama' else None
-        result=await model_status(selected,secret=key,ollama_url=app.state.ollama_url)
+        key=await asyncio.to_thread(app.state.secrets.get_secret,selected.provider) if selected.provider not in ('ollama','local') else None
+        result=await model_status(selected,secret=key,ollama_url=app.state.ollama_url,direct_models=app.state.direct_models)
         selected=selected.model_copy(update={'vision':result['vision'],'context_limit':result['context_limit']})
         with db: db.execute("INSERT OR REPLACE INTO settings VALUES ('provider',?)",(selected.model_dump_json(),))
         return result
@@ -297,6 +310,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.get('/api/local/status')
     async def local_status():
+        if config.embedded:return await app.state.direct_models.available()
         manager=app.state.local_models
         result={'connected':False,'managed_connected':manager.url is not None and manager.url==app.state.ollama_url,'models':[],'catalog':catalog(),'download':manager.progress,'model_directory':str((config.runtime_dir/'ollama-models').resolve())}
         if app.state.local_error: result['error']=app.state.local_error
@@ -307,6 +321,9 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post('/api/local/connect')
     async def connect_local(body:LocalInput):
+        if config.embedded:
+            if body.mode!='managed':raise ValueError('앱 내부 모델을 사용하세요')
+            return await app.state.direct_models.available()
         url=await app.state.local_models.start() if body.mode=='managed' else local_url(body.url)
         result=await installed_models(url)
         app.state.ollama_url=url;app.state.local_error=None
@@ -321,18 +338,25 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post('/api/local/pull',status_code=202)
     async def pull_model(body:PullInput):
         if not body.confirmed: raise ValueError('용량·저장 위치·라이선스를 확인하고 다운로드를 선택하세요')
-        return app.state.local_models.begin_pull(body.model,body.runner)
+        manager=app.state.direct_models if config.embedded else app.state.local_models
+        return manager.begin_pull(body.model,body.runner)
 
     @app.post('/api/local/pull/cancel')
     async def cancel_pull():
-        manager=app.state.local_models
+        manager=app.state.direct_models if config.embedded else app.state.local_models
         if manager.pull_task and not manager.pull_task.done():
             manager.pull_task.cancel();await asyncio.gather(manager.pull_task,return_exceptions=True)
         return manager.progress
 
     @asynccontextmanager
     async def local_embedding_client(job_id=None):
-        if app.state.ollama_url is None:
+        if config.embedded:
+            app.state.active_embedding_clients+=1
+            try:yield DirectEmbeddings(app.state.direct_models,lambda:wait_for_transcription(db,job_id))
+            finally:
+                app.state.active_embedding_clients-=1
+                if not app.state.closing and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
+        elif app.state.ollama_url is None:
             yield None
         else:
             async def before_request(request):
@@ -347,14 +371,14 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @asynccontextmanager
     async def generation_slot(provider,job_id):
-        if provider=='ollama':await wait_for_transcription(db,job_id)
-        lock=app.state.generation_lock if provider=='ollama' else app.state.external_generation_lock
+        if provider in ('ollama','local'):await wait_for_transcription(db,job_id)
+        lock=app.state.generation_lock if provider in ('ollama','local') else app.state.external_generation_lock
         try:
             async with lock:
-                if provider=='ollama':await wait_for_transcription(db,job_id)
+                if provider in ('ollama','local'):await wait_for_transcription(db,job_id)
                 yield
         finally:
-            if provider=='ollama' and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
+            if provider in ('ollama','local') and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
 
     class AIInput(OwnerInput):
         kind:str=Field(default='answer')
@@ -368,20 +392,21 @@ def create_app(config: AppConfig) -> FastAPI:
 
     def launch_ai(job):
         async def operation():
+            if config.embedded and job['request']['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 요청입니다. 새 작업으로 실행하세요')
             if 'snapshot' in job['request']:
                 request=AIRequest.model_validate(job['request']['request'])
                 web_key=await asyncio.to_thread(app.state.secrets.get_secret,'exa') if request.web else None
                 async with local_embedding_client(job['id']) as client:
-                    frozen=await freeze_request(db,request,client,web_key,snapshot=job['request']['snapshot'],runtime_dir=config.runtime_dir if app.state.local_models.url==app.state.ollama_url else None)
+                    frozen=await freeze_request(db,request,client,web_key,snapshot=job['request']['snapshot'],runtime_dir=config.runtime_dir if config.embedded or app.state.local_models.url==app.state.ollama_url else None)
                 with db:db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(frozen,ensure_ascii=False),job['id']))
                 job['request']=frozen
             async with generation_slot(job['request']['request']['provider']['provider'],job['id']):
                 provider=job['request']['request']['provider']['provider']
-                key=await asyncio.to_thread(app.state.secrets.get_secret,provider) if provider!='ollama' else None
+                key=await asyncio.to_thread(app.state.secrets.get_secret,provider) if provider not in ('ollama','local') else None
                 async def before_local():
                     await wait_for_transcription(db,job['id'])
                     checked_evidence(db,job['request'])
-                result=await run_ai_request(db,job['request'],job['id'],secret=key,ollama_url=app.state.ollama_url,runtime_dir=config.runtime_dir,before_local=before_local)
+                result=await run_ai_request(db,job['request'],job['id'],secret=key,ollama_url=app.state.ollama_url,runtime_dir=config.runtime_dir,before_local=before_local,direct_models=app.state.direct_models)
                 return {'id':result.id,'kind':result.kind}
         return launch_job(app,job,operation)
 
@@ -414,7 +439,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.put('/api/sessions/{sid}/question-candidates/options')
     async def candidate_options(sid:str,body:CandidateOption):
         session(db,sid)
-        if body.enabled and provider_config().provider!='ollama':raise ValueError('자동 추출은 로컬 모델에서만 켤 수 있습니다')
+        if body.enabled and provider_config().provider not in ('ollama','local'):raise ValueError('자동 추출은 로컬 모델에서만 켤 수 있습니다')
         with db:db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)',('candidate_options:'+sid,json.dumps(body.model_dump())))
         return body.model_dump()
 
@@ -424,7 +449,7 @@ def create_app(config: AppConfig) -> FastAPI:
         last=saved_setting('candidate_last:'+sid,{})
         try:job=get_job(db,last['job_id']) if last.get('job_id') else None
         except KeyError:job=None
-        return {'cards':question_cards(db,sid),'options':saved_setting('candidate_options:'+sid,{'enabled':False}),'local':provider_config().provider=='ollama','job':job}
+        return {'cards':question_cards(db,sid),'options':saved_setting('candidate_options:'+sid,{'enabled':False}),'local':provider_config().provider in ('ollama','local'),'job':job}
 
     class CandidateRun(Input):
         automatic:bool=Field(default=False,strict=True)
@@ -434,7 +459,7 @@ def create_app(config: AppConfig) -> FastAPI:
         from .assistance import scoped_evidence
         from .jobs import active_candidate
         provider=provider_config();options=saved_setting('candidate_options:'+sid,{'enabled':False})
-        if body.automatic and (not options['enabled'] or provider.provider!='ollama'):raise ValueError('자동 질문 후보 추출이 꺼져 있습니다. API는 직접 실행하세요')
+        if body.automatic and (not options['enabled'] or provider.provider not in ('ollama','local')):raise ValueError('자동 질문 후보 추출이 꺼져 있습니다. API는 직접 실행하세요')
         request=AIRequest(session_id=sid,kind='candidates',prompt='최근 확정 전사에서 원문 인용을 붙인 질문 후보를 추출하세요.',scope=Scope(session_id=sid,mode='current'),provider=provider)
         active=active_candidate(db,sid)
         if active:return {'job':active,'reason':'기존 후보 추출 작업'}
@@ -499,7 +524,7 @@ def create_app(config: AppConfig) -> FastAPI:
     async def patch_artifact(ident:str,body:EditArtifactInput):
         return edit_artifact(db,ident,body.body,body.confirmed)
 
-    @app.get('/api/artifacts/{ident}/export')
+    @app.api_route('/api/artifacts/{ident}/export',methods=['GET','HEAD'])
     async def export_artifact(ident:str):
         return PlainTextResponse(export_markdown(db,ident),media_type='text/markdown',headers={'Content-Disposition':'attachment; filename="lecture-study.md"'})
 
@@ -515,7 +540,7 @@ def create_app(config: AppConfig) -> FastAPI:
     async def attempt(ident:str,body:AttemptInput):
         _,question=quiz_question(db,ident,body.question_id)
         provider=provider_config() if question['kind']=='free' else None
-        if provider and provider.provider=='ollama':
+        if provider and provider.provider in ('ollama','local'):
             aid=save_attempt(db,ident,body.question_id,body.answer)
             quiz,_=quiz_question(db,ident,body.question_id)
             job=submit_job(db,quiz['session_id'],'grade',{'attempt_id':aid,'provider':provider.model_dump()})
@@ -527,7 +552,8 @@ def create_app(config: AppConfig) -> FastAPI:
     def launch_grade(job):
         async def operation():
             provider=ProviderConfig.model_validate(job['request']['provider'])
-            result=await grade_attempt(db,job['request']['attempt_id'],provider=provider,generation_lock=generation_slot(provider.provider,job['id']),ollama_url=app.state.ollama_url,before_local=lambda:wait_for_transcription(db,job['id']))
+            if config.embedded and provider.provider=='ollama':raise ValueError('이전 모델 엔진의 채점입니다. 새 작업으로 실행하세요')
+            result=await grade_attempt(db,job['request']['attempt_id'],provider=provider,generation_lock=generation_slot(provider.provider,job['id']),ollama_url=app.state.ollama_url,before_local=lambda:wait_for_transcription(db,job['id']),direct_models=app.state.direct_models)
             if result['status']!='done':raise ValueError(result['error'] or '채점 실패')
             return {'attempt_id':result['id']}
         return launch_job(app,job,operation)
@@ -548,10 +574,14 @@ def create_app(config: AppConfig) -> FastAPI:
     async def retry_local(ident:str,body:LocalRetry):
         old=get_job(db,ident)
         if old['kind']!='ai' or old['status'] not in ('failed','cancelled','interrupted'): raise ValueError('실패·취소·중단된 생성 작업만 로컬 재시도가 가능합니다')
-        selected=ProviderConfig(provider='ollama',model=body.model,context_limit=body.context_limit)
-        status=await model_status(selected,ollama_url=app.state.ollama_url)
+        selected=ProviderConfig(provider='local' if config.embedded else 'ollama',model=body.model,context_limit=body.context_limit)
+        status=await model_status(selected,ollama_url=app.state.ollama_url,direct_models=app.state.direct_models)
         if not status['completion'] or old['request']['request']['kind']=='vision' and not status['vision']: raise ValueError('로컬 모델이 요청 기능을 지원하지 않습니다')
         selected=selected.model_copy(update={'vision':status['vision']})
+        if config.embedded:
+            request=AIRequest.model_validate(old['request']['request']).model_copy(update={'provider':selected})
+            fresh=await freeze_request(db,request) if request.kind=='vision' else {'request':request.model_dump(),'snapshot':capture_request(db,request)}
+            return launch_ai(submit_job(db,old['session_id'],'ai',fresh,course_id=old['course_id']))
         frozen=old['request'];frozen['request']['provider']=selected.model_dump()
         with db: db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(frozen,ensure_ascii=False),ident))
         return launch_ai(submit_job(db,old['session_id'],'ai',frozen,ident,course_id=old['course_id']))
@@ -574,7 +604,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post("/api/sessions/{sid}/search")
     async def search_sources(sid: str,body: SearchInput):
         if body.scope.session_id!=sid: raise ValueError("검색 기록이 일치하지 않습니다")
-        if app.state.ollama_url and index_status(db)['ready']:
+        if (config.embedded or app.state.ollama_url) and index_status(db)['ready']:
             job=submit_job(db,sid,'search',body.model_dump()|{'snapshot':capture_search(db,body.scope,None)})
             launch_search(job)
             return JSONResponse(job,status_code=202)
@@ -615,7 +645,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post("/api/index/rebuild",status_code=202)
     async def rebuild_index(body: RebuildInput):
         session(db,body.session_id)
-        if app.state.ollama_url is None: raise ValueError("로컬 임베딩 모델 연결을 먼저 준비하세요")
+        if not config.embedded and app.state.ollama_url is None: raise ValueError("로컬 임베딩 모델 연결을 먼저 준비하세요")
         return launch_index(submit_job(db,body.session_id,'index',body.model_dump()))
 
     @app.get("/api/courses")
@@ -650,7 +680,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.post('/api/courses/{ident}/search')
     async def search_course(ident:str,body:SearchInput):
         if body.scope.course_id!=ident:raise ValueError('검색 과목이 일치하지 않습니다')
-        if app.state.ollama_url and index_status(db)['ready']:
+        if (config.embedded or app.state.ollama_url) and index_status(db)['ready']:
             job=submit_job(db,None,'search',body.model_dump()|{'snapshot':capture_search(db,body.scope,None)},course_id=ident)
             launch_search(job)
             return JSONResponse(job,status_code=202)
@@ -675,19 +705,25 @@ def create_app(config: AppConfig) -> FastAPI:
                 db.execute("UPDATE assets SET status='running',error=NULL WHERE id=?",(ident,))
             return await ingest_asset(db,ident,config.runtime_dir)
 
+    async def chosen_files(selected,kind='material'):
+        if config.embedded:
+            if selected is None:raise ValueError('앱의 파일 선택 창을 사용하세요')
+            return [Path(path) for path in selected]
+        return await select_files(config.runtime_dir,kind)
+
     @app.post("/api/sessions/{ident}/files/select",status_code=201)
-    async def connect_files(ident: str):
+    async def connect_files(ident: str,request:Request):
         session(db,ident)
-        return await connect_owner_files(session_id=ident)
+        return await connect_owner_files(session_id=ident,selected=request.scope.get('native_selected_files'))
 
     @app.post('/api/courses/{ident}/files/select',status_code=201)
-    async def connect_course_files(ident:str):
+    async def connect_course_files(ident:str,request:Request):
         course(db,ident)
-        return await connect_owner_files(course_id=ident)
+        return await connect_owner_files(course_id=ident,selected=request.scope.get('native_selected_files'))
 
-    async def connect_owner_files(session_id=None,course_id=None):
+    async def connect_owner_files(session_id=None,course_id=None,selected=None):
         async with app.state.file_selection:
-            paths = await select_files(config.runtime_dir)
+            paths = await chosen_files(selected)
         result = []
         for path in paths:
             inspected = await asyncio.to_thread(inspect_file,path)
@@ -734,7 +770,7 @@ def create_app(config: AppConfig) -> FastAPI:
     async def materials_for_session(ident: str):
         return list_materials(db,ident)
 
-    @app.get("/api/assets/{ident}/pages/{page}")
+    @app.api_route("/api/assets/{ident}/pages/{page}",methods=["GET","HEAD"])
     async def page_image(ident: str, page: int,document_sha256:str|None=None):
         async with app.state.parse_lock:
             path = await render_page(db,ident,page,config.runtime_dir,document_sha256)
@@ -752,7 +788,7 @@ def create_app(config: AppConfig) -> FastAPI:
     async def put_page_document(ident:str,asset_id:str,page:int,body:PageDocumentInput):
         return save_page_document(db,ident,asset_id,page,body)
 
-    @app.get("/api/assets/{ident}/original")
+    @app.api_route("/api/assets/{ident}/original",methods=["GET","HEAD"])
     async def original_material(ident: str,document_sha256:str|None=None):
         folder,asset = asset_dir(db,ident)
         source=checked_document_path(db,ident,document_sha256) if document_sha256 else original_path(db,asset)
@@ -771,7 +807,7 @@ def create_app(config: AppConfig) -> FastAPI:
                     path.unlink(missing_ok=True)
         return StreamingResponse(chunks(),media_type=media_type)
 
-    @app.get("/api/assets/{ident}/images/{image_id}")
+    @app.api_route("/api/assets/{ident}/images/{image_id}",methods=["GET","HEAD"])
     async def embedded_image(ident: str, image_id: str):
         async with app.state.parse_lock:
             path = await render_image(db,ident,image_id,config.runtime_dir)
@@ -812,16 +848,18 @@ def create_app(config: AppConfig) -> FastAPI:
             kick_transcription()
             return job
         if old['kind']=='ai':
+            if config.embedded and old['request']['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 요청입니다. 새 작업으로 실행하세요')
             job=submit_job(db,old['session_id'],'ai',old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks: launch_ai(job)
             return job
         if old['kind'] in ('grade','search'):
+            if config.embedded and old['kind']=='grade' and old['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 채점입니다. 새 작업으로 실행하세요')
             job=submit_job(db,old['session_id'],old['kind'],old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks:
                 (launch_grade if old['kind']=='grade' else launch_search)(job)
             return job
         if old["kind"]=="index":
-            if app.state.ollama_url is None: raise ValueError("로컬 임베딩 모델 연결을 먼저 준비하세요")
+            if not config.embedded and app.state.ollama_url is None: raise ValueError("로컬 임베딩 모델 연결을 먼저 준비하세요")
             job=submit_job(db,old["session_id"],old["kind"],old["request"],ident)
             if job["status"]=="queued" and ident not in app.state.job_tasks: launch_index(job)
             return job
@@ -899,7 +937,7 @@ def create_app(config: AppConfig) -> FastAPI:
         kick_transcription()
         return {"deleted":True,"cleanup_pending":db.execute("SELECT count(*) FROM file_cleanup").fetchone()[0]}
 
-    @app.get("/api/recordings/{ident}/audio")
+    @app.api_route("/api/recordings/{ident}/audio",methods=["GET","HEAD"])
     async def original_audio(ident: str):
         import mimetypes
         path=playable_path(db,ident)
@@ -944,7 +982,7 @@ def create_app(config: AppConfig) -> FastAPI:
                     finish_audio_jobs()
                     continue
                 if app.state.generation_lock.locked() or app.state.embedding_lock.locked() or app.state.active_embedding_clients:break
-                if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running') AND (kind IN ('search','index') OR (kind='ai' AND json_extract(request,'$.request.provider.provider')='ollama') OR (kind='grade' AND json_extract(request,'$.provider.provider')='ollama')) LIMIT 1").fetchone():break
+                if db.execute("SELECT 1 FROM jobs WHERE status IN ('queued','running') AND (kind IN ('search','index') OR (kind='ai' AND json_extract(request,'$.request.provider.provider') IN ('ollama','local')) OR (kind='grade' AND json_extract(request,'$.provider.provider') IN ('ollama','local'))) LIMIT 1").fetchone():break
                 pending=db.execute("SELECT id FROM jobs WHERE kind='asr_review' AND status='queued' AND EXISTS(SELECT 1 FROM recordings r WHERE r.id=json_extract(jobs.request,'$.recording_id') AND r.transcription_released=1) ORDER BY created_at LIMIT 1").fetchone()
                 if not pending:break
                 job=get_job(db,pending['id'])
@@ -1024,10 +1062,10 @@ def create_app(config: AppConfig) -> FastAPI:
         task=asyncio.create_task(release_later());app.state.audio_releases[ident]=task;app.state.tasks.add(task);task.add_done_callback(app.state.tasks.discard)
 
     @app.post("/api/sessions/{ident}/recordings",status_code=201)
-    async def connect_recordings(ident: str):
+    async def connect_recordings(ident: str,request:Request):
         session(db,ident)
         async with app.state.file_selection:
-            paths=await select_files(config.runtime_dir,"audio")
+            paths=await chosen_files(request.scope.get('native_selected_files'),'audio')
         result=[]
         for path in paths:
             rid=await register_audio(db,ident,path,config.runtime_dir)
@@ -1076,9 +1114,10 @@ def create_app(config: AppConfig) -> FastAPI:
     async def update_transcripts(ident:str,body:TranscriptBatchEdit):
         return {'segments':edit_segments(db,ident,[item.model_dump() for item in body.segments])}
 
-    @app.get('/api/sessions/{ident}/transcripts/export')
+    @app.api_route('/api/sessions/{ident}/transcripts/export',methods=['GET','HEAD'])
     async def download_transcript(ident:str,request:Request,format:Literal['txt','md']='txt'):
-        text=export_transcript(db,ident,format,str(request.base_url))
+        vault_id=db.execute("SELECT value FROM settings WHERE key='native_vault_id'").fetchone()[0] if config.embedded else None
+        text=export_transcript(db,ident,format,str(request.base_url),vault_id=vault_id)
         return PlainTextResponse(text,media_type='text/markdown' if format=='md' else 'text/plain',headers={'Content-Disposition':f'attachment; filename="transcript-{ident}.{format}"'})
 
     @app.patch("/api/transcripts/{ident}")

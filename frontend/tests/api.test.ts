@@ -26,3 +26,18 @@ test('protected request waits for bootstrap and sends the returned token', async
     globalThis.fetch = oldFetch;
   }
 });
+
+test('native API uses the trusted message bridge and preserves server error status', async () => {
+  Object.defineProperty(globalThis, 'location', {value:new URL('solasi-app://app/'), configurable:true});
+  const messages:unknown[]=[];
+  Object.defineProperty(globalThis, 'window', {value:{webkit:{messageHandlers:{solasi:{async postMessage(message:unknown){messages.push(message);return {status:409,text:JSON.stringify({detail:'revision conflict'})};}}}}},configurable:true});
+  await assert.rejects(api('/courses',{method:'POST',body:'{}'}),error=>error instanceof Error && error.message==='revision conflict' && (error as {status?:number}).status===409);
+  const request=messages[0] as {op:string;path:string;method:string};
+  assert.equal(request.op,'http');assert.equal(request.path,'/api/courses');assert.equal(request.method,'POST');
+  Reflect.deleteProperty(globalThis,'window');
+});
+
+test('bundled origin without a native bridge fails instead of fetching a server', async () => {
+  Object.defineProperty(globalThis,'location',{value:new URL('solasi-app://app/'),configurable:true});
+  await assert.rejects(api('/courses'),/앱 연결/);
+});

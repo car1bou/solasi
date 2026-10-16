@@ -19,17 +19,17 @@ test('default follows the system and updates native control colors',()=>{
   assert.equal(env.root.style.colorScheme,'dark');assert.equal(env.meta.content,'#171717');
   env.system(false);assert.equal(env.root.dataset.theme,'light');assert.equal(env.meta.content,'#FFFFFF');
 });
-test('manual theme persists and takes priority over system changes',()=>{
+test('manual theme persists and takes priority over system changes',async()=>{
   const env=environment('light');initializeTheme();assert.equal(env.root.dataset.theme,'light');
-  assert.equal(setThemePreference('dark'),true);assert.equal(env.stored(),'dark');
+  assert.equal(await setThemePreference('dark'),true);assert.equal(env.stored(),'dark');
   env.system(false);assert.equal(env.root.dataset.theme,'dark');
   initializeTheme();assert.equal(getThemePreference(),'dark');
-  setThemePreference('system');assert.equal(env.root.dataset.theme,'light');
+  await setThemePreference('system');assert.equal(env.root.dataset.theme,'light');
 });
-test('invalid or blocked storage falls back safely and manual choice still works',()=>{
+test('invalid or blocked storage falls back safely and manual choice still works',async()=>{
   const invalid=environment('invalid');initializeTheme();assert.equal(getThemePreference(),'system');
   assert.equal(invalid.root.dataset.theme,'dark');
   const blocked=environment(null,true,true);initializeTheme();
-  assert.equal(setThemePreference('light'),false);assert.equal(blocked.root.dataset.theme,'light');
+  assert.equal(await setThemePreference('light'),false);assert.equal(blocked.root.dataset.theme,'light');
   blocked.system(true);assert.equal(blocked.root.dataset.theme,'light');
 });

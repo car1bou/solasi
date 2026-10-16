@@ -3,6 +3,24 @@ import test from 'node:test';
 import {RecordingCapture} from '../src/recording-capture.ts';
 
 const flush=async()=>{for(let i=0;i<40;i++)await Promise.resolve();};
+
+test('bundled capture uses native commands and follows saved-frame state without browser audio',async t=>{
+  const events=new EventTarget(),messages:any[]=[],states:any[]=[];
+  const nativeWindow=Object.assign(events,{webkit:{messageHandlers:{solasi:{async postMessage(message:any){messages.push(message);return {accepted:true};}}}}});
+  for(const [key,value] of Object.entries({window:nativeWindow,location:new URL('solasi-app://app/')})){
+    const old=Object.getOwnPropertyDescriptor(globalThis,key);Object.defineProperty(globalThis,key,{value,configurable:true});
+    t.after(()=>{if(old)Object.defineProperty(globalThis,key,old);else Reflect.deleteProperty(globalThis,key);});
+  }
+  const capture=new RecordingCapture('a'.repeat(32),state=>states.push(state));
+  await capture.start();assert.equal(messages[0].op,'audio_start');assert.equal(messages[0].transcription_mode,'after_stop');
+  events.dispatchEvent(new CustomEvent('solasi-recording-state',{detail:{capture_id:'other',phase:'idle',seconds:9,pending:0,error:'',recovered:false}}));
+  assert.equal(states.at(-1).phase,'starting');
+  events.dispatchEvent(new CustomEvent('solasi-recording-state',{detail:{capture_id:messages[0].capture_id,phase:'recording',seconds:2,pending:.25,error:'',recovered:false}}));
+  assert.equal(states.at(-1).phase,'recording');assert.equal(states.at(-1).seconds,2);
+  await capture.stop();assert.equal(messages[1].op,'audio_stop');assert.equal(states.at(-1).phase,'idle');
+  events.dispatchEvent(new CustomEvent('solasi-recording-state',{detail:{capture_id:messages[0].capture_id,phase:'recording',seconds:3,pending:0,error:'',recovered:false}}));
+  assert.equal(states.at(-1).phase,'idle');
+});
 function setup(t:any){
   t.mock.timers.enable({apis:['setTimeout','setInterval','Date'],now:100000});
   const calls:any[]=[],nodes:any[]=[],contexts:any[]=[],sockets:any[]=[];let count=0,acquisitions=0,ack=true,flushReply=true;

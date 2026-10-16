@@ -6,6 +6,7 @@ from tokenizers import Tokenizer
 
 
 def local_profile(config,runtime):
+    if config.provider=='local':return direct_profile(config,runtime)
     if config.provider!='ollama' or config.model!='qwen3.5:4b' or runtime is None:return None
     from .local_models import CATALOG
     digest=CATALOG[config.model]['runners']['mlx']['digest'];root=Path(runtime)/'ollama-models/blobs'
@@ -34,8 +35,30 @@ def tokenizer(path,checksum,size,mtime):
 
 
 def input_bound(config,messages,schema,profile):
-    if config.provider!='ollama' or config.model!=profile['model']:raise ValueError('요약 모델과 토크나이저가 일치하지 않습니다')
+    if config.provider not in ('ollama','local') or config.model!=profile['model']:raise ValueError('요약 모델과 토크나이저가 일치하지 않습니다')
     try:stat=Path(profile['path']).stat();model=tokenizer(profile['path'],profile['sha256'],stat.st_size,stat.st_mtime_ns)
     except OSError:raise ValueError('요약 토크나이저를 찾을 수 없습니다') from None
     # shortcut: verified Qwen text chat reserves 200 template tokens; render templates before adding tools or custom models.
     return sum(len(model.encode(m['content'],add_special_tokens=False).ids)for m in messages)+len(model.encode(json.dumps(schema),add_special_tokens=False).ids)+200
+
+
+def direct_profile(config,runtime):
+    if runtime is None:return None
+    from .direct_models import model_identity
+    from .mlx_direct import SUPPORTED_MODELS
+    from .local_models import CATALOG
+    if config.model!='qwen3.5:4b' or config.model not in SUPPORTED_MODELS:return None
+    try:
+        name,tag=config.model.split(':',1);root=Path(runtime)/'ollama-models'
+        manifest=root/'manifests/registry.ollama.ai/library'/name/tag
+        if manifest.stat().st_size>64*1024*1024:return None
+        raw=manifest.read_bytes()
+        digest=hashlib.sha256(raw).hexdigest()
+        if digest not in (SUPPORTED_MODELS[config.model]['asset_digest'],CATALOG[config.model]['runners']['mlx']['digest']):return None
+        layer=next(row for row in json.loads(raw)['layers']if row.get('name')=='tokenizer.json')
+        checksum=layer['digest'].removeprefix('sha256:')
+        if not re.fullmatch('[0-9a-f]{64}',checksum):return None
+        path=root/'blobs'/('sha256-'+checksum)
+        if not path.is_file() or not path.resolve().is_relative_to((root/'blobs').resolve()):return None
+        return {'path':str(path.resolve()),'sha256':checksum,'model':config.model,'model_digest':model_identity(config.model,digest)}
+    except(OSError,ValueError,KeyError,TypeError,StopIteration):return None

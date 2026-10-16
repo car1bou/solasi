@@ -8,6 +8,7 @@ from contextlib import closing
 import unicodedata
 from .db import now,new_id,session,data_dir,course
 from .models import Scope,SourceRef,Evidence,SearchResult
+from .direct_models import DirectEmbeddings, EmbeddingInputTooLong, EMBEDDING_FORMAT
 
 
 def normalize(text):
@@ -232,6 +233,7 @@ def index_status(db):
 
 
 async def model_digest(client,model,base_url=""):
+    if isinstance(client,DirectEmbeddings):return (await client.status(model))['digest']
     response=await client.get(base_url+'/api/tags');response.raise_for_status()
     models=response.json().get('models',[])
     if not isinstance(models,list) or any(not isinstance(row,dict) for row in models): raise ValueError('로컬 모델 목록이 유효하지 않습니다')
@@ -252,13 +254,20 @@ def vector(values):
     return tuple(v/norm for v in values)
 
 
-def embedding_format(model):
+def embedding_format(model,client=None):
+    if isinstance(client,DirectEmbeddings):return EMBEDDING_FORMAT
     family=model.split(':')[0]
     return family+'-search-v1/chunk512-v1' if family in ('embeddinggemma','embeddinggemma-2') else 'plain-v1/chunk512-v1'
 
 
 async def embed_parts(client,model,text,title='',query=False):
     prefix=('task: search result | query: ' if query else 'title: '+(title or 'none')+' | text: ') if model.split(':')[0] in ('embeddinggemma','embeddinggemma-2') else ''
+    if isinstance(client,DirectEmbeddings):
+        try:return [vector(await client.embed(model,prefix+text))]
+        except EmbeddingInputTooLong:
+            if len(text)<=16:raise ValueError('임베딩 입력 한도가 너무 작습니다')
+            middle=len(text)//2
+            return await embed_parts(client,model,text[:middle],title,query)+await embed_parts(client,model,text[middle:],title,query)
     response=await client.post('/api/embed',json={'model':model,'input':[prefix+text],'truncate':False})
     if response.status_code in (400,413) and response.json().get('error')=='the input length exceeds the context length':
         if len(text)<=16: raise ValueError('임베딩 입력 한도가 너무 작습니다')
@@ -272,14 +281,16 @@ async def embed_parts(client,model,text,title='',query=False):
 
 async def rebuild_embeddings(db,model,client,job_id=None):
     digest=await model_digest(client,model)
-    response=await client.post('/api/show',json={'model':model});response.raise_for_status()
-    if response.json().get('remote_model') or response.json().get('remote_host'): raise ValueError('원격 임베딩 모델은 사용할 수 없습니다')
-    if 'embedding' not in response.json().get('capabilities',[]): raise ValueError('임베딩을 지원하는 로컬 모델을 선택하세요')
+    if isinstance(client,DirectEmbeddings):
+        if not (await client.status(model))['embedding']:raise ValueError('임베딩을 지원하는 로컬 모델을 선택하세요')
+    else:
+        response=await client.post('/api/show',json={'model':model});response.raise_for_status()
+        if response.json().get('remote_model') or response.json().get('remote_host'): raise ValueError('원격 임베딩 모델은 사용할 수 없습니다')
+        if 'embedding' not in response.json().get('capabilities',[]): raise ValueError('임베딩을 지원하는 로컬 모델을 선택하세요')
     rows=[dict(row) for row in db.execute('SELECT * FROM searchable_chunks ORDER BY id')]
     ident=new_id();dim=None
     with db:
-        db.execute("DELETE FROM embedding_sets WHERE status='failed'")
-        db.execute('INSERT INTO embedding_sets VALUES (?,?,?,NULL,?,\'building\',?)',(ident,model,digest,embedding_format(model),now()))
+        db.execute('INSERT INTO embedding_sets VALUES (?,?,?,NULL,?,\'building\',?)',(ident,model,digest,embedding_format(model,client),now()))
     try:
         for i,row in enumerate(rows):
             while db.execute("SELECT 1 FROM recordings WHERE status='recording' UNION ALL SELECT 1 FROM transcript_ranges WHERE status IN ('queued','running') LIMIT 1").fetchone():
@@ -301,7 +312,6 @@ async def rebuild_embeddings(db,model,client,job_id=None):
         with db:
             db.execute("UPDATE embedding_sets SET status='ready',dim=? WHERE id=?",(dim,ident))
             db.execute("INSERT OR REPLACE INTO settings VALUES ('active_embedding_index',?)",(json.dumps(ident),))
-            db.execute('DELETE FROM embedding_sets WHERE id!=?',(ident,))
         return index_status(db)
     except BaseException:
         with db: db.execute("UPDATE embedding_sets SET status='failed' WHERE id=?",(ident,))
@@ -342,7 +352,7 @@ async def retrieve(db,query,scope,cutoff_ms,limit=8,client=None,snapshot=None):
     if not rows: warning='검색할 자료·확정 전사 없음'
     if client is not None and index['ready'] and rows:
         try:
-            if embedding_format(index['model'])!=index['format'] or await model_digest(client,index['model'])!=index['digest']: raise ValueError('임베딩 모델이 변경되었습니다. 재색인하세요')
+            if embedding_format(index['model'],client)!=index['format'] or await model_digest(client,index['model'])!=index['digest']: raise ValueError('임베딩 모델이 변경되었습니다. 재색인하세요')
             query_vectors=await embed_parts(client,index['model'],query,query=True)
             if any(len(v)!=index['dim'] for v in query_vectors): raise ValueError('임베딩 차원이 변경되었습니다. 재색인하세요')
             semantic=await asyncio.to_thread(semantic_rank,db,index,rows,query_vectors,limit)

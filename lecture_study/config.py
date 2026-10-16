@@ -8,6 +8,7 @@ class AppConfig:
     runtime_dir: Path
     host: str = "127.0.0.1"
     port: int = 8765
+    embedded: bool = False
 
     def __post_init__(self):
         self.data_dir=self.data_dir.resolve()

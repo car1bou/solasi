@@ -5,7 +5,7 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {createServer} from 'vite';
 
 test('job status shows ASR waiting only while active and keeps cancel/retry controls',async()=>{
-  const server=await createServer({configFile:false,server:{middlewareMode:true},appType:'custom'});
+  const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
   try{
     const {default:JobProgress}=await server.ssrLoadModule('/src/JobProgress.tsx');
     const draw=(status:string)=>renderToStaticMarkup(React.createElement(JobProgress,{job:{id:'fixture',kind:'search',status,error:null,result:{paused_reason:'전사 처리 후 실행'}},onChange:()=>{}}));

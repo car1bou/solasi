@@ -48,3 +48,33 @@ test('page draft conflicts keep their base revision and cannot be retried past a
     await rm(cacheDir,{recursive:true,force:true});
   }
 });
+
+test('native close flush waits for journal commits and does not apply a page conflict',async()=>{
+  const cacheDir=await mkdtemp(join(tmpdir(),'solasi-close-drafts-'));
+  const vite=await createServer({configFile:false,cacheDir,optimizeDeps:{noDiscovery:true,include:[]},server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  Object.defineProperty(globalThis,'location',{value:new URL('solasi-app://app/'),configurable:true});
+  let commits=0,serverWrites=0,completed=false,release!:()=>void,started!:()=>void;
+  const blocked=new Promise<void>(resolve=>{release=resolve;}),firstCommit=new Promise<void>(resolve=>{started=resolve;});
+  const remote={id:'page',course_id:'course',asset_id:'asset',document_sha256:'hash',page:1,revision:2,text:'remote',ink:[],source_id:'source',updated_at:'2026-10-16'};
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{webkit:{messageHandlers:{solasi:{postMessage:async(message:{path:string;method:string;body?:string})=>{
+    const body=message.body?JSON.parse(message.body):{};
+    let result:unknown;
+    if(message.path.startsWith('/api/native/drafts/read'))result=[];
+    else if(message.path==='/api/native/drafts/uploads')result={id:'upload-'+commits,chunk_size:256*1024};
+    else if(message.path.endsWith('/commit')){commits++;if(commits===1){started();await blocked;}result={count:1,sha256:'checked'};}
+    else if(message.path.startsWith('/api/native/drafts/uploads/'))result={received:body.offset+Buffer.from(body.data,'base64').length};
+    else {if(message.method==='PUT')serverWrites++;result=remote;}
+    return {status:200,text:JSON.stringify(result)};
+  }}}}}});
+  try{
+    const {pageDraft,flushPageDrafts}=await vite.ssrLoadModule('/src/page-drafts.ts');
+    const store=pageDraft('course','asset','hash',1);
+    await new Promise<void>(resolve=>{const unsubscribe=store.subscribe(()=>{if(store.state.loaded){unsubscribe();resolve();}});});
+    store.state={...store.state,status:'conflict'};
+    store.change({text:'my unsaved conflict',ink:[]});
+    const pending=flushPageDrafts().then(()=>{completed=true;});
+    await firstCommit;assert.equal(completed,false);release();await pending;
+    assert.equal(commits,2);assert.equal(serverWrites,0);
+    assert.equal(store.state.text,'my unsaved conflict');assert.equal(store.state.status,'conflict');
+  }finally{release();await vite.close();await rm(cacheDir,{recursive:true,force:true});}
+});

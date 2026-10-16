@@ -56,7 +56,7 @@ async def create_assistance(db,frozen,job_id,**kwargs):
     request,evidence=checked_evidence(db,frozen)
     is_note=request.kind=='note';schema=NOTE_SCHEMA if is_note else CARD_SCHEMA;instruction=NOTE_INSTRUCTION if is_note else CARD_INSTRUCTION
     schema=evidence_schema(schema,[e for e in evidence if not is_note or e.ref.kind=='transcript'])
-    if is_note and request.provider.provider=='ollama':schema['properties']['addition'].update(minLength=1,maxLength=20000)
+    if is_note and request.provider.provider in ('ollama','local'):schema['properties']['addition'].update(minLength=1,maxLength=20000)
     if not is_note:schema['properties']['cards']['items']['properties']['source_id']['enum']=[e.ref.id for e in evidence]
     messages=output_messages(request,evidence,instruction);check_budget(request.provider,messages,schema)
     result=await generate(request.provider,messages,[],schema,**kwargs)

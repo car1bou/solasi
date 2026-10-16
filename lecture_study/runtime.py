@@ -10,6 +10,7 @@ import tarfile
 import tempfile
 import threading
 import time
+import sys
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -33,6 +34,26 @@ def matches(path,item):
 
 def check_cancel(cancel):
     if cancel and cancel.is_set(): raise InterruptedError('런타임 준비 취소')
+
+
+def asr_root(destination):
+    return Path(sys.executable).parent/'engines/asr' if getattr(sys,'frozen',False) else Path(destination)/'asr'
+
+
+def asr_binary(destination, name):
+    if name not in ('ffmpeg','ffprobe','whisper-cli','whisper-vad-speech-segments'):
+        raise ValueError('지원하지 않는 오디오 도구입니다')
+    root=asr_root(destination);receipt=root/'receipt.json'
+    if receipt.is_file():
+        try:
+            item=json.loads(receipt.read_text())['files']['bin/'+name]
+            if not matches(root/'bin'/name,item):raise ValueError('전사 엔진 파일 검증 실패')
+        except (KeyError,TypeError,json.JSONDecodeError):raise ValueError('전사 엔진 설치 정보를 확인하세요') from None
+        return root/'bin'/name
+    if getattr(sys,'frozen',False):raise ValueError('앱에 포함된 전사 엔진을 확인하세요')
+    path=Path(destination)/('ffmpeg/bin' if name in ('ffmpeg','ffprobe') else 'build/whisper/bin')/name
+    if not path.is_file():raise ValueError('오디오 엔진을 준비하세요')
+    return path
 
 
 def download_verified(item,target,progress=None,cancel=None):
@@ -63,21 +84,21 @@ def component_status(component,destination):
         checks.extend((root/'ollama'/name).is_symlink() and os.readlink(root/'ollama'/name)==target for name,target in item['symlinks'].items())
         checks.append(matches(root/'ollama/LICENSE',spec['assets']['ollama_license']))
     else:
-        receipt=root/'asr/receipt.json'
+        installed_root=asr_root(root);receipt=installed_root/'receipt.json'
         if receipt.is_file():
             try:
                 installed=json.loads(receipt.read_text());checks=[installed['version']==item['version']]
-                checks.extend(matches(root/'asr'/name,values) for name,values in installed['files'].items()if name!=activity_name)
-                activity_ready=activity_name in installed['files'] and matches(root/'asr'/activity_name,installed['files'][activity_name])
+                checks.extend(matches(installed_root/name,values) for name,values in installed['files'].items()if name!=activity_name)
+                activity_ready=activity_name in installed['files'] and matches(installed_root/activity_name,installed['files'][activity_name])
                 checks.append(set(installed['files'])>={'bin/whisper-cli','bin/ffmpeg','bin/ffprobe','sources/whisper.cpp/LICENSE','sources/ffmpeg/COPYING.LGPLv2.1'})
             except (OSError,ValueError,KeyError,TypeError): checks=[False]
-        else: checks=[matches(root/name,values) for name,values in item['reference_build'].items()]
+        else: checks=[False] if getattr(sys,'frozen',False) else [matches(root/name,values) for name,values in item['reference_build'].items()]
         checks.extend(matches(root/spec['assets'][key]['path'],spec['assets'][key]) for key in ('turbo','vad','whisper_notice','vad_notice'))
     return ({'voice_activity_ready':activity_ready}if component=='asr'else {})|{'label':item['label'],'version':item['version'],'ready':bool(checks) and all(checks),'bytes':sum(spec['assets'][key]['bytes'] for key in item['assets']),'error_code':None if checks and all(checks) else 'missing_or_hash_mismatch'}
 
 
 def probe_runtime(config):
-    components={key:component_status(key,config.runtime_dir) for key in manifest()['components']}
+    components={key:component_status(key,config.runtime_dir) for key in manifest()['components'] if not(config.embedded and key=='ollama')}
     try: parser_ready=importlib.metadata.version('liteparse')=='2.16.0'
     except importlib.metadata.PackageNotFoundError: parser_ready=False
     components['parser']={'label':'PDF·이미지 추출 · LiteParse','ready':parser_ready,'version':'2.16.0','bytes':0,'error_code':None if parser_ready else 'package_missing'}
@@ -130,6 +151,13 @@ def prepare_runtime(component,destination,progress=None,cancel=None):
     spec=manifest()
     if component not in spec['components']: raise ValueError('준비할 엔진을 선택하세요')
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
+    if getattr(sys,'frozen',False):
+        if component=='ollama':raise ValueError('앱은 내장 모델 엔진을 사용합니다')
+        if component=='asr':
+            for name in ('ffmpeg','ffprobe','whisper-cli','whisper-vad-speech-segments'):asr_binary(destination,name)
+            for key in ('turbo','vad','whisper_notice','vad_notice'):
+                asset=spec['assets'][key];download_verified(asset,destination/asset['path'],progress,cancel)
+            return component_status('asr',destination)
     target=destination/spec['components'][component]['install_dir'];backup=target.with_name(target.name+'.previous')
     if backup.exists():
         if target.exists() and component_status(component,destination)['ready']:shutil.rmtree(backup)

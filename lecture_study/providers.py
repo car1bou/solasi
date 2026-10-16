@@ -74,7 +74,11 @@ def usage_numbers(value):
     return {key:(usage_numbers(item) if isinstance(item,dict) else item) for key,item in value.items() if isinstance(key,str) and len(key)<100 and (isinstance(item,dict) or type(item) is int and item>=0)}
 
 
-async def model_status(config,*,client=None,secret=None,ollama_url=None):
+async def model_status(config,*,client=None,secret=None,ollama_url=None,direct_models=None):
+    if config.provider=='local':
+        if direct_models is None:raise ValueError('직접 실행 엔진을 준비하세요')
+        status=await direct_models.status(config.model)
+        return status|{'context_limit':min(config.context_limit,status.get('context_limit',config.context_limit))}
     async with http_client(client) as transport:
         try:
             if config.provider=='ollama':
@@ -99,12 +103,25 @@ async def model_status(config,*,client=None,secret=None,ollama_url=None):
         except (KeyError,TypeError,AttributeError): raise ValueError('모델 조회 응답 형식을 확인하세요') from None
 
 
-async def generate(config:ProviderConfig,messages,images,schema,*,client=None,secret=None,ollama_url=None,before_local=None,output_limit=4096,expected_digest=None,source_copy=False):
+async def generate(config:ProviderConfig,messages,images,schema,*,client=None,secret=None,ollama_url=None,before_local=None,output_limit=4096,expected_digest=None,source_copy=False,direct_models=None):
     if type(output_limit)is not int or not 1<=output_limit<=4096:raise ValueError('출력 예산은 1~4096이어야 합니다')
     if len(images)>4: raise ValueError('이미지는 한 번에 최대 4개입니다')
     if images and not config.vision: raise ValueError('선택한 모델의 이미지 지원을 먼저 확인하세요')
     if any(m.get('role') not in ('system','user','assistant') or not isinstance(m.get('content'),str) for m in messages): raise ValueError('모델 메시지를 확인하세요')
     if sum(len(m['content']) for m in messages)>1_000_000: raise ValueError('모델 입력이 너무 큽니다')
+    if config.provider=='local':
+        started=time.monotonic()
+        status=await model_status(config,direct_models=direct_models)
+        if not status['completion'] or images and not status['vision']:raise ValueError('로컬 모델이 요청 기능을 지원하지 않습니다')
+        if expected_digest is not None and status['digest']!=expected_digest:raise ValueError('요약용 토크나이저와 실행 모델이 다릅니다. 새 작업을 요청하세요')
+        body=await direct_models.generate(config,messages,images,schema,output_limit=output_limit,before_local=before_local,expected_digest=status['digest'])
+        text=body.get('text')
+        if body.get('finish_reason') not in ('stop','eos'):raise ValueError('모델 응답이 완료되지 않았습니다')
+        if not isinstance(text,str) or not text.strip():raise ValueError('모델의 텍스트 응답이 없습니다')
+        if schema is not None:
+            try:json.loads(text)
+            except ValueError:raise ValueError('모델이 유효한 JSON 결과를 반환하지 않았습니다') from None
+        return ProviderResult(digest=status['digest'],text=text,model=config.model,usage=usage_numbers(body.get('usage')),elapsed_ms=round((time.monotonic()-started)*1000))
     encoded=[]
     for path in images:
         if path.stat().st_size>20*1024*1024: raise ValueError('이미지는 20MiB 이하여야 합니다')

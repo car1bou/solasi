@@ -1,6 +1,7 @@
 import React,{useEffect,useId,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type {DocumentMetadata,DocumentPage,InkPoint,InkStroke} from './types';
 import {pageDraft} from './page-drafts';
+import {downloadJSON} from './api';
 import {clamp,eraseInk,inkBounds,inkPath,inside} from './ink';
 import type {Bounds,Point} from './ink';
 
@@ -9,7 +10,6 @@ type Gesture={id:number;kind:Tool|'move'|'resize';origin:Point;base:InkStroke[];
 const InkMark=React.memo(function InkMark({stroke,width,height}:{stroke:InkStroke;width:number;height:number}){return <path d={inkPath(stroke,width,height)} fill={stroke.color} opacity={stroke.opacity} pointerEvents="none"/>;});
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동'};
 const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장 대기',saving:'저장 중',failed:'저장 실패 · 초안 보존',conflict:'충돌 · 초안 보존'};
-function download(filename:string,value:unknown){const url=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)],{type:'application/json'})),anchor=document.createElement('a');anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
 export default function PageNotebook({courseId,document:metadata,page,filename}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string}){
   const noteId=useId();
   const store=useMemo(()=>pageDraft(courseId,metadata.asset_id,metadata.sha256,page.page),[courseId,metadata.asset_id,metadata.sha256,page.page]);
@@ -19,9 +19,11 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   const [preview,setPreview]=useState<InkStroke[]|null>(null),[liveStroke,setLiveStroke]=useState<InkStroke|null>(null),[polygon,setPolygon]=useState<Point[]>([]),[selected,setSelected]=useState<string[]>([]);
   const [history,setHistory]=useState<{past:InkStroke[][];future:InkStroke[][]}>({past:[],future:[]});
   const svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),gesture=useRef<Gesture|null>(null),touches=useRef(new Map<number,Point>()),pinch=useRef<{distance:number;zoom:number}|null>(null);
+  function download(name:string,value:unknown){void downloadJSON(name,value).catch(error=>setInputError((error as Error).message));}
   const displayed=preview||state.ink,selection=inkBounds(displayed.filter(stroke=>selected.includes(stroke.id)));
   useEffect(()=>{if(state.ink!==lastOwnInk.current){cancelGesture();setHistory({past:[],future:[]});setSelected([]);}},[state.ink]);
   useEffect(()=>{const refresh=()=>{void store.refresh();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[store]);
+  useEffect(()=>{const finish=()=>finishGesture();window.addEventListener('solasi-finish-ink',finish);return()=>window.removeEventListener('solasi-finish-ink',finish);},[store]);
   useEffect(()=>{const flush=()=>{void store.save();};const before=(event:BeforeUnloadEvent)=>{flush();if(!['saved','loading'].includes(store.state.status)){event.preventDefault();event.returnValue='';}};const cancel=()=>cancelGesture();window.addEventListener('beforeunload',before);window.addEventListener('blur',cancel);return()=>{flush();window.removeEventListener('beforeunload',before);window.removeEventListener('blur',cancel);};},[store]);
   function commit(ink:InkStroke[],base=latest.current.ink){
     if(base!==latest.current.ink){cancelGesture();setInputError('다른 창의 필기가 갱신되어 진행 중이던 입력을 취소했습니다. 최신 내용에서 다시 입력하세요.');return;}
@@ -72,8 +74,12 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   }
   function up(event:React.PointerEvent<SVGSVGElement>){
     touches.current.delete(event.pointerId);if(touches.current.size<2)pinch.current=null;
-    const g=gesture.current;if(!g||g.id!==event.pointerId)return;gesture.current=null;
+    if(gesture.current?.id===event.pointerId)finishGesture();
+  }
+  function finishGesture(){
+    const g=gesture.current;if(!g)return;gesture.current=null;
     if(g.stroke)commit([...g.base,g.stroke],g.base);else if(g.kind==='lasso')setSelected(g.base.filter(stroke=>stroke.points.some(point=>inside(point,g.polygon))).map(stroke=>stroke.id));else if(g.kind!=='pan')commit(g.work,g.base);
+    touches.current.clear();pinch.current=null;
     setPreview(null);setLiveStroke(null);setPolygon([]);
   }
   function chooseTool(value:Tool){cancelGesture();setTool(value);if(value==='pen'){setWidth(.0025);setOpacity(1);}if(value==='highlighter'){setWidth(.018);setOpacity(.35);}if(value!=='lasso')setSelected([]);}

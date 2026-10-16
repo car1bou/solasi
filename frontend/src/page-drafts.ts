@@ -1,4 +1,6 @@
-import {api,ApiError} from './api';
+import {api,ApiError,nativeApp} from './api';
+import {readNativeDrafts,transferDraft} from './draft-migration';
+import type {DraftExport} from './draft-migration';
 import type {DocumentMetadata,InkStroke,PageDocument} from './types';
 
 type Content={text:string;ink:InkStroke[]};
@@ -8,10 +10,18 @@ export type PageDraftState=Content&{loaded:boolean;revision:number;status:'loadi
 let database:Promise<IDBDatabase>|undefined;
 function db(){return database??=new Promise<IDBDatabase>((resolve,reject)=>{const request=indexedDB.open('solasi-page-drafts',1);request.onupgradeneeded=()=>request.result.createObjectStore('drafts',{keyPath:'key'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});}
 async function stored<T>(mode:IDBTransactionMode,operation:(store:IDBObjectStore)=>IDBRequest<T>):Promise<T>{const database=await db();return new Promise((resolve,reject)=>{const transaction=database.transaction('drafts',mode),request=operation(transaction.objectStore('drafts'));let result:T;request.onsuccess=()=>{result=request.result;};transaction.oncomplete=()=>resolve(result!);transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);});}
-async function writeDraft(draft:Draft,journalKey:string){const database=await db();return new Promise<void>((resolve,reject)=>{const transaction=database.transaction('drafts','readwrite'),store=transaction.objectStore('drafts');store.put(draft);if(draft.dirty)store.put({...draft,key:journalKey});else store.delete(journalKey);transaction.oncomplete=()=>resolve();transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);});}
+async function writeDraft(draft:Draft,journalKey:string){if(nativeApp()){await transferDraft(draft,'write',journalKey);return;}const database=await db();return new Promise<void>((resolve,reject)=>{const transaction=database.transaction('drafts','readwrite'),store=transaction.objectStore('drafts');store.put(draft);if(draft.dirty)store.put({...draft,key:journalKey});else store.delete(journalKey);transaction.oncomplete=()=>resolve();transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);});}
+async function deleteJournal(key:string){if(nativeApp())await api('/native/drafts/journal?key='+encodeURIComponent(key),{method:'DELETE'});else await stored('readwrite',store=>store.delete(key));}
 function equal(a:Content,b:Content){return a.text===b.text&&JSON.stringify(a.ink)===JSON.stringify(b.ink);}
 const stores=new Map<string,PageDraft>();
 export function pageDraft(courseId:string,assetId:string,hash:string,page:number){const key=JSON.stringify([courseId,assetId,hash,page]);let store=stores.get(key);if(!store){store=new PageDraft(key,`/courses/${courseId}/assets/${assetId}/pages/${page}/document`,hash);stores.set(key,store);}return store;}
+export async function flushPageDrafts(){for(const store of stores.values())if(!await store.flushStorage())throw new Error('페이지 초안을 저장하지 못했습니다. 창을 유지하고 저장 상태를 확인하세요.');}
+export function resumePageDrafts(){for(const store of stores.values())store.resumeStorage();}
+export async function exportPageDrafts(vaultId:string,theme:DraftExport['theme'],unsavedInputs:unknown[]):Promise<DraftExport>{
+  if(nativeApp())throw new Error('이전 화면의 초안 저장소에서 내보내기를 실행하세요.');
+  for(const store of stores.values())if(!await store.flushStorage())throw new Error('초안 저장이 끝나지 않아 이전을 중단했습니다.');
+  return {version:1,vault_id:vaultId,origin:location.origin,theme,drafts:await stored('readonly',store=>store.getAll()),unsaved_inputs:unsavedInputs};
+}
 
 export class PageDraft{
   state:PageDraftState={text:'',ink:[],loaded:false,revision:0,status:'loading',error:'',storageError:'',server:null,recovered:[]};
@@ -20,18 +30,20 @@ export class PageDraft{
   private writer=crypto.randomUUID();
   private timer:ReturnType<typeof setTimeout>|undefined;
   private saving=false;
-  private storageQueue:Promise<unknown>=Promise.resolve();
+  private storageQueue:Promise<boolean>=Promise.resolve(true);
   private key:string;
   private path:string;
   private hash:string;
   constructor(key:string,path:string,hash:string){this.key=key;this.path=path;this.hash=hash;void this.load();}
   subscribe=(listener:()=>void)=>{const first=this.listeners.size===0;this.listeners.add(listener);if(first&&this.state.loaded)void this.refresh();return()=>{this.listeners.delete(listener);};};
   snapshot=()=>this.state;
+  async flushStorage(){clearTimeout(this.timer);return this.state.loaded&&this.state.status!=='saved'?await this.persist():await this.storageQueue;}
+  resumeStorage(){if(this.state.status==='pending')this.schedule();}
   private update(next:Partial<PageDraftState>){this.state={...this.state,...next};this.listeners.forEach(listener=>listener());}
   private persist(){const draft:Draft={key:this.key,revision:this.state.revision,text:this.state.text,ink:this.state.ink,token:this.token,backup:this.state.backup,dirty:this.state.status!=='saved',updatedAt:Date.now()};this.storageQueue=this.storageQueue.catch(()=>{}).then(()=>writeDraft(draft,this.key+'::'+this.writer)).then(()=>true).catch(()=>{this.update({storageError:'앱 초안 저장소에 접근할 수 없습니다. 서버 저장 완료를 확인한 후 이동하세요.'});return false;});return this.storageQueue;}
   private async load(){
     let draft:Draft|undefined,recovered:Draft[]=[];
-    try{draft=await stored('readonly',store=>store.get(this.key));recovered=await stored('readonly',store=>store.getAll(IDBKeyRange.bound(this.key+'::',this.key+'::\uffff')));}catch{this.update({storageError:'앱 초안 저장소에 접근할 수 없습니다.'});}
+    try{if(nativeApp()){const rows=await readNativeDrafts<Draft>(this.key);draft=rows.find(row=>row.key===this.key);recovered=rows.filter(row=>row.key!==this.key);}else{draft=await stored('readonly',store=>store.get(this.key));recovered=await stored('readonly',store=>store.getAll(IDBKeyRange.bound(this.key+'::',this.key+'::\uffff')));}}catch{this.update({storageError:'앱 초안 저장소에 접근할 수 없습니다.'});}
     try{
       const server=await api<PageDocument>(this.path+'?document_sha256='+encodeURIComponent(this.hash));
       this.token=draft?.token||crypto.randomUUID();
@@ -74,6 +86,6 @@ export class PageDraft{
     this.update(useLocal?{revision:server.revision,status:'pending',error:'',backup:{text:server.text,ink:server.ink}}:{text:server.text,ink:server.ink,revision:server.revision,status:'saved',error:'',backup:{text:this.state.text,ink:this.state.ink}});
     void this.persist();if(useLocal)void this.save();
   }
-  recover(draft:Recovery){this.update({backup:{text:this.state.text,ink:this.state.ink},recovered:this.state.recovered.filter(row=>row.key!==draft.key)});this.change({text:draft.text,ink:draft.ink});void this.persist().then(saved=>saved?stored('readwrite',store=>store.delete(draft.key)):undefined).catch(()=>{});}
+  recover(draft:Recovery){this.update({backup:{text:this.state.text,ink:this.state.ink},recovered:this.state.recovered.filter(row=>row.key!==draft.key)});this.change({text:draft.text,ink:draft.ink});void this.persist().then(saved=>saved?deleteJournal(draft.key):undefined).catch(()=>{});}
   retry(){if(!this.state.loaded)void this.load();else void this.save();}
 }

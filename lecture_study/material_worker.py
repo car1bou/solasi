@@ -12,28 +12,12 @@ def main():
     source,output,runtime = Path(source),Path(output),Path(runtime)
     if mode=='metadata':
         if sys.platform!='darwin':raise ValueError('원본 페이지 정보는 현재 Mac에서 지원합니다')
-        script='''import Foundation
-import PDFKit
-import AppKit
-let url = URL(fileURLWithPath: CommandLine.arguments.last!)
-var pages: [[String: Any]] = []
-if let document = PDFDocument(url: url) {
-    guard !document.isLocked else { exit(2) }
-    for index in 0..<document.pageCount {
-        guard let page = document.page(at: index) else { exit(3) }
-        let bounds = page.bounds(for: .cropBox)
-        let rotation = (page.rotation % 360 + 360) % 360
-        let sideways = rotation == 90 || rotation == 270
-        pages.append(["page": index + 1, "width": sideways ? bounds.height : bounds.width, "height": sideways ? bounds.width : bounds.height, "rotation": rotation])
-    }
-} else if let data = try? Data(contentsOf: url), let image = NSBitmapImageRep(data: data) {
-    pages.append(["page": 1, "width": image.pixelsWide, "height": image.pixelsHigh, "rotation": 0])
-} else { exit(4) }
-guard !pages.isEmpty else { exit(5) }
-FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: pages))
-'''
-        cache=Path(tempfile.gettempdir())/'solasi-swift-module-cache'
-        result=subprocess.run(['/usr/bin/swift','-module-cache-path',str(cache),'-e',script,str(source)],capture_output=True,timeout=90,check=True)
+        if getattr(sys,'frozen',False):
+            command=[str(Path(sys.executable).parent/'MaterialMetadata'),str(source)]
+        else:
+            cache=Path(tempfile.gettempdir())/'solasi-swift-module-cache'
+            command=['/usr/bin/swift','-module-cache-path',str(cache),str(Path(__file__).parent.parent/'macos/MaterialMetadata.swift'),str(source)]
+        result=subprocess.run(command,capture_output=True,timeout=90,check=True)
         output.write_bytes(result.stdout)
         return
     if mode=="parse" and kind in ("txt","md"):

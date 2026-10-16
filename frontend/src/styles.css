@@ -517,3 +517,8 @@ small,.muted{color:var(--muted)}
 }
 @media(any-pointer:coarse){.app-shell button,.sidebar .sidebar-add,.session-management button,.notebook-heading button,.recorder .primary,.ink-toolbar button{min-height:44px;min-width:44px}}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
+.native-audio{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;max-width:100%;padding:.5rem 0}
+.native-audio input[aria-label="원음 재생 위치"]{flex:1;min-width:100px;width:auto}
+.native-audio input[aria-label="원음 음량"]{width:70px}
+.native-audio span{font-variant-numeric:tabular-nums}
+.native-audio p{flex-basis:100%;margin:0}

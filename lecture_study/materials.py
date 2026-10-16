@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from .db import data_dir, new_id, now, session,course
 from .models import SourceRef
 from .retrieval import index_source
+from .execution import worker_command
 
 MAX_MATERIAL_BYTES = 256*1024*1024
 MAX_CACHE_BYTES = 256*1024*1024
@@ -176,7 +177,7 @@ def normalize_result(result, ident, folder, ocr_ready, version=1):
 
 
 async def worker(args, timeout=120):
-    process = await asyncio.create_subprocess_exec(sys.executable,"-m","lecture_study.material_worker",*map(str,args),
+    process = await asyncio.create_subprocess_exec(*worker_command('material-worker',args),
                                                    stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
     try:
         code = await asyncio.wait_for(process.wait(),timeout)

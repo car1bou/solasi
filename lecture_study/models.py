@@ -119,7 +119,7 @@ class SearchResult(BaseModel):
     warning: str | None = None
 
 class ProviderConfig(Input):
-    provider: Literal['openai','gemini','claude','ollama'] = 'ollama'
+    provider: Literal['openai','gemini','claude','ollama','local'] = 'ollama'
     model: str = Field(default='qwen3.5:4b',pattern=r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,199}$')
     context_limit: int = Field(default=8192,ge=512,le=262144)
     vision: bool = False

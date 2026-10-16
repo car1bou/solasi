@@ -159,3 +159,12 @@ class TranscriptScriptTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn('원음 없음', md.text)
         self.assertNotIn('/audio#t=', md.text)
         self.assertEqual((await self.client.get(self.route+'/export?format=html')).status_code, 422)
+
+    async def test_native_export_links_name_vault_and_exact_recording_offsets(self):
+        vault = 'a'*32
+        text = tr.export_transcript(self.db,self.sid,'md','',vault_id=vault)
+        self.assertIn(f'solasi://audio/{vault}/{self.rid}?start_ms=1000&end_ms=2000',text)
+        self.assertIn(f'solasi://audio/{vault}/{self.rid2}?start_ms=0&end_ms=1000',text)
+        self.assertNotIn('http://',text)
+        self.assertIn('같은 보관함',text)
+        with self.assertRaises(ValueError):tr.export_transcript(self.db,self.sid,'md','',vault_id='../other')

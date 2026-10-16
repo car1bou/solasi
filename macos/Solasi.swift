@@ -3,21 +3,20 @@ import AVFoundation
 import Darwin
 import Foundation
 import WebKit
+import UniformTypeIdentifiers
 
 struct LaunchSettings: Decodable {
-    let python: String
-    let source: String
     let data: String
     let runtime: String
-    let port: Int
 }
 
 private final class AppWindow {
     let window: NSWindow
     let webView: WKWebView
-    let status = NSTextField(wrappingLabelWithString: "로컬 서버를 준비하고 있습니다…")
+    let status = NSTextField(wrappingLabelWithString: "기록을 준비하고 있습니다…")
     let retry = NSButton(title: "화면 다시 열기", target: nil, action: nil)
     var userClickAt = Date.distantPast
+    var uiReady = false
 
     init(configuration: WKWebViewConfiguration) {
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -58,11 +57,15 @@ private final class AppWindow {
     }
 }
 
-final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKDownloadDelegate {
-    private var server: Process?
-    private var output = Data()
-    private var originURL: URL?
-    private var receivedBootstrap = false
+final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKScriptMessageHandlerWithReply, WKDownloadDelegate {
+    private let worker = WorkerBridge()
+    private var resources: AppResources?
+    private var vaultID = ""
+    private var workerReady = false
+    private var pendingAudio: URL?
+    private var requests: [ObjectIdentifier: [String: String]] = [:]
+    private var captures: [String: (owner:ObjectIdentifier,capture:AudioCapture)] = [:]
+    private var players: [String: (owner:ObjectIdentifier,player:AudioPlayback)] = [:]
     private var mainWindow: AppWindow?
     private var extraWindows: [AppWindow] = []
     private var downloadWindows: [ObjectIdentifier: AppWindow] = [:]
@@ -70,9 +73,13 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     private var downloadTargets: [ObjectIdentifier: (destination: URL, staging: URL)] = [:]
     private let clickWorld = WKContentWorld.world(name: "SolasiUserInput")
     private var quitting = false
+    private var preparingQuit = false
+    private var preparingWindows = Set<ObjectIdentifier>()
+    private var approvedWindows = Set<ObjectIdentifier>()
+    private var deliveringAudio = false
     private var log: FileHandle?
     private let logURL = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/Solasi/server.log")
+        .appendingPathComponent("Library/Logs/" + (Bundle.main.bundleIdentifier ?? "local.solasi.development") + "/engine.log")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         installMenu()
@@ -80,63 +87,56 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         if let iconURL = Bundle.main.url(forResource: "Solasi", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) {
             NSApp.applicationIconImage = icon
         }
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
-        configuration.userContentController.add(self, contentWorld: clickWorld, name: "userClick")
-        configuration.userContentController.addUserScript(WKUserScript(source: """
-            document.addEventListener('click', event => {
-                if (event.isTrusted) window.webkit.messageHandlers.userClick.postMessage(null);
-            }, true);
-            """, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: clickWorld))
-        mainWindow = makeWindow(configuration: configuration)
-        showWindow()
         do {
             guard let settingsURL = Bundle.main.url(forResource: "launch", withExtension: "json") else {
                 throw NSError(domain: "Solasi", code: 1, userInfo: [NSLocalizedDescriptionKey: "실행 설정이 없습니다. 실행 앱을 다시 설치하세요."])
             }
             let settings = try JSONDecoder().decode(LaunchSettings.self, from: Data(contentsOf: settingsURL))
-            guard (1...65535).contains(settings.port) else {
-                throw NSError(domain: "Solasi", code: 3, userInfo: [NSLocalizedDescriptionKey: "앱 초안 저장소를 유지하려면 고정 포트로 다시 설치하세요."])
-            }
-            for path in [settings.python, settings.source + "/frontend/dist/index.html", settings.data, settings.runtime] {
+            guard let bundle = Bundle.main.resourceURL else { throw BridgeFailure.invalid("앱 번들을 찾을 수 없습니다.") }
+            let engine = bundle.appendingPathComponent("engine/solasi-engine")
+            let frontend = bundle.appendingPathComponent("frontend")
+            for path in [engine.path, frontend.appendingPathComponent("index.html").path, settings.data, settings.runtime] {
                 guard FileManager.default.fileExists(atPath: path) else {
                     throw NSError(domain: "Solasi", code: 2, userInfo: [NSLocalizedDescriptionKey: "필요한 파일이나 폴더가 없습니다: \(path)"])
                 }
             }
+            resources = AppResources(root: frontend, worker: worker)
+            let configuration = WKWebViewConfiguration()
+            configuration.websiteDataStore = .default()
+            configuration.setURLSchemeHandler(resources!, forURLScheme: "solasi-app")
+            configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "solasi")
+            configuration.userContentController.add(self, contentWorld: clickWorld, name: "userClick")
+            configuration.userContentController.addUserScript(WKUserScript(source: """
+                document.addEventListener('click', event => {
+                    if (event.isTrusted) window.webkit.messageHandlers.userClick.postMessage(null);
+                }, true);
+                """, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: clickWorld))
+            mainWindow = makeWindow(configuration: configuration)
+            showWindow()
             try FileManager.default.createDirectory(at: logURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-            FileManager.default.createFile(atPath: logURL.path, contents: nil, attributes: [.posixPermissions: 0o600])
+            if !FileManager.default.fileExists(atPath:logURL.path) { FileManager.default.createFile(atPath: logURL.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
             log = try FileHandle(forWritingTo: logURL)
-            let process = Process()
-            let pipe = Pipe()
-            process.executableURL = URL(fileURLWithPath: settings.python)
-            process.currentDirectoryURL = URL(fileURLWithPath: settings.source)
-            process.arguments = ["-m", "lecture_study.launcher", "--data-dir", settings.data, "--runtime-dir", settings.runtime, "--port", String(settings.port), "--strict-port", "--no-browser"]
+            try log?.seekToEnd()
             var environment = ProcessInfo.processInfo.environment
-            environment["PYTHONPATH"] = settings.source
+            environment.removeValue(forKey: "PYTHONPATH")
+            environment.removeValue(forKey: "PYTHONHOME")
             environment["PYTHONDONTWRITEBYTECODE"] = "1"
             environment["PYTHONUNBUFFERED"] = "1"
             environment["SOLASI_OWNER_PID"] = String(ProcessInfo.processInfo.processIdentifier)
-            process.environment = environment
-            process.standardOutput = pipe
-            process.standardError = log
-            pipe.fileHandleForReading.readabilityHandler = { [weak self] handle in
-                let data = handle.availableData
-                if data.isEmpty { handle.readabilityHandler = nil; return }
-                DispatchQueue.main.async { self?.received(data) }
+            worker.ready = { [weak self] in
+                guard let self = self else { return }
+                self.prepareVault()
             }
-            process.terminationHandler = { [weak self] _ in
-                pipe.fileHandleForReading.readabilityHandler = nil
-                DispatchQueue.main.async {
-                    guard let self = self else { return }
-                    if self.quitting { NSApp.reply(toApplicationShouldTerminate: true) }
-                    else { self.fail(self.originURL == nil ? "로컬 서버를 시작하지 못했습니다. 실행 중인 Solasi·포트 충돌과 로그를 확인하세요." : "로컬 서버가 종료되었습니다. 로그를 확인한 뒤 앱을 다시 실행하세요.") }
-                }
+            worker.terminated = { [weak self] _ in
+                guard let self = self else { return }
+                for active in Array(self.captures.values) { active.capture.stop(interrupted:true,reason:"작업 엔진이 종료되었습니다") {} }
+                if self.quitting { NSApp.reply(toApplicationShouldTerminate: true) }
+                else { self.fail("작업 엔진이 종료되었습니다. 저장된 기록을 보존했습니다. 로그를 확인한 뒤 앱을 다시 실행하세요.") }
             }
-            server = process
-            try process.run()
+            try worker.start(executable: engine, arguments: ["--data-dir", settings.data, "--runtime-dir", settings.runtime], environment: environment, log: log)
             DispatchQueue.main.asyncAfter(deadline: .now() + 120) { [weak self] in
-                guard let self = self, !self.quitting, self.originURL == nil else { return }
-                self.fail("서버 준비 시간이 초과되었습니다. 로그에서 원인을 확인하세요.")
+                guard let self = self, !self.quitting, !self.workerReady else { return }
+                self.fail("기록 준비 시간이 초과되었습니다. 로그에서 원인을 확인하세요.")
             }
         } catch { fail(error.localizedDescription) }
     }
@@ -190,8 +190,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
 
     private func trusted(_ url: URL?) -> Bool {
-        guard let url = url, let origin = originURL else { return false }
-        return url.scheme == "http" && url.host == "127.0.0.1" && url.port == origin.port && url.user == nil && url.password == nil
+        AppResourcePolicy.trusted(url)
     }
 
     private func trustedBlob(_ url: URL?) -> Bool {
@@ -200,43 +199,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
 
     private func trusted(_ origin: WKSecurityOrigin) -> Bool {
-        origin.protocol == "http" && origin.host == "127.0.0.1" && origin.port == originURL?.port
-    }
-
-    private func received(_ data: Data) {
-        output.append(data)
-        while let newline = output.firstIndex(of: 10) {
-            let line = String(decoding: output[..<newline], as: UTF8.self)
-            output.removeSubrange(...newline)
-            guard !receivedBootstrap, line.hasPrefix("실행 링크: "),
-                  let url = URL(string: String(line.dropFirst("실행 링크: ".count))),
-                  url.scheme == "http", url.host == "127.0.0.1", let port = url.port, (1...65535).contains(port),
-                  url.user == nil, url.password == nil, url.query == nil,
-                  url.path == "/", url.fragment?.hasPrefix("bootstrap=") == true else { continue }
-            receivedBootstrap = true
-            waitUntilReady(url, remaining: 240)
-        }
-        if output.count > 65536 { output.removeAll() }
-    }
-
-    private func waitUntilReady(_ url: URL, remaining: Int) {
-        guard !quitting, server?.isRunning == true else { return }
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.fragment = nil
-        let base = components.url!
-        var request = URLRequest(url: base.appendingPathComponent("api/health"))
-        request.timeoutInterval = 1
-        URLSession.shared.dataTask(with: request) { [weak self] _, response, _ in
-            DispatchQueue.main.async {
-                guard let self = self, !self.quitting, self.server?.isRunning == true else { return }
-                if (response as? HTTPURLResponse)?.statusCode == 200, response?.url == request.url {
-                    self.originURL = base
-                    self.mainWindow?.webView.load(URLRequest(url: url))
-                } else if remaining > 0 {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { self.waitUntilReady(url, remaining: remaining - 1) }
-                } else { self.fail("로컬 서버에 연결할 수 없습니다.") }
-            }
-        }.resume()
+        origin.protocol == "solasi-app" && origin.host == "app" && origin.port == 0
     }
 
     @objc private func showWindow() {
@@ -248,7 +211,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     @objc private func showLog() { NSWorkspace.shared.open(logURL) }
 
     @objc private func retryPage(_ sender: NSButton) {
-        guard let page = ([mainWindow].compactMap { $0 } + extraWindows).first(where: { $0.retry === sender }), server?.isRunning == true else { return }
+        guard let page = ([mainWindow].compactMap { $0 } + extraWindows).first(where: { $0.retry === sender }), worker.process.isRunning else { return }
         let alert = NSAlert()
         alert.messageText = "화면을 다시 여시겠습니까?"
         alert.informativeText = "진행 중인 녹음과 화면 입력이 중단될 수 있습니다. 저장된 원음과 기록은 화면을 다시 연 뒤 확인하세요."
@@ -268,28 +231,298 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         if sender === mainWindow?.window { sender.orderOut(nil); return false }
-        return true
+        let key=ObjectIdentifier(sender)
+        if approvedWindows.remove(key) != nil { return true }
+        guard !preparingQuit,!quitting,!preparingWindows.contains(key),let page=extraWindows.first(where: { $0.window === sender }) else { return false }
+        preparingWindows.insert(key)
+        prepareClose([page]) { result in
+            self.preparingWindows.remove(key)
+            switch result {
+            case .success: self.approvedWindows.insert(key);sender.performClose(nil)
+            case .failure(let error): page.showStatus(error.localizedDescription)
+            }
+        }
+        return false
     }
 
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
+        if let page=extraWindows.first(where: { $0.window === window }) {
+            for (id,active) in players where active.owner == ObjectIdentifier(page.webView) { active.player.close();players.removeValue(forKey:id) }
+        }
         DispatchQueue.main.async { self.extraWindows.removeAll { $0.window === window } }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        quitting = true
-        if let process = server, process.isRunning {
-            process.terminate()
-            return .terminateLater
+        if preparingQuit || quitting { return .terminateLater }
+        guard preparingWindows.isEmpty else { mainWindow?.showStatus("창의 초안 저장을 마친 뒤 다시 종료해 주세요.");return .terminateCancel }
+        preparingQuit=true
+        let pages=[mainWindow].compactMap { $0 }+extraWindows
+        prepareClose(pages) { result in
+            self.preparingQuit=false
+            switch result {
+            case .failure(let error):
+                self.mainWindow?.showStatus(error.localizedDescription);self.showWindow();NSApp.reply(toApplicationShouldTerminate:false)
+            case .success: self.finishQuit()
+            }
         }
-        return .terminateNow
+        return .terminateLater
+    }
+
+    private func prepareClose(_ pages:[AppWindow],completion:@escaping (Result<Void,Error>)->Void) {
+        let pages=pages.filter { AppResourcePolicy.trustedUI($0.webView.url) }
+        guard !pages.isEmpty else { DispatchQueue.main.async { completion(.success(())) };return }
+        var finished=false,remaining=pages.count
+        var deadline:DispatchWorkItem?
+        func settle(_ result:Result<Void,Error>) {
+            guard !finished else { return };finished=true;deadline?.cancel()
+            if case .failure=result {
+                for page in pages { page.webView.callAsyncJavaScript("window.solasiLifecycle?.resume()",arguments:[:],in:nil,in:.page,completionHandler:nil) }
+            }
+            completion(result)
+        }
+        let timeout=DispatchWorkItem { settle(.failure(BridgeFailure.invalid("초안 저장이 끝나지 않아 창을 유지했습니다. 저장 상태를 확인하고 다시 시도해 주세요."))) }
+        deadline=timeout;DispatchQueue.main.asyncAfter(deadline:.now()+30,execute:timeout)
+        for page in pages {
+            page.webView.callAsyncJavaScript("if (!window.solasiLifecycle) throw new Error('화면 준비가 끝난 뒤 다시 닫아 주세요.'); return await window.solasiLifecycle.prepareClose();",arguments:[:],in:nil,in:.page) { result in
+                guard !finished else { return }
+                switch result {
+                case .success(let value):
+                    guard value as? Bool == true else { settle(.failure(BridgeFailure.invalid("초안 저장 결과를 확인하지 못해 창을 유지했습니다.")));return }
+                    remaining-=1;if remaining==0 { settle(.success(())) }
+                case .failure(let error):
+                    let failure=error as NSError
+                    settle(.failure(BridgeFailure.invalid(failure.userInfo["WKJavaScriptExceptionMessage"] as? String ?? failure.localizedDescription)))
+                }
+            }
+        }
+    }
+
+    private func finishQuit() {
+        quitting=true
+        for active in players.values { active.player.close() };players.removeAll()
+        if worker.process.isRunning {
+            let active=Array(captures.values)
+            if active.isEmpty { worker.shutdown() }
+            else {
+                var remaining=active.count
+                for item in active { item.capture.stop(interrupted:true,reason:"앱 종료로 녹음을 마쳤습니다") { remaining -= 1; if remaining == 0 { self.worker.shutdown() } } }
+            }
+            return
+        }
+        NSApp.reply(toApplicationShouldTerminate:true)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "userClick", message.world == clickWorld, message.frameInfo.isMainFrame,
               trusted(message.frameInfo.securityOrigin), let webView = message.webView,
-              trusted(webView.url) else { return }
+              AppResourcePolicy.trustedUI(webView.url) else { return }
         page(for: webView)?.userClickAt = Date()
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.name == "solasi", message.frameInfo.isMainFrame, trusted(message.frameInfo.securityOrigin),
+              let webView = message.webView, AppResourcePolicy.trustedUI(webView.url), let page = page(for: webView),
+              let body = message.body as? [String: Any], let op = body["op"] as? String else {
+            replyHandler(nil, "허용하지 않은 앱 요청입니다."); return
+        }
+        let owner = ObjectIdentifier(webView)
+        if op == "ui_ready" {
+            page.uiReady=true;replyHandler(["ready":true],nil)
+            DispatchQueue.main.async { self.deliverAudio() };return
+        }
+        if op.hasPrefix("playback_") {
+            guard let id=body["id"] as? String,UUID(uuidString:id) != nil else { replyHandler(nil,"재생 식별자가 없습니다."); return }
+            do {
+                if op == "playback_load" {
+                    guard players[id] == nil,players.count < 16,let path=body["path"] as? String else { throw BridgeFailure.invalid("재생 중인 원음을 먼저 닫아 주세요.") }
+                    let playback=try AudioPlayback(path:path,worker:worker) { [weak webView] state in
+                        webView?.callAsyncJavaScript("window.dispatchEvent(new CustomEvent('solasi-playback-state', {detail: state}))",arguments:["state":state.merging(["id":id]) { _,new in new }],in:nil,in:.page,completionHandler:nil)
+                    }
+                    players[id]=(owner,playback)
+                } else {
+                    guard let active=players[id],active.owner == owner else { replyHandler(["closed":true],nil); return }
+                    switch op {
+                    case "playback_play": active.player.player.play()
+                    case "playback_pause": active.player.player.pause()
+                    case "playback_seek":
+                        guard let time=body["time"] as? Double else { throw BridgeFailure.invalid("재생 시각을 확인하세요.") }
+                        try active.player.seek(time) { error in replyHandler(error == nil ? ["accepted":true] : nil,error?.localizedDescription) };return
+                    case "playback_volume": guard let value=body["volume"] as? Double,value.isFinite,(0...1).contains(value) else { throw BridgeFailure.invalid("음량을 확인하세요.") };active.player.player.volume=Float(value)
+                    case "playback_close": active.player.close();players.removeValue(forKey:id)
+                    case "playback_release":
+                        active.player.player.pause();let state=active.player.snapshot()
+                        active.player.close();players.removeValue(forKey:id);replyHandler(state,nil);return
+                    default: throw BridgeFailure.invalid("허용하지 않은 재생 요청입니다.")
+                    }
+                }
+                replyHandler(["accepted":true],nil)
+            } catch { replyHandler(nil,error.localizedDescription) }
+            return
+        }
+        if op == "audio_start" {
+            guard webView === mainWindow?.webView, consumeClick(page), let id=body["capture_id"] as? String,
+                  UUID(uuidString:id) != nil, captures[id] == nil, let session=body["session_id"] as? String,
+                  session.range(of:"^[a-f0-9]{32}$",options:.regularExpression) != nil,
+                  let mode=body["transcription_mode"] as? String,["after_stop","realtime"].contains(mode) else { replyHandler(nil,"녹음 시작 버튼을 다시 눌러 주세요."); return }
+            let capture=AudioCapture(id:id,session:session,mode:mode,worker:worker) { [weak self,weak webView] state in
+                guard let self=self,let webView=webView else { return }
+                webView.callAsyncJavaScript("window.dispatchEvent(new CustomEvent('solasi-recording-state', {detail: state}))", arguments:["state":state],in:nil,in:.page,completionHandler:nil)
+                if state["phase"] as? String == "idle" { self.captures.removeValue(forKey:id) }
+            }
+            captures[id]=(owner,capture); capture.start(); replyHandler(["accepted":true],nil); return
+        }
+        if op == "audio_stop" {
+            guard let id=body["capture_id"] as? String else { replyHandler(nil,"녹음 식별자가 없습니다."); return }
+            guard let active=captures[id] else { replyHandler(["stopped":true],nil); return }
+            guard active.owner == owner else { replyHandler(nil,"이 창에서 시작한 녹음만 종료할 수 있습니다."); return }
+            active.capture.stop(interrupted:body["interrupted"] as? Bool ?? false) { replyHandler(["stopped":true],nil) }; return
+        }
+        if op == "cancel", let target = body["target"] as? String {
+            if let id = requests[owner]?.removeValue(forKey: target) { worker.cancel(id) }
+            replyHandler(["cancelled":true], nil); return
+        }
+        if op == "export_text" {
+            guard consumeClick(page), let text = body["text"] as? String, text.utf8.count <= 64 * 1024 * 1024,
+                  let filename = body["filename"] as? String, filename.utf8.count < 256 else { replyHandler(nil, "내보내기 버튼을 다시 눌러 주세요."); return }
+            saveDestination(page: page, filename: filename) { export in
+                guard let export = export else { replyHandler(["cancelled":true], nil); return }
+                do { try export.append(Data(text.utf8)); try export.finish(); replyHandler(["saved":true], nil) }
+                catch { replyHandler(nil, error.localizedDescription) }
+            }
+            return
+        }
+        guard op == "http", let path = body["path"] as? String, AppResourcePolicy.validAPIPath(path),
+              let method = body["method"] as? String, ["GET","HEAD","POST","PUT","PATCH","DELETE"].contains(method),
+              let clientID = body["id"] as? String, UUID(uuidString: clientID) != nil,
+              requests[owner]?[clientID] == nil, body["body"] == nil || body["body"] is String else {
+            replyHandler(nil, "잘못된 앱 요청입니다."); return
+        }
+        let data = Data((body["body"] as? String ?? "").utf8)
+        guard data.count <= WorkerFrame.requestLimit else { replyHandler(nil, "요청 크기를 초과했습니다."); return }
+        var header: [String: Any] = ["op":"http", "method":method, "path":path]
+        let picker = method == "POST" && path.range(of: "^/api/((sessions|courses)/[a-f0-9]{32}/files/select|sessions/[a-f0-9]{32}/recordings)$", options: .regularExpression) != nil
+        if picker {
+            guard consumeClick(page) else { replyHandler(nil, "파일 연결 버튼을 다시 눌러 주세요."); return }
+            let panel = NSOpenPanel()
+            panel.canChooseDirectories = false; panel.allowsMultipleSelection = true
+            let audio = path.hasSuffix("/recordings")
+            panel.title = audio ? "녹음 파일 연결" : "자료 연결"
+            panel.allowedContentTypes = (audio ? ["wav","mp3","m4a","aac","flac","ogg","webm","mp4"] : ["pdf","png","jpg","jpeg","txt","md"]).compactMap { UTType(filenameExtension: $0) }
+            panel.beginSheetModal(for: page.window) { result in
+                let urls = result == .OK ? panel.urls : []
+                guard urls.count <= 64 else { replyHandler(nil, "한 번에 파일 64개까지 연결할 수 있습니다."); return }
+                header["native_selected_files"] = urls.map(\.path)
+                self.jsonRequest(header, data: data, owner: owner, clientID: clientID, reply: replyHandler)
+            }
+        } else { jsonRequest(header, data: data, owner: owner, clientID: clientID, reply: replyHandler) }
+    }
+
+    private func jsonRequest(_ header: [String: Any], data: Data, owner: ObjectIdentifier, clientID: String, reply: @escaping (Any?, String?) -> Void) {
+        var result = Data(), status = 500
+        let request = worker.request(header, body: data) { event, bytes in
+            switch event["event"] as? String {
+            case "response_start": status = event["status"] as? Int ?? 500
+            case "body":
+                guard result.count + bytes.count <= 64 * 1024 * 1024 else { throw BridgeFailure.invalid("응답 크기를 초과했습니다.") }
+                result.append(bytes)
+            case "complete":
+                self.requests[owner]?.removeValue(forKey: clientID)
+                reply(["status":status,"text":String(decoding:result,as:UTF8.self)], nil)
+            case "error":
+                self.requests[owner]?.removeValue(forKey: clientID)
+                reply(nil, event["message"] as? String ?? "요청을 처리하지 못했습니다.")
+            default: break
+            }
+        }
+        requests[owner, default: [:]][clientID] = request
+    }
+
+    private func consumeClick(_ page: AppWindow) -> Bool {
+        guard Date().timeIntervalSince(page.userClickAt) < 5 else { return false }
+        page.userClickAt = .distantPast; return true
+    }
+
+    private func prepareVault() {
+        var data = Data(), status = 500
+        worker.request(["op":"http","method":"GET","path":"/api/native/state"]) { header, bytes in
+            switch header["event"] as? String {
+            case "response_start": status = header["status"] as? Int ?? 500
+            case "body":
+                guard data.count + bytes.count <= 1024 * 1024 else { throw BridgeFailure.invalid("보관함 응답을 확인하세요.") }
+                data.append(bytes)
+            case "complete":
+                guard status == 200, let state = try JSONSerialization.jsonObject(with:data) as? [String:Any],
+                      let id = state["vault_id"] as? String, id.range(of:"^[a-f0-9]{32}$",options:.regularExpression) != nil else {
+                    self.fail("보관함 식별자를 확인할 수 없습니다."); return
+                }
+                self.vaultID = id; self.workerReady = true
+                self.mainWindow?.webView.load(URLRequest(url:URL(string:"solasi-app://app/")!))
+            case "error": self.fail(header["message"] as? String ?? "보관함을 열 수 없습니다.")
+            default: break
+            }
+        }
+    }
+
+    private func saveDestination(page: AppWindow, filename: String, completion: @escaping (ExclusiveExport?) -> Void) {
+        let panel = NSSavePanel()
+        panel.title = "Solasi 내보내기"; panel.message = "기존 파일은 보존합니다. 새 파일 이름을 선택하세요."
+        panel.nameFieldStringValue = (filename as NSString).lastPathComponent; panel.canCreateDirectories = true
+        panel.beginSheetModal(for: page.window) { result in
+            guard result == .OK, let destination = panel.url else { completion(nil); return }
+            if FileManager.default.fileExists(atPath: destination.path) {
+                let alert = NSAlert(); alert.messageText = "기존 파일을 덮어쓰지 않습니다"; alert.informativeText = "다른 파일 이름이나 저장 위치를 선택하세요."
+                alert.beginSheetModal(for: page.window) { _ in self.saveDestination(page: page, filename: filename, completion: completion) }; return
+            }
+            do { completion(try ExclusiveExport(destination: destination)) }
+            catch { page.showStatus("저장 위치를 준비할 수 없습니다. " + error.localizedDescription); completion(nil) }
+        }
+    }
+
+    private func exportResource(_ url: URL, page: AppWindow) {
+        guard consumeClick(page) else { return }
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+        components.scheme = nil; components.host = nil; components.fragment = nil
+        let path = components.string!
+        guard AppResourcePolicy.resourcePath(path) else { return }
+        let suffix = components.queryItems?.first(where: { $0.name == "format" })?.value == "txt" ? "txt" : "md"
+        saveDestination(page: page, filename: "Solasi-내보내기." + suffix) { export in
+            guard let export = export else { return }
+            var successful = false
+            self.worker.request(["op":"http","method":"GET","path":path]) { header, bytes in
+                switch header["event"] as? String {
+                case "response_start":
+                    successful = (200..<300).contains(header["status"] as? Int ?? 500)
+                    if !successful { throw BridgeFailure.invalid("내보낼 기록을 불러올 수 없습니다.") }
+                case "body": try export.append(bytes)
+                case "complete":
+                    guard successful else { export.cancel(); return }
+                    do { try export.finish(); page.showStatus("내보내기를 완료했습니다.") }
+                    catch { page.showStatus(error.localizedDescription) }
+                case "error": export.cancel(); page.showStatus(header["message"] as? String ?? "내보내기에 실패했습니다.")
+                default: break
+                }
+            }
+        }
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let url = urls.first, url.scheme == "solasi", url.host == "audio" else { return }
+        pendingAudio = url; showWindow(); deliverAudio()
+    }
+
+    private func deliverAudio() {
+        guard let url = pendingAudio,!vaultID.isEmpty,!deliveringAudio else { return }
+        guard let link = AppResourcePolicy.audioLink(url,vault:vaultID) else { pendingAudio=nil;mainWindow?.showStatus("이 보관함에 연결된 원음 링크가 아닙니다.");return }
+        guard
+              let page=mainWindow,page.uiReady,AppResourcePolicy.trustedUI(page.webView.url),!page.webView.isLoading else { return }
+        let webView=page.webView;deliveringAudio=true
+        let payload: [String: Any] = ["url":"/api/recordings/" + link.id + "/audio", "start":link.start, "end":link.end]
+        webView.callAsyncJavaScript("window.dispatchEvent(new CustomEvent('solasi-open-audio', {detail: clip}))", arguments: ["clip":payload], in: nil, in: .page) { result in
+            self.deliveringAudio=false
+            if case .success=result { if self.pendingAudio==url { self.pendingAudio=nil };self.deliverAudio() }
+            else { page.showStatus("원음 링크를 화면에 전달하지 못했습니다. 화면을 다시 연 뒤 링크를 눌러 주세요.") }
+        }
     }
 
     func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
@@ -317,7 +550,10 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             return
         }
         if trusted(navigationAction.request.url) {
-            decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
+            if navigationAction.shouldPerformDownload, let url = navigationAction.request.url, let page = page(for: webView),
+               AppResourcePolicy.trustedUI(webView.url), navigationAction.sourceFrame.isMainFrame {
+                decisionHandler(.cancel); exportResource(url, page: page)
+            } else { decisionHandler(.allow) }
             return
         }
         decisionHandler(.cancel)
@@ -356,7 +592,8 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
 
     func webViewDidClose(_ webView: WKWebView) { page(for: webView)?.window.performClose(nil) }
 
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { page(for: webView)?.showStatus("") }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { page(for:webView)?.uiReady=false }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { page(for: webView)?.showStatus(""); deliverAudio() }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { showLoadFailure(webView, error: error) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { showLoadFailure(webView, error: error) }
@@ -365,10 +602,12 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         let error = error as NSError
         guard !quitting, !(error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled),
               !(error.domain == "WebKitErrorDomain" && error.code == 102) else { return }
-        page(for: webView)?.showStatus("화면을 불러오지 못했습니다. 네트워크 연결과 로그를 확인하세요. \(error.localizedDescription)", canRetry: true)
+        page(for: webView)?.showStatus("화면을 불러오지 못했습니다. 로그를 확인하세요. \(error.localizedDescription)", canRetry: true)
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        for (id,active) in players where active.owner == ObjectIdentifier(webView) { active.player.close();players.removeValue(forKey:id) }
+        for active in Array(captures.values) where active.owner == ObjectIdentifier(webView) { active.capture.stop(interrupted:true,reason:"화면 프로세스가 종료되었습니다") {} }
         page(for: webView)?.showStatus("화면 프로세스가 종료되었습니다. 녹음이 중단됐을 수 있습니다. 화면을 다시 열고 저장된 원음을 확인하세요.", canRetry: true)
     }
 
@@ -453,13 +692,19 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
 
     private func fail(_ message: String) {
         guard !quitting else { return }
+        if mainWindow == nil { let alert = NSAlert(); alert.messageText = "Solasi를 시작하지 못했습니다"; alert.informativeText = message; alert.runModal(); return }
         mainWindow?.showStatus(message)
         showWindow()
     }
 }
 
-let app = NSApplication.shared
-let delegate = SolasiApp()
-app.setActivationPolicy(.regular)
-app.delegate = delegate
-app.run()
+@main
+enum SolasiMain {
+    static func main() {
+        let app = NSApplication.shared
+        let delegate = SolasiApp()
+        app.setActivationPolicy(.regular)
+        app.delegate = delegate
+        app.run()
+    }
+}

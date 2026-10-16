@@ -188,10 +188,11 @@ async def command(argv,timeout=120):
 
 def engine_paths(runtime):
     runtime=Path(runtime)
-    if (runtime/'asr/receipt.json').is_file():
+    from .runtime import asr_root,asr_binary
+    if (asr_root(runtime)/'receipt.json').is_file():
         from .runtime import component_status
         if not component_status('asr',runtime)['ready']:raise ValueError('전사 엔진 파일 검증 실패')
-    ffmpeg=runtime/("asr/bin/ffmpeg" if (runtime/"asr/receipt.json").is_file() else "ffmpeg/bin/ffmpeg");whisper=runtime/("asr/bin/whisper-cli" if (runtime/"asr/receipt.json").is_file() else "build/whisper/bin/whisper-cli");model=runtime/"models"/("ggml-"+MODEL_NAME+".bin")
+    ffmpeg=asr_binary(runtime,'ffmpeg');whisper=asr_binary(runtime,'whisper-cli');model=runtime/"models"/("ggml-"+MODEL_NAME+".bin")
     if not all(p.is_file() for p in (ffmpeg,whisper,model)): raise ValueError("전사 엔진과 "+MODEL_NAME+" 모델을 준비하세요")
     verify_model(model,MODEL_SHA)
     return ffmpeg,whisper,model
@@ -243,8 +244,10 @@ def parse_activity(output,duration_ms):
 
 
 async def speech_activity(input_wav,runtime_dir):
-    runtime=Path(runtime_dir);receipt=runtime/'asr/receipt.json';name='bin/whisper-vad-speech-segments'
+    from .runtime import asr_root,asr_binary
+    runtime=Path(runtime_dir);receipt=asr_root(runtime)/'receipt.json';name='bin/whisper-vad-speech-segments'
     utility=runtime/('asr/'+name if receipt.is_file()else'build/whisper/'+name)
+    if getattr(sys,'frozen',False):utility=asr_root(runtime)/name
     if not utility.is_file():return None
     if receipt.is_file():
         from .runtime import matches
@@ -336,7 +339,7 @@ def edit_segments(db,sid,segments):
         return [edit_segment(db,item['id'],item['text'],expected_revision=item['expected_revision']) for item in segments]
 
 
-def export_transcript(db,sid,format,base_url):
+def export_transcript(db,sid,format,base_url,*,vault_id=None):
     from .db import session
     from .lifecycle import resolve_source
     from html import escape
@@ -344,12 +347,14 @@ def export_transcript(db,sid,format,base_url):
     rows=[row for row in list_transcripts(db,sid) if row['final']]
     if format=='txt':return owner['title']+'\n\n'+' '.join(row['text'] for row in rows)+'\n'
     if format!='md':raise ValueError('TXT 또는 Markdown 형식을 선택하세요')
+    if vault_id is not None and (not isinstance(vault_id,str) or not re.fullmatch(r'[a-f0-9]{32}',vault_id)):
+        raise ValueError('원음 보관함 식별자를 확인하세요')
     def safe(text):
         return re.sub(r'([\\`*_{}\[\]()#+.!|>~-])',r'\\\1',escape(text,quote=False))
     def stamp(ms):
         return f'{ms//60000}:{ms//1000%60:02}.{ms%1000:03}'
     lines=['# '+safe(owner['title']),'',
-        '> 원음 링크는 로컬 앱 실행 및 해당 앱의 인증이 필요합니다. 현재 포트가 바뀌거나 원음이 삭제되면 열리지 않습니다. 이 파일에는 원음이 포함되지 않으며 다른 기기에서 그대로 재생되는 오디오 묶음이 아닙니다.',
+        ('> 원음 링크는 Solasi 앱의 같은 보관함에서 열립니다. 원음을 삭제하면 재생할 수 없습니다. 이 파일에는 원음이 포함되지 않습니다.' if vault_id else '> 원음 링크는 로컬 앱 실행 및 해당 앱의 인증이 필요합니다. 현재 포트가 바뀌거나 원음이 삭제되면 열리지 않습니다. 이 파일에는 원음이 포함되지 않으며 다른 기기에서 그대로 재생되는 오디오 묶음이 아닙니다.'),
         '> 시각은 확정 전사 구간 기준입니다. 단어별 시각은 제공하지 않습니다.','']
     for row in rows:
         ident=row['id']+':v'+str(row['revision'])
@@ -357,7 +362,7 @@ def export_transcript(db,sid,format,base_url):
         link='원음 없음'
         if source['open_url'] and source['seek_seconds'] is not None and source['end_seconds'] is not None:
             positions=','.join(f'{value:.9f}'.rstrip('0').rstrip('.') for value in (source['seek_seconds'],source['end_seconds']))
-            url=base_url.rstrip('/')+source['open_url']+'#t='+positions
+            url=(f"solasi://audio/{vault_id}/{row['recording_id']}?start_ms={round(source['seek_seconds']*1000)}&end_ms={round(source['end_seconds']*1000)}" if vault_id else base_url.rstrip('/')+source['open_url']+'#t='+positions)
             link='[원음 듣기]('+url+')'
         lines.extend([f"**{stamp(row['start_ms'])}–{stamp(row['end_ms'])}** · `{ident}` · {link}",'',safe(row['text']),''])
     return '\n'.join(lines)
@@ -421,8 +426,8 @@ async def register_audio(db,sid,path,runtime_dir):
                 header.startswith(b"ID3") or (header[:4]==b"RIFF" and header[8:12]==b"WAVE") or
                 header[4:8]==b"ftyp" or (len(header)>1 and header[0]==255 and header[1]&224==224))
     if not recognized: raise ValueError("지원되는 오디오 형식이 아닙니다")
-    probe=Path(runtime_dir)/("asr/bin/ffprobe" if (Path(runtime_dir)/"asr/receipt.json").is_file() else "ffmpeg/bin/ffprobe")
-    if not probe.is_file(): raise ValueError("FFmpeg를 준비하세요")
+    from .runtime import asr_binary
+    probe=await asyncio.to_thread(asr_binary,runtime_dir,'ffprobe')
     output=await command([probe,"-v","error","-protocol_whitelist","file","-select_streams","a:0","-show_entries",
           "stream=sample_rate,channels,duration,duration_ts,time_base:format=duration","-of","json","-i",path],30)
     try:
@@ -456,12 +461,8 @@ async def register_audio(db,sid,path,runtime_dir):
 
 
 async def file_boundaries(path,frames,rate,runtime):
-    runtime=Path(runtime);managed=(runtime/'asr/receipt.json').is_file()
-    if managed:
-        from .runtime import component_status
-        if not (await asyncio.to_thread(component_status,'asr',runtime))['ready']:raise ValueError('전사 엔진 파일 검증 실패')
-    ffmpeg=runtime/('asr/bin/ffmpeg' if managed else 'ffmpeg/bin/ffmpeg')
-    if not ffmpeg.is_file():raise ValueError('FFmpeg를 준비하세요')
+    from .runtime import asr_binary
+    ffmpeg=await asyncio.to_thread(asr_binary,runtime,'ffmpeg')
     process=await asyncio.create_subprocess_exec(str(ffmpeg),'-nostdin','-v','error','-protocol_whitelist','file','-i',str(path),'-map','0:a:0','-ac','1','-ar','16000','-f','s16le','pipe:1',stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
     buffer=b'';cursor=0;boundaries=[];capacity=16000*CHUNK_SECONDS*2
     try:
@@ -501,7 +502,9 @@ def external_audio_path(db,record):
 
 async def external_clip(db,record,chunk,clip,runtime_dir):
     source=external_audio_path(db,record)
-    ffmpeg,_,_=await asyncio.to_thread(engine_paths,runtime_dir)
+    from .runtime import asr_binary
+    # Reading an audio range needs FFmpeg; the selected recognizer verifies its own model.
+    ffmpeg=await asyncio.to_thread(asr_binary,runtime_dir,'ffmpeg')
     start=chunk["start_frame"]/record["sample_rate"];duration=(chunk["end_frame"]-chunk["start_frame"])/record["sample_rate"]
     await command([ffmpeg,"-nostdin","-v","error","-y","-protocol_whitelist","file","-ss",str(start),"-i",source,
                   "-t",str(duration),"-map","0:a:0","-ac","1","-ar","16000","-c:a","pcm_s16le",clip])
