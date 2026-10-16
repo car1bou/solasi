@@ -28,3 +28,4 @@ docs/verification/*
 !docs/verification/sentence-summary-20261015.json
 !docs/verification/fidelity-followup-20261015.json
 !docs/verification/mac-recovery-speech-20261016.json
+!docs/verification/mac-recovery-followup-20261016.json

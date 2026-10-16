@@ -10,7 +10,7 @@ import time
 import wave
 from datetime import datetime,timezone
 from pathlib import Path
-from lecture_study.transcription import parse_segments,file_hash,VAD_SHA
+from lecture_study.transcription import parse_segments,file_hash,VAD_SHA,engine_paths
 from tests.evaluate_human_audio import score
 
 parser=argparse.ArgumentParser()
@@ -19,6 +19,7 @@ parser.add_argument("--vad-mode",choices=["default","pad250","off"],default="def
 parser.add_argument("--backend",choices=["cpu","metal"],default="cpu")
 args=parser.parse_args()
 runtime=Path(__file__).resolve().parents[1]/".local-state/runtime"
+ffmpeg,whisper,_=engine_paths(runtime)
 model_file,meta_file={"turbo":("ggml-large-v3-turbo.bin","turbo-provenance.json"),"komixv2":("ggml-medium-komixv2.bin","komixv2-ggml-provenance.json")}[args.model]
 model=runtime/"models"/model_file
 meta=json.loads((runtime/"models"/meta_file).read_text())
@@ -42,10 +43,10 @@ for label,manifest_path in groups:
             source=Path(fixture["path"]);assert file_hash(source)==fixture["sha256"]
             clip=temp/"pcm.wav";prefix=temp/"result"
             began=time.perf_counter()
-            subprocess.run([str(runtime/"ffmpeg/bin/ffmpeg"),"-nostdin","-v","error","-y","-i",str(source),"-ac","1","-ar","16000","-c:a","pcm_s16le",str(clip)],check=True,timeout=120)
+            subprocess.run([str(ffmpeg),"-nostdin","-v","error","-y","-i",str(source),"-ac","1","-ar","16000","-c:a","pcm_s16le",str(clip)],check=True,timeout=120)
             converted=time.perf_counter()-began
             with wave.open(str(clip)) as pcm: duration=round(pcm.getnframes()*1000/pcm.getframerate())
-            argv=["/usr/bin/time","-l",str(runtime/"build/whisper/bin/whisper-cli"),"-m",str(model),"-f",str(clip),"-l","ko","-oj","-of",str(prefix),"-np"]
+            argv=["/usr/bin/time","-l",str(whisper),"-m",str(model),"-f",str(clip),"-l","ko","-oj","-of",str(prefix),"-np"]
             if args.backend=="cpu": argv += ["-ng"]
             if args.vad_mode!="off": argv += ["--vad","-vm",str(vad)]
             if args.vad_mode=="pad250": argv += ["--vad-speech-pad-ms","250"]

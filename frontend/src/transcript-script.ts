@@ -2,7 +2,7 @@ export type TranscriptSegment={id:string;chunk_id:string;recording_id:string;sta
 export type TranscriptAudio={id:string;open_url:string;seek_seconds:number;end_seconds:number};
 type SourceAudio={open_url:string|null;seek_seconds:number|null;end_seconds:number|null};
 
-export const transcriptStamp=(ms:number)=>Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');
+export const transcriptStamp=(ms:number)=>{ms=Math.round(ms);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');};
 
 export function enforceTranscriptBounds(audio:Pick<HTMLMediaElement,'currentTime'|'paused'>,clip:TranscriptAudio,seeking=false):boolean{
   if(audio.currentTime<clip.seek_seconds||seeking&&audio.paused&&audio.currentTime>=clip.end_seconds)audio.currentTime=clip.seek_seconds;

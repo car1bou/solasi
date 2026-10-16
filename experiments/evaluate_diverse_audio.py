@@ -25,7 +25,8 @@ if args.engine=='qwen':
  began=time.perf_counter();model=load_model(location,strict=True);mx.synchronize();report['load_seconds']=time.perf_counter()-began
  report['model']={'name':provenance['model'],'revision':provenance['revision'],'sha256':expected,'license':provenance['license']};report['options']={'temperature':0,'language':'Korean','max_tokens':1024,'hotwords':None};report['limitations'].append('Qwen segment times are input ranges, not learned sentence/word alignment; MLX allocator peak is not total system RAM.')
 else:
- from lecture_study.transcription import parse_segments,VAD_SHA
+ from lecture_study.transcription import parse_segments,VAD_SHA,engine_paths
+ ffmpeg,whisper,_=engine_paths(runtime)
  if args.engine=='small':meta=json.loads((runtime/'human-audio-20261013/official-small-comparison.json').read_text())['model_metadata']['small'];weights=Path(meta['path'])
  else:
   name,provenance={'turbo':('ggml-large-v3-turbo.bin','turbo-provenance.json'),'komix':('ggml-medium-komixv2.bin','komixv2-ggml-provenance.json')}[args.engine];weights=runtime/'models'/name;meta=json.loads((runtime/'models'/provenance).read_text())
@@ -57,8 +58,8 @@ for clip in clips:
   else:
    with tempfile.TemporaryDirectory(prefix='lecture-diverse-native-') as temporary:
     temporary=Path(temporary);pcm=temporary/'pcm.wav';prefix=temporary/'result'
-    subprocess.run([str(runtime/'ffmpeg/bin/ffmpeg'),'-v','error','-nostdin','-y','-i',str(source),'-ar','16000','-ac','1','-c:a','pcm_s16le',str(pcm)],check=True)
-    result=subprocess.run(['/usr/bin/time','-l',str(runtime/'build/whisper/bin/whisper-cli'),'-m',str(weights),'-f',str(pcm),'-l','ko','-oj','-of',str(prefix),'-np','--vad','-vm',str(vad)],capture_output=True,timeout=300)
+    subprocess.run([str(ffmpeg),'-v','error','-nostdin','-y','-i',str(source),'-ar','16000','-ac','1','-c:a','pcm_s16le',str(pcm)],check=True)
+    result=subprocess.run(['/usr/bin/time','-l',str(whisper),'-m',str(weights),'-f',str(pcm),'-l','ko','-oj','-of',str(prefix),'-np','--vad','-vm',str(vad)],capture_output=True,timeout=300)
     assert result.returncode==0,result.stderr.decode(errors='replace')[-1000:]
     segments=parse_segments(json.loads(prefix.with_suffix('.json').read_text()),round(clip['duration_seconds']*1000));recognized=' '.join(s['text'] for s in segments);row['segments']=segments
     peak=re.search(r'(\d+)\s+maximum resident set size',result.stderr.decode(errors='replace'));assert peak;row['peak_rss_bytes']=int(peak.group(1))

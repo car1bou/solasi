@@ -61,7 +61,8 @@ def start_recording(db,session_id,sample_rate,transcription_mode="realtime",resu
         raise ValueError("이미 녹음 중입니다")
     if transcription_mode not in ('realtime','after_stop'):raise ValueError('전사 방식을 확인하세요')
     previous=get_recording(db,resume_from) if resume_from else None
-    if previous and (previous['session_id']!=session_id or previous['transcription_mode']!=transcription_mode or previous['status']=='recording' or transcription_mode=='after_stop' and previous['transcription_released']):raise ValueError('복구할 녹음의 소속·방식·상태가 일치하지 않습니다')
+    # A disconnected segment may finish transcription before the microphone returns.
+    if previous and (previous['session_id']!=session_id or previous['transcription_mode']!=transcription_mode or previous['status']=='recording' or transcription_mode=='after_stop' and previous['transcription_released'] and previous['status']!='interrupted'):raise ValueError('복구할 녹음의 소속·방식·상태가 일치하지 않습니다')
     ident,created = new_id(),now()
     capture_id=(previous['capture_id']or previous['id'])if previous else ident
     first = db.execute("SELECT started_at FROM recordings WHERE session_id=? ORDER BY started_at LIMIT 1",(session_id,)).fetchone()

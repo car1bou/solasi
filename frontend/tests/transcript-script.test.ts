@@ -27,6 +27,9 @@ test('partial words select full touched confirmed segments and keep the selected
     assert.deepEqual(helper.selectTranscriptRange(segments,0,100).map((s:typeof segments[number])=>s.id),['a','b','c']);
     assert.deepEqual(helper.selectTranscriptRange(segments,2,2),[]);
     assert.equal(helper.transcriptStamp(61234),'1:01.234');
+    assert.equal(helper.transcriptStamp(128*1000/48000),'0:00.003');
+    assert.equal(helper.transcriptStamp(2432*1000/48000),'0:00.051');
+    assert.equal(helper.transcriptStamp(59999.7),'1:00.000');
   }finally{await server.close();}
 });
 

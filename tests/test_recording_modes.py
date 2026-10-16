@@ -76,6 +76,29 @@ class RecordingModeTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(get_recording(self.db,rid)['transcription_released']);self.assertEqual(self.native.await_count,1)
             await self.stop(second);await self.settled();self.assertTrue(get_recording(self.db,rid)['transcription_released'])
 
+    async def test_late_recovery_preserves_released_audio_and_holds_new_segment(self):
+        from lecture_study import server
+        with patch.object(server,'AUDIO_RELEASE_SECONDS',.03):
+            first=await self.start();self.pcm(first);job=await self.stop(first,interrupted=True,defer_transcription=True)
+            await self.settled()
+            self.assertTrue(get_recording(self.db,first)['transcription_released'])
+            original=[dict(r)for r in self.db.execute('SELECT * FROM transcripts WHERE recording_id=?',(first,))]
+            self.assertTrue(original)
+            second=await self.start(resume_from=first)
+            self.assertEqual(get_recording(self.db,second)['capture_id'],first)
+            self.assertFalse(get_recording(self.db,second)['transcription_released'])
+            self.assertGreaterEqual(get_recording(self.db,second)['offset_ms'],3000)
+            self.pcm(second);self.assertEqual(plan_chunks(self.db,second),[])
+            await self.stop(second);await self.settled()
+            self.assertEqual([dict(r)for r in self.db.execute('SELECT * FROM transcripts WHERE recording_id=?',(first,))],original)
+            self.assertEqual(get_recording(self.db,first)['stop_job_id'],job['id'])
+            self.assertEqual(self.native.await_count,2)
+
+    async def test_normally_finished_recording_cannot_be_automatically_resumed(self):
+        first=await self.start();self.pcm(first);await self.stop(first);await self.settled()
+        response=await self.client.post('/api/sessions/'+self.sid+'/audio/start',json={'sample_rate':16000,'resume_from':first},headers=self.headers)
+        self.assertEqual(response.status_code,422)
+
     async def test_startup_releases_held_recording_without_replacing_original_job(self):
         folder=Path(self.temp.name)/'restart';db=open_db(folder);sid=create_session(db,'lecture','재시작',None,None).id
         rid=start_recording(db,sid,16000,'after_stop');append_pcm(db,rid,0,0,16000,b'\1\0'*16000)

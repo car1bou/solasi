@@ -1,0 +1,682 @@
+{
+  "date": "2026-10-16",
+  "host": {
+    "chip": "Apple M4",
+    "ram_bytes": 17179869184,
+    "os": "macOS arm64"
+  },
+  "privacy": "No raw audio, human transcripts, model output, tokens, user data or local source paths are included.",
+  "recovery": {
+    "pre_sleep_committed_seconds": 1830.0026666666668,
+    "first_segment_seconds": 1850.928,
+    "after_wake_new_segment_seconds_at_checkpoint": 70.50266666666667,
+    "same_capture_new_segment": true,
+    "between_segment_gap_ms": 6010.667,
+    "sleep_evidence": {
+      "user_reported_sleep_wake_completed": true,
+      "system_will_sleep_kst": "19:03:34.481",
+      "display_activity_kst": "19:03:39.334",
+      "display_on_kst": "19:03:39.650",
+      "pmset_deep_idle_pair_found": false,
+      "requested_30_to_60_seconds_sustained": false,
+      "limit": "Only approximately five seconds between software sleep notification and display activity; no claim of 30-60 seconds of deep idle."
+    },
+    "native_only_kill_owned_server_exit_seconds": 1.133,
+    "draft_and_audio_restart": {
+      "same_origin_native_restart": true,
+      "recovered_revision": 3,
+      "text_matches_export": true,
+      "ink_matches_export": true,
+      "strokes": 3,
+      "prior_revisions_and_pcm_preserved": true,
+      "recordings": [
+        {
+          "seconds": 1850.928,
+          "status": "interrupted",
+          "wav_header_matches_db": true
+        },
+        {
+          "seconds": 292.00266666666664,
+          "status": "interrupted",
+          "wav_header_matches_db": true
+        },
+        {
+          "seconds": 156.25266666666667,
+          "status": "interrupted",
+          "wav_header_matches_db": true
+        }
+      ]
+    },
+    "late_recovery_real_http_ws_whisper": {
+      "passed": true,
+      "real_http_websocket_and_whisper": true,
+      "physical_microphone": false,
+      "disconnect_wait_seconds": 48.678753082989715,
+      "first_audio_seconds": 15.78,
+      "original_pcm_equal": true,
+      "original_transcripts_unchanged": true,
+      "original_job_id_unchanged": true,
+      "new_segment_held_until_stop": true,
+      "same_capture": true
+    },
+    "production_settings_db_hash_and_39_table_counts_equal": true,
+    "gap_display_observed": [
+      "0:00.003–0:00.168",
+      "0:00.003–0:00.051"
+    ]
+  },
+  "speech": {
+    "aggregates": {
+      "existing90_whisper": {
+        "cafeteria-adult": {
+          "reference_chars": 152,
+          "edits": 28,
+          "substitutions": 20,
+          "deletions": 6,
+          "insertions": 2,
+          "clips": 15,
+          "cer": 0.18421052631578946
+        },
+        "clean-adult": {
+          "reference_chars": 152,
+          "edits": 13,
+          "substitutions": 6,
+          "deletions": 7,
+          "insertions": 0,
+          "clips": 15,
+          "cer": 0.08552631578947369
+        },
+        "clean5": {
+          "reference_chars": 223,
+          "edits": 13,
+          "substitutions": 10,
+          "deletions": 3,
+          "insertions": 0,
+          "clips": 5,
+          "cer": 0.05829596412556054
+        },
+        "kmsav-manual6": {
+          "reference_chars": 103,
+          "edits": 13,
+          "substitutions": 3,
+          "deletions": 10,
+          "insertions": 0,
+          "clips": 6,
+          "cer": 0.1262135922330097
+        },
+        "lowgain5": {
+          "reference_chars": 223,
+          "edits": 22,
+          "substitutions": 10,
+          "deletions": 12,
+          "insertions": 0,
+          "clips": 5,
+          "cer": 0.09865470852017937
+        },
+        "office-adult": {
+          "reference_chars": 152,
+          "edits": 13,
+          "substitutions": 6,
+          "deletions": 7,
+          "insertions": 0,
+          "clips": 15,
+          "cer": 0.08552631578947369
+        },
+        "rooms6": {
+          "reference_chars": 213,
+          "edits": 1,
+          "substitutions": 1,
+          "deletions": 0,
+          "insertions": 0,
+          "clips": 6,
+          "cer": 0.004694835680751174
+        },
+        "snr105": {
+          "reference_chars": 223,
+          "edits": 16,
+          "substitutions": 13,
+          "deletions": 3,
+          "insertions": 0,
+          "clips": 5,
+          "cer": 0.07174887892376682
+        },
+        "spontaneous12": {
+          "reference_chars": 256,
+          "edits": 54,
+          "substitutions": 14,
+          "deletions": 37,
+          "insertions": 3,
+          "clips": 12,
+          "cer": 0.2109375
+        },
+        "talk6": {
+          "reference_chars": 132,
+          "edits": 12,
+          "substitutions": 5,
+          "deletions": 1,
+          "insertions": 6,
+          "clips": 6,
+          "cer": 0.09090909090909091
+        }
+      },
+      "new20_whisper": {
+        "new-fleurs20": {
+          "reference_chars": 926,
+          "edits": 50,
+          "substitutions": 14,
+          "deletions": 36,
+          "insertions": 0,
+          "clips": 20,
+          "cer": 0.05399568034557235
+        }
+      },
+      "new20_qwen": {
+        "new-fleurs20": {
+          "reference_chars": 926,
+          "edits": 53,
+          "substitutions": 14,
+          "deletions": 37,
+          "insertions": 2,
+          "clips": 20,
+          "cer": 0.05723542116630669
+        }
+      },
+      "adult45_whisper": {
+        "new-adult-cafeteria15": {
+          "reference_chars": 271,
+          "edits": 55,
+          "substitutions": 25,
+          "deletions": 28,
+          "insertions": 2,
+          "clips": 15,
+          "cer": 0.2029520295202952
+        },
+        "new-adult-clean15": {
+          "reference_chars": 271,
+          "edits": 15,
+          "substitutions": 7,
+          "deletions": 7,
+          "insertions": 1,
+          "clips": 15,
+          "cer": 0.055350553505535055
+        },
+        "new-adult-office15": {
+          "reference_chars": 271,
+          "edits": 16,
+          "substitutions": 8,
+          "deletions": 7,
+          "insertions": 1,
+          "clips": 15,
+          "cer": 0.05904059040590406
+        }
+      },
+      "adult45_qwen": {
+        "new-adult-cafeteria15": {
+          "reference_chars": 271,
+          "edits": 41,
+          "substitutions": 22,
+          "deletions": 15,
+          "insertions": 4,
+          "clips": 15,
+          "cer": 0.15129151291512916
+        },
+        "new-adult-clean15": {
+          "reference_chars": 271,
+          "edits": 18,
+          "substitutions": 10,
+          "deletions": 4,
+          "insertions": 4,
+          "clips": 15,
+          "cer": 0.06642066420664207
+        },
+        "new-adult-office15": {
+          "reference_chars": 271,
+          "edits": 19,
+          "substitutions": 10,
+          "deletions": 5,
+          "insertions": 4,
+          "clips": 15,
+          "cer": 0.07011070110701106
+        }
+      }
+    },
+    "candidate_comparisons": {
+      "new20": {
+        "qwen_better": 2,
+        "qwen_worse": 4,
+        "equal": 14
+      },
+      "adult45": {
+        "qwen_better": 7,
+        "qwen_worse": 9,
+        "equal": 29
+      }
+    },
+    "metric": "NFKC lower Unicode letters/numbers edit rate, not semantic hallucination frequency",
+    "defaults_changed": false
+  },
+  "vad_diagnostic_existing90": {
+    "reference_chars": 1829,
+    "current": {
+      "edits": 185,
+      "deletions": 86,
+      "insertions": 11
+    },
+    "min_speech_100ms": {
+      "edits": 191,
+      "deletions": 81,
+      "insertions": 18
+    },
+    "vad_off": {
+      "edits": 243,
+      "deletions": 62,
+      "insertions": 78
+    },
+    "both_experiments_rejected": true
+  },
+  "models": {
+    "whisper": {
+      "repo": "ggerganov/whisper.cpp",
+      "revision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "license": "MIT"
+    },
+    "qwen": {
+      "model": "mlx-community/Qwen3-ASR-1.7B-4bit",
+      "revision": "78a389c776a5483b2d0d4ea5494e11012e0d6159",
+      "license": "Apache-2.0",
+      "weights_sha256": "9848eaf7a5c1589c671b35035ac27b72e248dd0c604eacae547e7e403d29db45"
+    }
+  },
+  "new_selections": [
+    {
+      "selection": "fleurs20",
+      "manifest_sha256": "006ca04fb521a3460428ba027d2f946714d27f0872d1c899bec1803b6afbdc81",
+      "files": 20,
+      "seconds_including_paired_repeats": 251.64,
+      "input_proof": [
+        {
+          "group": "new-fleurs20",
+          "sha256": "445fbe3856371a3cfaa9cc1d34dc5f2aa2d1e3b43d49161ac55729111ca75776",
+          "duration_seconds": 15.78
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "ab7aec8ed1ccc6654ec94f77cca1aab0eec81cddbdf0a3bb24a325b2655de9f3",
+          "duration_seconds": 13.98
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "36bc3f36f75ae8b5b8f971c7a1aa8849a6a70725a86a6f1b3f30025ddfff23be",
+          "duration_seconds": 14.28
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "9c681df9dab82172786f47f72885752c5d71bacf26900a0aa8c57a7b34302428",
+          "duration_seconds": 10.02
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "35e24a816569a2b1e84c6cf4aa2ada151c6f53096514d8f72ae0ba35cfb52031",
+          "duration_seconds": 11.1
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "a80504ddfddefe0d88c0b0016eabdeb2ef646be1dc25b0afc44488b6f395d17d",
+          "duration_seconds": 8.88
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "1fa9de1b88d8f9dad8f2a2c321ff7ebf26e773a9e33cd388c1b3f687ed89bc68",
+          "duration_seconds": 12.42
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "d1a9de58c7018b71de196e1c2acc95e7f055a0063001991e9a0fcd8fa99a1159",
+          "duration_seconds": 11.76
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "077f0270b8d411bde01e4512e25f4143aa465b3886ea560192e39efa6cebadbb",
+          "duration_seconds": 12.12
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "72079fd396c2dd4b291186aca3773fe8b89a44f0d4df808a759a1fdfc3eaf868",
+          "duration_seconds": 16.14
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "26db187ca698fabf326181b533d0cdd5e47c77944504b120a9b0dd9c9e793859",
+          "duration_seconds": 10.92
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "790cb6dbf3ed4c5f0badfae06174aefc095957736d6eecb849a3325c79f243f9",
+          "duration_seconds": 18.42
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "7f09a8d2a74f04247f37a5198e582206448593fc7ded443f1d7d6c8ae0f0ea0f",
+          "duration_seconds": 13.5
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "93ed778edc111b9176b0c537a18c177aeb2aef9cd31f58b1df5c7256ceaedf98",
+          "duration_seconds": 9.84
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "53856afc854aa5749fd1ba9e8b32e02d41a89229282001494ea87166a937682c",
+          "duration_seconds": 12.06
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "5b17ba756c9e6a0ea0602488f604ffbee76b398550f2e1d418bc4d30244c08fe",
+          "duration_seconds": 10.86
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "60de094b7145e549d41f79fc98e2b6486266cdbffbd15bcaa1a971a51754811b",
+          "duration_seconds": 11.88
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "4fdfb14b083bd66eac2a1143beaa74922610a5652eeb4a8e80d412377cb058ed",
+          "duration_seconds": 11.7
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "0a2d4243197c53e99a94af72ca994bc46b7c0dc5c0458d961ea17f9b6787bd5c",
+          "duration_seconds": 13.56
+        },
+        {
+          "group": "new-fleurs20",
+          "sha256": "42e964a3b70c6c2cb82f8046d6a4224e0bc572ae518992b22cc42abc6afbd878",
+          "duration_seconds": 12.42
+        }
+      ]
+    },
+    {
+      "selection": "adult45",
+      "manifest_sha256": "ce6042c808f7c7868070ce79aa6ba47d2e0b1336db8349fe93c44c4f81113a97",
+      "files": 45,
+      "seconds_including_paired_repeats": 124.0213125,
+      "input_proof": [
+        {
+          "group": "new-adult-clean15",
+          "sha256": "9531b13f3f7708c989c63ea9111eddaaca0018b26820ec0d2ec62fc82568d32f",
+          "duration_seconds": 2.0964375
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "8fc1c9dfb7aa720d90ffcef9ce9e1445429c03ecd31cf7ea4ca01870a235262c",
+          "duration_seconds": 2.0964375
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "e51f458a0590a595bcb0ac30c12d7ec8d59372b664fe72e573acf83b78c2fdb0",
+          "duration_seconds": 2.0964375
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "adc3f6ee656d4ab20d9b87d7568954291a60b54a1a264fc7a43c5d88e9648484",
+          "duration_seconds": 2.480375
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "7d1d158aed541860eeab43014dd910786d8a9c7f93deffb418afd80ff826e0a4",
+          "duration_seconds": 2.480375
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "4cb7aaef28bb8727a53c079f86f85062870717178eee12af5a2d922fb688851c",
+          "duration_seconds": 2.480375
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "011813008d2abdef778f72ee2ac4736f8faf83c54bd7ac5a813f00906cc6de67",
+          "duration_seconds": 3.89675
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "60b3b01ffa1aced73a967f9820c3b90b777c264e687e2e83df5f67878c213a40",
+          "duration_seconds": 3.89675
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "12f1e4663d5a1be6e2205e5f69c74563ff29946e4cfb437d78c1363d22ce5d5e",
+          "duration_seconds": 3.89675
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "62692a67ced25b879ef13b9a54284fbbcf3a61844f5f8d5f97ff32ccad81b092",
+          "duration_seconds": 2.214125
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "556c1260c4e24434a611a244164de689e81459b8b7e79cb575bd382eba733f5c",
+          "duration_seconds": 2.214125
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "7ab5cafb56777c4d3514d58dffd410385166de8298c9408c8ad1b7ef2e29de86",
+          "duration_seconds": 2.214125
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "21db4d10dc852536a738b0c9fe51bbc5a26705aa208d3be7984911ce3fde4000",
+          "duration_seconds": 2.690625
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "2a258ad17845b58024f4a57bb53904cb4b2a453d8bb5e092bfa664bb8aa7b281",
+          "duration_seconds": 2.690625
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "8302459ee99f6c728dcfcc0b33977f08611193b09527635e6bdfa493e7ef7a7e",
+          "duration_seconds": 2.690625
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "09ca7f661086fab5217223ed14e7e550b0bc79a53798ca5a943dffb6a75d2275",
+          "duration_seconds": 2.14425
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "1c609d0b43beac040a1c144b2b8d9129723db6c71fc7f9e0fc77041ddfd9b002",
+          "duration_seconds": 2.14425
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "1208ea2246752e7341ff0481767a5130823251643030c20e9b0aefecb09a8fee",
+          "duration_seconds": 2.14425
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "2a15efd5ad8be2b7f4f9bfaa8b30e1cf03f7df51cc2405a2bb1add137062b025",
+          "duration_seconds": 2.6995
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "77f288e260eef85cbc803ed4a8887730b03aac5d2e3311706189c9ed41f3f79f",
+          "duration_seconds": 2.6995
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "c23840c08764e3177441a27bfd9c2244ae309a3ea675d7cbae82f00fd2dab078",
+          "duration_seconds": 2.6995
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "3babf92bd5ddd9ee10623104574d7c185b82aeb374478dd4dc54a000892ea3cb",
+          "duration_seconds": 2.183
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "d03a1e3676b8919cc934b32524b7aa1f485aff5c7dd5f007e9f2bf78f467eda1",
+          "duration_seconds": 2.183
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "445582c393c2beabbae09e1332cc34d1b51a8b7d4033e00fc19f2f7091bf541c",
+          "duration_seconds": 2.183
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "55299ef956eeb2623bfd532a4fc3ae6122741e12cf5915274a87e1e344d301e6",
+          "duration_seconds": 2.134125
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "8e6d3e07c13d0d3b08b4e78047c1907c5ada31e39db694e504d3e308dca8229e",
+          "duration_seconds": 2.134125
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "baea2b00480d6a48cd58bdb95b2b8ac7048708f74c3db52aa710a9fecbc4e748",
+          "duration_seconds": 2.134125
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "0574667a291fd9398275f6b587cb3a50351bcbcc7e18d867ac98c07a80de9453",
+          "duration_seconds": 2.4203125
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "61bb085e6ddcbd1ceac5cb9f2affe3dbb8f0c2278471ffa884bab13135303635",
+          "duration_seconds": 2.4203125
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "4159e1bd1fca5b13c1d301e27f0032e1f66a05bb790182702e50aa8955c45f5d",
+          "duration_seconds": 2.4203125
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "12f99e1064979f57c5ec45d56a57c374577b587b22fd0b0152d9c000ebfc1569",
+          "duration_seconds": 2.4705625
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "46d5e4a99b5a3fb92d8f81703b731887bf24f31bad025b96f6255f22db71eef0",
+          "duration_seconds": 2.4705625
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "52206b469ae00b6fcd61131afdc7184894cc182074523c01df33234b0c79de07",
+          "duration_seconds": 2.4705625
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "bec58cfb5ebd5746c5b2130869e1cee5d7ee99d984171d18a877fc02f81aa4e8",
+          "duration_seconds": 5.3771875
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "521d46af1fd223db2a2d6192f1f880b752ea111ed97f8c9eed6b252202ff97a2",
+          "duration_seconds": 5.3771875
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "d8156dd644c9e8097478ab8edd2dfe29b9b255743bbc3a44c5922d0a20a2ffc1",
+          "duration_seconds": 5.3771875
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "2168a5f894f3e38877c95cda8bca5da618e4bdc9d1695d0f785b47fb40b41485",
+          "duration_seconds": 3.0176875
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "c49ece7be3f790630bd3ff59d5a4d4112ae7d285df7a9478dedf1f7efdbe475b",
+          "duration_seconds": 3.0176875
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "9d77c45a703f4b0ef728c4b5deda837e473e778fa3ffa32c0720baf9751c7a1d",
+          "duration_seconds": 3.0176875
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "47602e2fcba286e1d7aee941c5df43efcd5a608d525a1b5a306a7bbefb10bcec",
+          "duration_seconds": 3.4673125
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "9c93525a29191eea94b9b9f340601730063c279e2ccd207bb56968ffe44a3d3a",
+          "duration_seconds": 3.4673125
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "c97ef2fb4be55d91f74dec55839f6eb11f7690cbb0d368db3d170427dbed27c6",
+          "duration_seconds": 3.4673125
+        },
+        {
+          "group": "new-adult-clean15",
+          "sha256": "c39b23454b67d748b9ee31c36d25a53fada44a5e0564282530fb22a07817c789",
+          "duration_seconds": 2.0481875
+        },
+        {
+          "group": "new-adult-office15",
+          "sha256": "9c15ce32c8d31f64d652bae93f53cc62d3c4555b191fab9b55e055af86f936b4",
+          "duration_seconds": 2.0481875
+        },
+        {
+          "group": "new-adult-cafeteria15",
+          "sha256": "06ce940719bf1aceb9064652463363f8862fd909c6388307323c206f157919a9",
+          "duration_seconds": 2.0481875
+        }
+      ]
+    }
+  ],
+  "sources": {
+    "fleurs": {
+      "url": "https://huggingface.co/datasets/google/fleurs",
+      "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+      "license": "CC-BY-4.0",
+      "viewer_rows": [
+        68,
+        87
+      ],
+      "archive_verified": true,
+      "archive_sha256": "3489e529f2aad18d3357b746c5f955941d258b79dc60d8a102d5bced2a223184",
+      "tsv_sha256": "cf2f7c8765f6203e3c46ef620d5e936d3f331b6e8865455557777dd1347517f5",
+      "metadata_mapping_old_rows_equal": 65,
+      "verified_independent_speaker_count": null
+    },
+    "adult": {
+      "seoul": {
+        "source": "https://www.openslr.org/113/",
+        "license": "CC BY-NC2.0",
+        "limitations": "Interviewer <IVER> has no lexical reference. No whole-conversation CER. Original and mixtures used for local noncommercial evaluation, original audio not bundled."
+      },
+      "demand": {
+        "source": "https://zenodo.org/records/1227121",
+        "license": "Producer PDF says CC BY-SA3.0; record JSON says CC BY4.0. Use producer conditions conservatively, no mixture redistribution.",
+        "limitations": "Actual French office/cafeteria ambience, can contain competing speech. Mixtures are derived, not on-site Korean meetings."
+      }
+    }
+  },
+  "verification": {
+    "backend_tests": 369,
+    "frontend_tests": 56,
+    "native_fixture_tests": 5,
+    "typescript_check": true,
+    "vite_production_build": true,
+    "before_fix_late_recovery_reproduced_422": true,
+    "before_fix_fractional_time_test_failed": true
+  },
+  "limitations": [
+    "Physical mic recovery is separate from reference-scored speech accuracy.",
+    "First physical sleep path used a server started before the late-release backend condition edit; final backend separately passed actual HTTP/WebSocket/Whisper late resume.",
+    "New adult ranges reuse three prior adult recordings; paired mixtures are not independent samples.",
+    "FLEURS is read speech; no claim of 20 distinct speakers.",
+    "Character insertion and deletion counts are not semantic hallucination or omission rates.",
+    "No independent listening re-annotation and no whole-conversation CER.",
+    "No new default model or VAD setting; remaining speech errors, especially cafeteria noise.",
+    "Not a power-loss, unfinished-stroke, Bluetooth hardware matrix or long deep-idle validation.",
+    "Concurrent machine work makes these runs unsuitable for model latency ranking."
+  ]
+}
