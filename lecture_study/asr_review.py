@@ -13,6 +13,25 @@ def active_segments(db,chunk_id):
     return [dict(r)for r in db.execute('SELECT * FROM transcripts WHERE chunk_id=? AND final=1 AND superseded_by IS NULL ORDER BY start_ms,id',(chunk_id,))]
 
 
+def result_utf8_failure(chunk):
+    return chunk['final'] and chunk['status']=='failed' and chunk['error']==tr.ASR_RESULT_UTF8_ERROR
+
+
+def finish_recording_job(db,record,*,repair_failed=False):
+    if not record['stop_job_id'] or record['status']=='recording' or not record['transcription_released']:return
+    counts=tr.transcription_status(db,record['id'])
+    if counts['queued'] or counts['running']:return
+    failed=db.execute("SELECT error FROM transcript_ranges WHERE recording_id=? AND status IN ('failed','interrupted') LIMIT 1",(record['id'],)).fetchone()
+    status='failed' if failed else 'cancelled' if counts['cancelled'] else 'done'
+    result=json.dumps(counts);error=failed[0]if failed else None
+    if repair_failed:
+        parent=get_job(db,record['stop_job_id'])
+        if parent['status']=='failed' and parent['error']!=tr.ASR_RESULT_UTF8_ERROR and not db.execute("SELECT 1 FROM transcript_ranges WHERE recording_id=? AND status IN ('failed','interrupted') AND error=?",(record['id'],parent['error'])).fetchone():status,error='failed',parent['error']
+    with db:
+        db.execute("UPDATE jobs SET status=?,result=?,error=?,updated_at=? WHERE id=? AND (status IN ('queued','running') OR (? AND status='failed')) AND (status!=? OR result IS NOT ? OR error IS NOT ?)",
+                   (status,result,error,now(),record['stop_job_id'],repair_failed,status,result,error))
+
+
 
 def uncovered_activity(activity,rows,offset):
     covered=sorted((r['start_ms']-offset-250,r['end_ms']-offset+250)for r in rows);gaps=[]
@@ -30,6 +49,7 @@ def uncovered_activity(activity,rows,offset):
 
 
 def suspect_reason(db,chunk,activity=None):
+    if result_utf8_failure(chunk):return tr.ASR_RESULT_UTF8_ERROR
     if not chunk['final'] or chunk['status']!='done' or chunk['quiet']:return None
     rows=active_segments(db,chunk['id']);record=tr.get_recording(db,chunk['recording_id'])
     duration=(chunk['end_frame']-chunk['start_frame'])/record['sample_rate']
@@ -45,7 +65,7 @@ def suspect_reason(db,chunk,activity=None):
 
 def checked_chunk(db,chunk_id):
     chunk=tr.range_row(db,chunk_id);record=tr.get_recording(db,chunk['recording_id']);session(db,record['session_id'])
-    if not chunk['final'] or chunk['status']!='done':raise ValueError('확정 전사 완료 후 다시 인식할 수 있습니다')
+    if not chunk['final'] or (chunk['status']!='done' and not result_utf8_failure(chunk)):raise ValueError('확정 전사 완료 또는 UTF-8 형식 오류 구간만 다시 인식할 수 있습니다')
     if record['status']=='audio_deleted':raise ValueError('원음이 삭제되거나 연결 해제되었습니다')
     if record['kind']=='file':tr.external_audio_path(db,record)
     elif not tr.recording_path(db,record['id']).is_file():raise ValueError('원음을 찾을 수 없습니다')
@@ -60,7 +80,7 @@ def queue_review(db,chunk_id,*,automatic,activity=None,runtime=None):
     if automatic and any(r['revision']>1 for r in active_segments(db,chunk_id)):return None
     reason=suspect_reason(db,chunk,activity)if automatic else '사용자가 원음 재인식을 요청함'
     if not reason:return None
-    request={'chunk_id':chunk_id,'recording_id':record['id'],'chunk_revision':chunk['revision'],'automatic':automatic,'reason':reason,'original_segments':active_segments(db,chunk_id),'prompt':chunk['prompt'],'model':tr.MODEL_NAME,'alternative':'native-vad-off'}
+    request={'chunk_id':chunk_id,'recording_id':record['id'],'chunk_revision':chunk['revision'],'original_status':chunk['status'],'original_error':chunk['error'],'automatic':automatic,'reason':reason,'original_segments':active_segments(db,chunk_id),'prompt':chunk['prompt'],'model':tr.MODEL_NAME,'alternative':'native-vad-off'}
     from . import qwen_asr
     if runtime is not None and qwen_asr.available(runtime):request.update(model=qwen_asr.MODEL,alternative=qwen_asr.ALTERNATIVE)
     if activity is not None:request['voice_activity_ranges']=activity
@@ -69,7 +89,7 @@ def queue_review(db,chunk_id,*,automatic,activity=None,runtime=None):
 
 def unchanged(db,request):
     chunk,record=checked_chunk(db,request['chunk_id'])
-    if chunk['revision']!=request['chunk_revision'] or active_segments(db,chunk['id'])!=request['original_segments']:raise ValueError('후보 생성 후 전사가 변경되었습니다. 현재 원문으로 다시 인식하세요')
+    if chunk['revision']!=request['chunk_revision'] or chunk['status']!=request.get('original_status','done') or chunk['error']!=request.get('original_error') or active_segments(db,chunk['id'])!=request['original_segments']:raise ValueError('후보 생성 후 전사가 변경되었습니다. 현재 원문으로 다시 인식하세요')
     return chunk,record
 
 
@@ -115,6 +135,9 @@ def apply_review(db,job_id,text):
             db.execute('INSERT INTO sources(id,ref,text_snapshot)VALUES(?,?,?)',(ref.id,ref.model_dump_json(),text.strip()));index_source(db,ref,text.strip())
         result.update(applied=True,applied_text=text.strip(),transcript_id=primary)
         db.execute('UPDATE jobs SET result=?,updated_at=? WHERE id=?',(json.dumps(result,ensure_ascii=False),now(),job_id))
+        if result_utf8_failure(chunk):
+            db.execute("UPDATE transcript_ranges SET status='done',error=NULL WHERE id=?",(chunk['id'],))
+            finish_recording_job(db,record,repair_failed=True)
     return result
 
 
@@ -129,7 +152,7 @@ def range_details(db,chunk):
 
 
 def empty_ranges(db,sid):
-    return [dict(r)|range_details(db,r)for r in db.execute("SELECT t.* FROM transcript_ranges t JOIN recordings r ON r.id=t.recording_id WHERE r.session_id=? AND r.status!='audio_deleted' AND t.final=1 AND t.status='done' AND t.quiet=0 AND t.model IS NOT NULL AND NOT EXISTS(SELECT 1 FROM transcripts s WHERE s.chunk_id=t.id AND s.superseded_by IS NULL) ORDER BY r.offset_ms,t.start_frame",(sid,))]
+    return [dict(r)|range_details(db,r)for r in db.execute("SELECT t.* FROM transcript_ranges t JOIN recordings r ON r.id=t.recording_id WHERE r.session_id=? AND r.status!='audio_deleted' AND t.final=1 AND (t.status='done' OR (t.status='failed' AND t.error=?)) AND t.quiet=0 AND t.model IS NOT NULL AND NOT EXISTS(SELECT 1 FROM transcripts s WHERE s.chunk_id=t.id AND s.superseded_by IS NULL) ORDER BY r.offset_ms,t.start_frame",(sid,tr.ASR_RESULT_UTF8_ERROR))]
 
 
 def public_reviews(db,sid):

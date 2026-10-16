@@ -106,3 +106,22 @@ test('script renders continuous confirmed text with keyboard sentence actions an
     assert.doesNotMatch(markup,/class="transcript final"/);
   }finally{await server.close();}
 });
+
+test('output errors have an audio review action without being described as empty speech',async()=>{
+  const server=await createServer({configFile:false,cacheDir:'../.local-state/transcript-test-vite',server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {EmptyTranscriptRange,ReviewCard}=await server.ssrLoadModule('/src/TranscriptView.tsx');
+    const range={id:'r:0',start_ms:0,end_ms:25000,audio_url:'/api/recordings/r/audio',seek_seconds:0,error:'전사 결과가 올바른 UTF-8이 아닙니다. 원음 확인이 필요합니다.'};
+    const draw=(error:string|null)=>renderToStaticMarkup(React.createElement(EmptyTranscriptRange,{range:{...range,error},reviews:[],review:async()=>{}}));
+    const failed=draw(range.error);
+    assert.match(failed,/전사 출력 오류 · 원음 확인 필요/);
+    assert.match(failed,/원음 다시 인식/);
+    assert.match(failed,/aria-label="전사 출력 오류 구간 원음"/);
+    assert.doesNotMatch(failed,/빈 전사 구간|발화 또는 소음/);
+    assert.match(draw(null),/빈 전사 구간/);
+    const job={...range,id:'review',kind:'asr_review',status:'queued',error:null,result:null,request:{chunk_id:range.id,reason:range.error,original_status:'failed',original_error:range.error,original_segments:[]}};
+    const card=renderToStaticMarkup(React.createElement(ReviewCard,{job,refresh:async()=>{}}));
+    assert.match(card,/전사 출력 오류로 저장된 인식문 없음/);
+    assert.doesNotMatch(card,/\(빈 전사\)|확인한 전사 적용/);
+  }finally{await server.close();}
+});

@@ -37,7 +37,7 @@ from .outputs import cached_summary_parts,public_artifact,submit_attempt,save_at
 from .models import AIRequest
 from .retrieval import backfill_sources,retrieve,list_terms,save_term,concept_detail,rebuild_embeddings,index_status,capture_search
 from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,edit_segments,export_transcript,TranscriptConflict,get_asr_terms,save_asr_terms,asr_prompt,engine_paths,verify_model,MODEL_NAME,VAD_SHA
-from .asr_review import queue_review,process_review,apply_review,public_reviews,empty_ranges,unchanged
+from .asr_review import queue_review,process_review,apply_review,public_reviews,empty_ranges,unchanged,result_utf8_failure,finish_recording_job
 from .audio import start_recording, append_pcm, stop_recording, get_recording, interrupt_recording, recover_recordings
 from .native_drafts import attach_native_drafts
 
@@ -950,13 +950,8 @@ def create_app(config: AppConfig) -> FastAPI:
         return resolve_source(db,SourceRef.model_validate_json(row["ref"]))
 
     def finish_audio_jobs():
-        for record in db.execute("SELECT id,stop_job_id FROM recordings WHERE stop_job_id IS NOT NULL AND status!='recording' AND transcription_released=1").fetchall():
-            status=transcription_status(db,record["id"])
-            if status["queued"] or status["running"]: continue
-            error=db.execute("SELECT error FROM transcript_ranges WHERE recording_id=? AND status IN ('failed','interrupted') LIMIT 1",(record["id"],)).fetchone()
-            with db:
-                db.execute("UPDATE jobs SET status=?,result=?,error=?,updated_at=? WHERE id=? AND status IN ('queued','running')",
-                           ("failed" if error else "cancelled" if status["cancelled"] else "done",json.dumps(status),error[0] if error else None,now(),record["stop_job_id"]))
+        for record in db.execute("SELECT * FROM recordings WHERE stop_job_id IS NOT NULL AND status!='recording' AND transcription_released=1").fetchall():
+            finish_recording_job(db,record)
 
     async def transcription_loop():
         try:
@@ -974,7 +969,7 @@ def create_app(config: AppConfig) -> FastAPI:
                         if asyncio.current_task().cancelling():raise
                     finally:app.state.active_asr=None
                     latest=db.execute('SELECT * FROM transcript_ranges WHERE id=?',(chunk['id'],)).fetchone()
-                    if latest and latest['final'] and latest['status']=='done':
+                    if latest and latest['final'] and (latest['status']=='done' or result_utf8_failure(latest)):
                         activity=task.result()if not task.cancelled()else None
                         try:queue_review(db,latest['id'],automatic=True,runtime=config.runtime_dir,**({'activity':activity}if isinstance(activity,list)else{}))
                         except (KeyError,ValueError,OSError) as exc:logging.getLogger(__name__).warning('Optional transcription review skipped: %s',exc)

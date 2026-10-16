@@ -20,6 +20,7 @@ CHUNK_SECONDS=30
 BASE_SHA="60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
 MODEL_NAME="large-v3-turbo"
 MODEL_SHA="1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
+ASR_RESULT_UTF8_ERROR="전사 결과가 올바른 UTF-8이 아닙니다. 원음 확인이 필요합니다."
 _verified=set()
 
 
@@ -224,7 +225,8 @@ async def transcribe_range(input_wav,start_ms,prompt,runtime_dir,*,preview=False
         if preview:argv += ["-bs","1","-bo","1","-nf"]
         if prompt.strip(): argv+=["--prompt",prompt]
         await command(argv)
-        try: body=json.loads(prefix.with_suffix(".json").read_text())
+        try: body=json.loads(prefix.with_suffix(".json").read_text(encoding="utf-8"))
+        except UnicodeDecodeError: raise ValueError(ASR_RESULT_UTF8_ERROR) from None
         except (OSError,json.JSONDecodeError): raise ValueError("전사 결과를 읽을 수 없습니다") from None
         return parse_segments(body,duration,start_ms)
 

@@ -89,6 +89,25 @@ class TranscriptionTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValueError):
             tr.parse_segments({"transcription":[{"offsets":{"from":-1,"to":2},"text":"말"}]},1000,0)
 
+    async def test_native_result_rejects_invalid_utf8_without_replacing_text(self):
+        import json,wave
+        valid={"transcription":[{"offsets":{"from":0,"to":1000},"text":"정상 발화"}]}
+        payload=json.dumps(valid,ensure_ascii=False).encode("utf-8")
+        async def command(argv):
+            if "-of" in argv:
+                Path(str(argv[argv.index("-of")+1])+".json").write_bytes(payload)
+            else:
+                with wave.open(str(argv[-1]),"wb") as out:
+                    out.setnchannels(1);out.setsampwidth(2);out.setframerate(16000);out.writeframes(b"\0\1"*16000)
+            return b""
+        with patch.object(tr,"engine_paths",return_value=("ffmpeg","whisper","model")),patch.object(tr,"verify_model"),patch.object(tr,"command",new=command):
+            self.assertEqual(await tr.transcribe_range(self.root/"source.wav",500,"",self.root),[{"start_ms":500,"end_ms":1500,"text":"정상 발화"}])
+            payload=payload.replace("정상 발화".encode("utf-8"),b"\xeb\x88")
+            with self.assertRaises(ValueError) as error:
+                await tr.transcribe_range(self.root/"source.wav",500,"",self.root)
+        self.assertIs(type(error.exception),ValueError)
+        self.assertEqual(str(error.exception),"전사 결과가 올바른 UTF-8이 아닙니다. 원음 확인이 필요합니다.")
+
     async def test_external_audio_is_referenced_and_changed_file_refused(self):
         audio.stop_recording(self.db,self.rid)
         import wave,math

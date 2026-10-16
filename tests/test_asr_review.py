@@ -65,6 +65,12 @@ class ReviewTests(unittest.IsolatedAsyncioTestCase):
         tr.edit_segment(self.db,tr.list_transcripts(self.db,self.sid)[0]['id'],'사용자 수정')
         with self.assertRaisesRegex(ValueError,'변경'):review.apply_review(self.db,job['id'],'새 전사')
         self.assertEqual(tr.list_transcripts(self.db,self.sid)[0]['text'],'사용자 수정')
+    async def test_legacy_completed_range_review_request_remains_valid(self):
+        self.first([]);job=review.queue_review(self.db,self.chunk['id'],automatic=False)
+        job['request'].pop('original_status');job['request'].pop('original_error')
+        with self.db:self.db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(job['request']),job['id']))
+        await self.decode(job);review.apply_review(self.db,job['id'],'확인한 전사')
+        self.assertEqual(tr.list_transcripts(self.db,self.sid)[0]['text'],'확인한 전사')
     async def test_empty_first_result_apply_and_once_automatic(self):
         self.first([]);job=review.queue_review(self.db,self.chunk['id'],automatic=True)
         self.assertIsNotNone(job);self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True))
@@ -111,6 +117,31 @@ class ReviewApiTests(unittest.IsolatedAsyncioTestCase):
     from tests.test_transcription_api import TranscriptApiTests as _Base
     asyncSetUp=_Base.asyncSetUp
     asyncTearDown=_Base.asyncTearDown
+    async def test_utf8_failure_schedules_one_unapplied_candidate_and_reconciles_stop_job(self):
+        import asyncio
+        async def decoder(*args,vad_enabled=True,**kwargs):
+            if vad_enabled:raise ValueError(tr.ASR_RESULT_UTF8_ERROR)
+            return [{'start_ms':0,'end_ms':1000,'text':'확인 후보'}]
+        with patch.object(tr,'transcribe_range',new=AsyncMock(side_effect=decoder))as native:
+            stopped=(await self.client.post('/api/recordings/'+self.rid+'/stop',json={},headers=self.headers)).json()
+            await asyncio.gather(*self.app.state.tasks)
+            data=(await self.client.get('/api/sessions/'+self.sid+'/events')).json()
+            self.assertEqual(len(data['asr_reviews']),1)
+            candidate=data['asr_reviews'][0];chunk=data['empty_transcript_ranges'][0]
+            self.assertEqual(chunk['error'],tr.ASR_RESULT_UTF8_ERROR);self.assertEqual(chunk['status'],'failed')
+            self.assertEqual(candidate['request']['original_status'],'failed');self.assertEqual(candidate['request']['original_error'],tr.ASR_RESULT_UTF8_ERROR)
+            self.assertFalse(candidate['result']['applied']);self.assertEqual(data['transcripts'],[])
+            self.assertEqual((await self.client.get('/api/jobs/'+stopped['id'])).json()['status'],'failed')
+            self.app.state.kick_transcription();await asyncio.gather(*self.app.state.tasks)
+            self.assertEqual(native.await_count,2)
+        response=await self.client.post('/api/jobs/'+candidate['id']+'/apply-transcript',json={'text':'확인한 전사'},headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(tr.range_row(self.app.state.db,chunk['id'])['status'],'done');self.assertIsNone(tr.range_row(self.app.state.db,chunk['id'])['error'])
+        data=(await self.client.get('/api/sessions/'+self.sid+'/events')).json()
+        self.assertEqual(data['empty_transcript_ranges'],[]);self.assertEqual(data['transcripts'][0]['original_text'],'')
+        parent=(await self.client.get('/api/jobs/'+stopped['id'])).json()
+        self.assertEqual(parent['status'],'done');self.assertEqual(parent['result']['done'],1);self.assertEqual(parent['result']['failed'],0);self.assertIsNone(parent['error'])
+
     async def test_manual_candidate_apply_and_cancel_queued(self):
         import asyncio
         with patch.object(tr,'transcribe_range',new=AsyncMock(return_value=[{'start_ms':0,'end_ms':1000,'text':'최초'}])):
@@ -246,6 +277,78 @@ class ReviewApiTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.gather(*self.app.state.tasks)
         self.assertEqual(decoder.await_count,2)
         self.assertEqual(len(tr.list_transcripts(self.app.state.db,self.sid)),2)
+
+class FailedResultReviewTests(unittest.IsolatedAsyncioTestCase):
+    setUp=ReviewTests.setUp
+    decode=ReviewTests.decode
+    def mark_failed(self,error=tr.ASR_RESULT_UTF8_ERROR):
+        with self.db:self.db.execute("UPDATE transcript_ranges SET status='failed',error=?,model=? WHERE id=?",(error,tr.MODEL_NAME,self.chunk['id']))
+        self.chunk=tr.range_row(self.db,self.chunk['id'])
+    def test_unrelated_errors_and_unfinished_ranges_cannot_offer_review(self):
+        for status,error,final in [('failed','엔진 실패',1),('interrupted',tr.ASR_RESULT_UTF8_ERROR,1),('queued',tr.ASR_RESULT_UTF8_ERROR,1),('failed',tr.ASR_RESULT_UTF8_ERROR,0)]:
+            with self.subTest(status=status,error=error,final=final):
+                self.mark_failed(error)
+                with self.db:self.db.execute('UPDATE transcript_ranges SET status=?,final=? WHERE id=?',(status,final,self.chunk['id']))
+                for automatic in (True,False):
+                    with self.assertRaises(ValueError):review.queue_review(self.db,self.chunk['id'],automatic=automatic)
+                self.assertEqual(review.empty_ranges(self.db,self.sid),[])
+    async def test_failed_format_keeps_raw_and_original_error_until_user_applies(self):
+        self.mark_failed();before=audio.recording_path(self.db,self.rid).read_bytes()
+        with patch('lecture_study.qwen_asr.available',return_value=True):job=review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime')
+        self.assertEqual(job['request']['alternative'],'qwen3-asr-1.7b-4bit');self.assertEqual(job['request']['original_status'],'failed');self.assertEqual(job['request']['original_error'],tr.ASR_RESULT_UTF8_ERROR)
+        self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True))
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(return_value={'text':'확인 후보'})):
+            result=await review.process_review(self.db,job,self.root/'runtime')
+        self.assertFalse(result['applied']);self.assertEqual(tr.list_transcripts(self.db,self.sid),[]);self.assertEqual(tr.range_row(self.db,self.chunk['id'])['status'],'failed')
+        self.assertEqual(audio.recording_path(self.db,self.rid).read_bytes(),before)
+    async def test_failed_candidate_cannot_replace_a_later_success_or_changed_error(self):
+        self.mark_failed();job=review.queue_review(self.db,self.chunk['id'],automatic=True);await self.decode(job)
+        with self.db:self.db.execute('UPDATE transcript_ranges SET error=? WHERE id=?',('다른 실패',self.chunk['id']))
+        with self.assertRaises(ValueError):review.apply_review(self.db,job['id'],'후보')
+        self.mark_failed()
+        self.assertTrue(tr.accept_transcription(self.db,self.rid,self.chunk['id'],self.chunk['revision'],True,[{'start_ms':0,'end_ms':1000,'text':'나중의 정상 전사'}]))
+        with self.assertRaisesRegex(ValueError,'변경'):review.apply_review(self.db,job['id'],'후보')
+        self.assertEqual(tr.list_transcripts(self.db,self.sid)[0]['text'],'나중의 정상 전사')
+    async def test_failed_alternative_cannot_schedule_another_automatic_inference(self):
+        from lecture_study.jobs import get_job,run_job
+        self.mark_failed();job=review.queue_review(self.db,self.chunk['id'],automatic=True)
+        with patch.object(tr,'transcribe_range',new=AsyncMock(side_effect=ValueError('후보 엔진 실패')))as native:
+            await run_job(self.db,job['id'],lambda:review.process_review(self.db,job,self.root/'runtime'))
+            self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True));self.assertEqual(native.await_count,1)
+        self.assertEqual(get_job(self.db,job['id'])['status'],'failed');self.assertEqual(tr.range_row(self.db,self.chunk['id'])['error'],tr.ASR_RESULT_UTF8_ERROR)
+    def test_normal_finishing_does_not_turn_an_unrelated_failed_stop_job_done(self):
+        from lecture_study.jobs import get_job
+        self.assertTrue(tr.accept_transcription(self.db,self.rid,self.chunk['id'],1,True,[]));parent=audio.stop_recording(self.db,self.rid)
+        with self.db:self.db.execute("UPDATE jobs SET status='failed',error=? WHERE id=?",('원음 읽기 실패',parent['id']))
+        review.finish_recording_job(self.db,tr.get_recording(self.db,self.rid))
+        self.assertEqual(get_job(self.db,parent['id'])['status'],'failed');self.assertEqual(get_job(self.db,parent['id'])['error'],'원음 읽기 실패')
+    async def test_apply_cannot_clear_a_later_audio_planning_failure(self):
+        from lecture_study.jobs import get_job
+        self.mark_failed();audio.append_pcm(self.db,self.rid,1,16000,16000,b'\0\1'*16000);parent=audio.stop_recording(self.db,self.rid)
+        with self.db:self.db.execute("UPDATE jobs SET status='failed',error=? WHERE id=?",(tr.ASR_RESULT_UTF8_ERROR,parent['id']))
+        job=review.queue_review(self.db,self.chunk['id'],automatic=True);await self.decode(job)
+        path=audio.recording_path(self.db,self.rid);path.write_bytes(path.read_bytes()[:44+32000])
+        with self.assertRaisesRegex(OSError,'저장된 원음이 짧습니다') as failure:tr.plan_chunks(self.db,self.rid,True)
+        with self.db:
+            self.db.execute('UPDATE recordings SET error=? WHERE id=?',(str(failure.exception),self.rid))
+            self.db.execute("UPDATE jobs SET status='failed',error=? WHERE id=?",(str(failure.exception),parent['id']))
+        review.apply_review(self.db,job['id'],'확인한 전사');current=get_job(self.db,parent['id'])
+        self.assertEqual(current['status'],'failed');self.assertEqual(current['error'],'저장된 원음이 짧습니다')
+        self.assertEqual(current['result']['done'],1);self.assertEqual(current['result']['failed'],0)
+        self.assertEqual(tr.get_recording(self.db,self.rid)['error'],'저장된 원음이 짧습니다');self.assertEqual(tr.list_transcripts(self.db,self.sid)[0]['text'],'확인한 전사')
+    async def test_apply_preserves_other_success_and_other_failure_keeps_parent_failed(self):
+        from lecture_study.jobs import get_job
+        self.assertTrue(tr.accept_transcription(self.db,self.rid,self.chunk['id'],1,True,[{'start_ms':0,'end_ms':1000,'text':'기존 정상 전사'}]))
+        original=tr.list_transcripts(self.db,self.sid)[0]
+        for seq in (1,2):audio.append_pcm(self.db,self.rid,seq,seq*32000,16000,b'\0\1'*16000)
+        chunks=tr.plan_chunks(self.db,self.rid,True);self.chunk=chunks[1];self.mark_failed()
+        with self.db:self.db.execute("UPDATE transcript_ranges SET status='failed',error=? WHERE id=?",('다른 엔진 실패',chunks[2]['id']))
+        parent=audio.stop_recording(self.db,self.rid)
+        with self.db:self.db.execute("UPDATE jobs SET status='failed',result=?,error=? WHERE id=?",(json.dumps(tr.transcription_status(self.db,self.rid)),'다른 엔진 실패',parent['id']))
+        job=review.queue_review(self.db,self.chunk['id'],automatic=True);await self.decode(job);review.apply_review(self.db,job['id'],'확인한 전사')
+        parent=get_job(self.db,parent['id'])
+        self.assertEqual(parent['status'],'failed');self.assertEqual(parent['result']['done'],2);self.assertEqual(parent['result']['failed'],1);self.assertEqual(parent['error'],'다른 엔진 실패')
+        self.assertEqual(tr.list_transcripts(self.db,self.sid)[0],original);self.assertEqual(get_job(self.db,job['id'])['request']['original_error'],tr.ASR_RESULT_UTF8_ERROR)
 
 class ActivityReviewTests(unittest.TestCase):
     def test_partial_and_long_empty_speech_are_candidates_but_boundary_jitter_is_not(self):
