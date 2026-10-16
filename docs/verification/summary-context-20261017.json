@@ -1,0 +1,157 @@
+{
+  "date": "2026-10-17",
+  "policy": {
+    "id": "complete-v1",
+    "selected_ids_per_call": 8,
+    "output_tokens": 512,
+    "additional_selection_attempts": 1,
+    "preceding_max_units": 8,
+    "preceding_max_characters": 640,
+    "preceding_max_ms": 45000,
+    "preceding_max_gap_ms": 30000,
+    "forward_max_gap_ms": 3000,
+    "forward_additional_units": 4,
+    "generated_subject_or_event_labels": false,
+    "legacy_requests_and_originals_preserved": true
+  },
+  "interview": {
+    "same_transcripts": 179,
+    "input_type": "real adult interview with derived real-office-noise mixture",
+    "whole_dialogue_cer": null,
+    "excluded_duplicate_recording": true,
+    "excluded_authored_memo": true,
+    "calls": 1,
+    "model": "qwen3.5:4b",
+    "digest": "1e9f4174647623f03c75d972c6b26666fb45ef909d4c51092262d50a20e642ad",
+    "elapsed_seconds_excluding_input_preparation": 29.558057041023858,
+    "evaluation": {
+      "sections": 7,
+      "quote_chars": 1170,
+      "review_sections": 1,
+      "checks": {
+        "self_only_child": true,
+        "hypothetical_death": true,
+        "parents_health": true
+      },
+      "incomplete_parts": []
+    },
+    "report_sha256": "3cfa455cdd95f9313ab814b718cf1258c6453b49add45fdf7896d98f6bc98ee7",
+    "engine_sha256": "d8386d2f82144713ef07488ac824fcf938a1cf6e8eca15768e0d24094de4bb02",
+    "quotes_validated": true
+  },
+  "package": {
+    "version": "0.3.3",
+    "build": "13",
+    "minimum_macos": "27.0",
+    "engine_sha256": "d8386d2f82144713ef07488ac824fcf938a1cf6e8eca15768e0d24094de4bb02",
+    "installed_engine_matches": true,
+    "frontend_index_sha256": "f5edaed2fedfbc4bfe1cfbf8669d113c0e800a24ae9a7b994781c701f376e7ce",
+    "frontend_matches": true
+  },
+  "tests": {
+    "backend_total": 476,
+    "backend_passed": 471,
+    "backend_optional_skipped": 5,
+    "frontend_passed": 71,
+    "typescript_build": true,
+    "vite_build": true,
+    "swift_build_and_codesign": true
+  },
+  "preservation": {
+    "passed": true,
+    "tables": 43,
+    "schema_objects": 86,
+    "referenced_files": 18,
+    "differences": {},
+    "missing_files": [],
+    "integrity_check": "ok",
+    "foreign_key_errors": 0
+  },
+  "limitations": [
+    "Selection coverage is not semantic completeness.",
+    "Preceding/forward bounds and Korean sentence endings are heuristics.",
+    "Original corpus audio, reference and recognized text remain outside Git.",
+    "These timings are single observations, not a general speed comparison.",
+    "Native UI body was not readable through the capture tool; launch and lifecycle quit were observed.",
+    "Long narrative water request remains unquoted despite completed coverage checks.",
+    "No full reference for all overlapping multi-speaker dialogue was obtained.",
+    "ASR benchmarks and this summary test do not newly validate long physical microphone sleep/crash recovery."
+  ],
+  "long_native_pipe": {
+    "integration_status": "pass",
+    "evidence_count": 306,
+    "transcript_count": 302,
+    "same_frozen_input": true,
+    "fixture_only_old_page_note_pointer_restored": true,
+    "newer_page_note_revision_preserved": true,
+    "frozen_evidence_sha256": "af853c1c33b19158cd166df594597b8d9c269197c0acaf18492589e1df0c53d2",
+    "frozen_policy": "complete-v1",
+    "model_calls": 7,
+    "generation_wall_seconds_after_job_response": 77.86708620900754,
+    "model_reported_elapsed_ms": 77615,
+    "evaluation": {
+      "semantic_checks": {
+        "thought_clause_and_predicate": true,
+        "departure_and_predicate": true,
+        "drinking": true,
+        "room_entry": true,
+        "water_request": false
+      },
+      "semantic_missing_count": 1,
+      "sections": 18,
+      "quotes": 145,
+      "quote_chars": 2599,
+      "review_sections": 3,
+      "completed_parts": 5,
+      "expected_parts": 5,
+      "selection_incomplete_parts": [],
+      "unquoted_sources": 202,
+      "last_evidence_quoted": true,
+      "last_transcript_quoted": true,
+      "last_transcript_end_ms": 912994,
+      "covered_evidence_count": 306,
+      "exact_quotes_no_subject_or_event_labels": true
+    },
+    "body_frames": 306,
+    "ack_frames": 306,
+    "socket_samples": 366,
+    "socket_violations": 0,
+    "graceful_shutdown": true,
+    "exit_code": 0,
+    "remaining_children": 0,
+    "source_and_models_unchanged": true,
+    "report_sha256": "d4754e4cbab7d566540848268cc98aaa2e695581b90562180fa1dfb6ad84dac5"
+  },
+  "short_native_asr_summary_smoke": {
+    "integration_status": "pass",
+    "source_seconds": 15.78,
+    "nonempty_original_transcript_with_ordered_in_bounds_times": true,
+    "summary_has_exact_quotes_and_unchanged_transcripts": true,
+    "transcription_seconds": 5.0433840829646215,
+    "summary_seconds": 9.284747625002638,
+    "socket_samples": 87,
+    "socket_violations": 0,
+    "exit_code": 0,
+    "remaining_children": 0,
+    "models_unchanged": true,
+    "engine_sha256": "d8386d2f82144713ef07488ac824fcf938a1cf6e8eca15768e0d24094de4bb02",
+    "report_sha256": "40efda898549c631a27402f9fcd121e1710182f9274d55a861ac988b9e781b91"
+  },
+  "rejected_experiments": [
+    {
+      "change": "selection cap24",
+      "adopted": false,
+      "sections": 54,
+      "quote_chars": 8790,
+      "elapsed_seconds_excluding_input_preparation": 107.40597099997103,
+      "reason": "Consecutive ID selection lost known content and increased repeated context."
+    },
+    {
+      "change": "cap8 with short-request instruction",
+      "adopted": false,
+      "sections": 22,
+      "elapsed_seconds_excluding_input_preparation": 91.28729675000068,
+      "reason": "Selection concentrated in one band and lost the drinking event."
+    }
+  ]
+}

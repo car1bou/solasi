@@ -114,6 +114,8 @@ npm run build
 ```
 
 - [실행·기능 검증 기록](docs/verification.md)
+- [한국어210조건·추가55원음·Qwen 후보 재검증](docs/korean-asr-validation-20261017.md)
+- [긴 요약의 문맥·후반 누락과 Mac 내장 엔진 검증](docs/summary-context-validation-20261017.md)
 - [Mac 대본·필기 저장·내보내기 검증](docs/mac-script-validation.md)
 - [긴 한국어 파일 전사·요약 동시 실행](docs/mac-long-file-validation.md)
 - [Mac 마이크 시작·핵심 원문 요약 재검증](docs/mac-microphone-summary-validation.md)

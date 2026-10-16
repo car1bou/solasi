@@ -254,13 +254,14 @@ def cached_summary_parts(db,job_id):
     else:course(db,job['course_id'])
     if 'summary_parts' not in job['request']:return {'parts':[],'total_parts':0,'evidence':[]}
     _,evidence=checked_evidence(db,job['request']);parts=job['request']['summary_parts'];result=[]
-    for saved in db.execute('SELECT part_no,body FROM artifact_parts WHERE job_id=? AND part_no>=0 ORDER BY part_no',(job_id,)):
+    for saved in db.execute('SELECT part_no,body,metadata FROM artifact_parts WHERE job_id=? AND part_no>=0 ORDER BY part_no',(job_id,)):
         number=saved['part_no']
         if not 0<=number<len(parts):raise ValueError('구간 요약 번호가 유효하지 않습니다')
         provided=[Evidence.model_validate(e)for e in parts[number]]
         empty=job['request'].get('allow_empty_summary_parts') and all(e.ref.kind=='note'for e in provided)
         if job['request'].get('summary_format')=='excerpts-v1':
             from .summary_excerpts import checked_excerpts
+            if json.loads(saved['metadata']).get('excerpt_policy')!=job['request'].get('summary_excerpt_policy'):raise ValueError('보존한 구간의 원문 발췌 정책이 다릅니다')
             body=checked_excerpts(json.loads(saved['body']),evidence)
         elif job['request'].get('summary_grounding')=='quotes-v1':
             from .summary_grounding import checked_grounded

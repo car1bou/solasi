@@ -14,7 +14,7 @@ from lecture_study.jobs import submit_job
 from lecture_study.assistance import apply_note
 ROOT=Path(__file__).resolve().parents[1];RUNTIME=ROOT/'.local-state/runtime'
 def assert_same_summary_request(old,frozen):
- for key in ('request','evidence','summary_parts','summary_instruction','summary_grounding','summary_mode','summary_subject','summary_output_limit','summary_tokenizer','source_sampling','cutoff_ms'):assert old['frozen_request'].get(key)==frozen.get(key),key
+ for key in ('request','evidence','summary_parts','summary_instruction','summary_grounding','summary_mode','summary_subject','summary_output_limit','summary_tokenizer','source_sampling','cutoff_ms','summary_format','summary_excerpt_policy'):assert old['frozen_request'].get(key)==frozen.get(key),key
 
 def completed_grounded_parts(old,frozen):
  from lecture_study.models import Evidence

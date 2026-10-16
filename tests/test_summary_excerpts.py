@@ -99,3 +99,262 @@ class ExcerptDispatchTests(unittest.IsolatedAsyncioTestCase):
         second=json.loads(generated.call_args_list[1].args[1][1]['content'])['evidence'];self.assertEqual([e['source_id']for e in second],['s'+str(i)for i in range(11,31)])
         self.assertEqual(result.body['selection_incomplete_parts'],[]);self.assertFalse(any(s['review_required']for s in result.body['sections']))
         self.assertIn(refs[10].id,result.body['cited_source_ids']);self.assertIn(refs[20].id,result.body['cited_source_ids'])
+
+
+class CompleteExcerptTests(unittest.TestCase):
+    def units(self,texts):
+        return [Evidence(ref=SourceRef(id='s'+str(i),kind='transcript',session_id='session',start_ms=i*1000,end_ms=(i+1)*1000),text=text,label='전사')for i,text in enumerate(texts)]
+
+    def ranges(self,units,anchors=None,restore=None):
+        from lecture_study.summary_excerpts import complete_ranges
+        return complete_ranges([0]if anchors is None else anchors,units,restore or {e.ref.id:e.ref.id for e in units})
+
+    def test_imagery_clause_keeps_the_following_predicate(self):
+        units=self.units(['설명은 여기까지였다','모두 잠시 쉬었다','강사는 사례를 다시 들었다','학생이 떠올린 가정과 예시가','다시 논의의 주제로 돌아왔다'])
+        self.assertEqual(self.ranges(units),[(0,4)])
+
+    def test_final_departure_keeps_short_predicate_and_legacy_range_is_unchanged(self):
+        from lecture_study.summary_excerpts import anchor_ranges
+        units=self.units(['담당자는 방으로 들어왔다','동료는 출입문에 멈춰 선 채','두 번 손을 흔들고는','그 방향으로','돌아갔다'])
+        self.assertEqual(anchor_ranges([0],len(units)),[(0,3)])
+        self.assertEqual(self.ranges(units),[(0,4)])
+
+    def test_finished_fourth_unit_does_not_pull_in_another_sentence(self):
+        for ending in ('확정했습니다.','확정했다','확정했어요','확정했죠','확정인가요?','확정이다.”'):
+            with self.subTest(ending=ending):
+                self.assertEqual(self.ranges(self.units(['첫 번째 원문','두 번째 원문','세 번째 원문',ending,'다음 주제는 미정이다'])),[(0,3)])
+
+    def test_unfinished_range_extends_by_at_most_four_units(self):
+        units=self.units(['아직 이어지는 원문 '+str(i)for i in range(8)]+['이제야 마쳤다'])
+        self.assertEqual(self.ranges(units),[(0,7)])
+
+    def test_causal_clause_ending_in_nikka_keeps_the_following_decision(self):
+        units=self.units(['앞 문장이다','설명을 시작한다','선행 조건이다','시간이 없으니까','제출일을 미루기로 했다'])
+        self.assertEqual(self.ranges(units),[(0,4)])
+
+    def test_extension_stops_at_session_gap_missing_time_or_reverse_time(self):
+        base=self.units(['첫 번째 원문','두 번째 원문','세 번째 원문','조건이 성립한다면','결과가 달라진다'])
+        changes=({'session_id':'other-session'},{'start_ms':64000,'end_ms':65000},{'start_ms':None,'end_ms':None},{'start_ms':2000,'end_ms':3000})
+        for change in changes:
+            with self.subTest(change=change):
+                units=base[:4]+[base[4].model_copy(update={'ref':base[4].ref.model_copy(update=change)})]
+                self.assertEqual(self.ranges(units),[(0,3)])
+
+    def test_extension_does_not_cross_original_note_or_material_source(self):
+        for kind in ('note','material'):
+            with self.subTest(kind=kind):
+                units=[e.model_copy(update={'ref':e.ref.model_copy(update={'kind':kind,'start_ms':None,'end_ms':None})})for e in self.units(['첫 번째 원문','두 번째 원문','세 번째 원문','조건이 성립한다면','결과가 달라진다'])]
+                restore={e.ref.id:('source-a'if i<4 else 'source-b')for i,e in enumerate(units)}
+                self.assertEqual(self.ranges(units,restore=restore),[(0,3)])
+                self.assertEqual(self.ranges(units,restore={e.ref.id:'source-a'for e in units}),[(0,4)])
+
+    def test_base_range_also_stops_before_an_unrelated_session(self):
+        units=self.units(['첫 번째 원문','아직 끝나지 않은 조건','다른 수업의 원문','다른 수업의 끝이다'])
+        units[2]=units[2].model_copy(update={'ref':units[2].ref.model_copy(update={'session_id':'other-session'})})
+        self.assertEqual(self.ranges(units),[(0,1)])
+
+    def test_overlapping_completed_ranges_are_merged(self):
+        units=self.units(['첫 번째 원문','두 번째 원문','세 번째 원문','조건이 성립한다면','결과가 달라진다','이어지는 설명','마무리 설명','마쳤다'])
+        self.assertEqual(self.ranges(units,[0,4]),[(0,7)])
+
+    def test_repeated_phrase_does_not_acquire_first_occurrences_subject_context(self):
+        from lecture_study.summary_excerpts import excerpt_section,checked_excerpts
+        from lecture_study.summary_grounding import grounded_units
+        original=Evidence(ref=SourceRef(id='original',kind='note',session_id='session'),text='철수의 가정입니다. 결과는 같습니다. '+'중간 설명 '*80+'. 영희의 실제 경험입니다. 결과는 같습니다.',label='노트')
+        aliases={'original':'s1'};units,restore=grounded_units([original],aliases)
+        legacy=excerpt_section([original],[units[-1]],aliases,restore,[2],False)
+        self.assertIn('철수',legacy['text'])
+        section=excerpt_section([original],[units[-1]],aliases,restore,[2],False,complete=True)
+        self.assertEqual(section['quotes'],[{'text':'결과는 같습니다.','evidence_ids':['original']}])
+        self.assertTrue(section['review_required']);self.assertNotIn('subject',section);self.assertNotIn('event_type',section)
+        checked_excerpts({'sections':[section]},[original])
+
+    def test_repeated_selected_sentence_keeps_both_occurrences_in_source_order(self):
+        from lecture_study.summary_excerpts import excerpt_section,checked_excerpts
+        from lecture_study.summary_grounding import grounded_units
+        texts=['철수는 가정을 말했다.','내일 비가 온다.','영희는 실제 경험을 말했다.','내일 비가 온다.']
+        original=Evidence(ref=SourceRef(id='original',kind='note',session_id='session'),text=' '.join(texts),label='노트')
+        aliases={'original':'s1'};units,restore=grounded_units([original],aliases)
+        legacy=excerpt_section([original],units,aliases,restore,[0,1,2],False)
+        self.assertEqual([q['text']for q in legacy['quotes']],texts[:3])
+        section=excerpt_section([original],units,aliases,restore,[0,1,2],False,complete=True)
+        self.assertEqual([q['text']for q in section['quotes']],texts)
+        self.assertFalse(section['review_required'])
+        checked_excerpts({'sections':[section]},[original])
+
+    def test_unfinished_extension_limit_is_marked_for_review_without_rewriting(self):
+        from lecture_study.summary_excerpts import excerpt_section,checked_excerpts
+        units=self.units(['아직 이어지는 원문 '+str(i)for i in range(8)]+['마쳤다'])
+        aliases={e.ref.id:e.ref.id for e in units};start,end=self.ranges(units)[0]
+        section=excerpt_section(units,units[start:end+1],aliases,aliases,[0,1,2],False,complete=True)
+        self.assertTrue(section['review_required'])
+        self.assertEqual([q['text']for q in section['quotes']],[e.text for e in units[:8]])
+        checked_excerpts({'sections':[section]},units)
+
+    def test_preceding_self_context_survives_a_short_pause_and_thirty_three_seconds(self):
+        from lecture_study.summary_excerpts import excerpt_section,checked_excerpts
+        texts=['저는 형제가 없는 외동으로 자랐어요.','지금은 부모님과 같은 집에서 지냅니다.','네, 그렇습니다.','잠깐 생각을 정리한 뒤에 이어서 이야기할게요.','그래서 제 가족을 설명하자면','저와 부모님이 함께 사는 세 식구예요.']
+        times=[(168400,175630),(175630,182740),(182740,184460),(195920,199220),(199980,201700),(201700,205000)]
+        units=[e.model_copy(update={'ref':e.ref.model_copy(update={'start_ms':start,'end_ms':end})})for e,(start,end)in zip(self.units(texts),times)]
+        aliases={e.ref.id:e.ref.id for e in units}
+        section=excerpt_section(units,[units[-1]],aliases,aliases,[1],False,complete=True)
+        self.assertEqual([q['text']for q in section['quotes']],texts)
+        self.assertFalse(section['review_required'])
+        self.assertNotIn('subject',section);self.assertNotIn('event_type',section)
+        checked_excerpts({'sections':[section]},units)
+
+    def test_preceding_context_stops_at_session_missing_time_total_time_and_gap_limits(self):
+        from lecture_study.summary_excerpts import excerpt_section
+        base=self.units(['저는 어린 시절 외동으로 자랐어요.','지금 가족에 관한 설명입니다.'])
+        selected=base[1].model_copy(update={'ref':base[1].ref.model_copy(update={'start_ms':201700,'end_ms':205000})})
+        changes=[{'session_id':'other-session','start_ms':200700,'end_ms':201700},{'start_ms':None,'end_ms':None},{'start_ms':156699,'end_ms':201000},{'start_ms':165000,'end_ms':171699}]
+        for change in changes:
+            with self.subTest(change=change):
+                units=[base[0].model_copy(update={'ref':base[0].ref.model_copy(update=change)}),selected];aliases={e.ref.id:e.ref.id for e in units}
+                section=excerpt_section(units,[selected],aliases,aliases,[1],False,complete=True)
+                self.assertEqual(section['quotes'],[{'text':selected.text,'evidence_ids':[selected.ref.id]}])
+
+    def test_forward_completion_keeps_its_three_second_gap_limit(self):
+        units=self.units(['첫 설명입니다.','두 번째 설명입니다.','세 번째 설명입니다.','조건을 만족하면','결과가 달라집니다.'])
+        units[-1]=units[-1].model_copy(update={'ref':units[-1].ref.model_copy(update={'start_ms':7001,'end_ms':8001})})
+        self.assertEqual(self.ranges(units),[(0,3)])
+
+    def test_preceding_context_retains_eight_unit_and_six_hundred_forty_character_caps(self):
+        from lecture_study.summary_excerpts import excerpt_section
+        for texts,expected in ((['문맥 '+str(i)+'입니다.'for i in range(10)],list(range(1,10))),(['가'*320,'나'*320,'다'*320,'마쳤다'],[1,2,3])):
+            with self.subTest(lengths=[len(text)for text in texts]):
+                units=self.units(texts);aliases={e.ref.id:e.ref.id for e in units}
+                section=excerpt_section(units,[units[-1]],aliases,aliases,[1],False,complete=True)
+                self.assertEqual([q['text']for q in section['quotes']],[texts[i]for i in expected])
+                self.assertLessEqual(sum(len(q['text'])for q in section['quotes'][:-1]),640)
+
+
+class CompleteExcerptDispatchTests(unittest.IsolatedAsyncioTestCase):
+    setUp=test_answers.AnswerTests.setUp
+
+    def frozen(self,policy=None,text=None):
+        text=text or '\n'.join(('담당자는 방으로 들어왔다','동료는 출입문에 멈춰 선 채','두 번 손을 흔들고는','그 방향으로','돌아갔다'))
+        ref=save_note(self.db,self.sid,text);evidence=Evidence(ref=ref,text=text,label='노트')
+        request=self.request.model_copy(update={'kind':'summary','provider':ProviderConfig(provider='ollama',model='test')})
+        frozen={'request':request.model_dump(),'evidence':[evidence.model_dump()],'summary_parts':[[evidence.model_dump()]],'summary_format':'excerpts-v1','summary_output_limit':512,'cutoff_ms':None,'warning':''}
+        if policy is not None:frozen['summary_excerpt_policy']=policy
+        return frozen
+
+    def selection(self):
+        return ProviderResult(text=json.dumps({'evidence_ids':['s1u0']}),model='test',usage={},elapsed_ms=1)
+
+    async def test_new_local_frozen_requests_have_complete_policy_but_api_requests_do_not(self):
+        for provider in ('ollama','local'):
+            with self.subTest(provider=provider),patch('lecture_study.token_budget.local_profile',return_value=None):
+                request=self.request.model_copy(update={'kind':'summary','provider':ProviderConfig(provider=provider,model='test')})
+                frozen=await freeze_request(self.db,request)
+                self.assertEqual(frozen.get('summary_excerpt_policy'),'complete-v1')
+        api=await freeze_request(self.db,self.request.model_copy(update={'kind':'summary'}))
+        self.assertNotIn('summary_excerpt_policy',api)
+
+    async def test_complete_policy_dispatch_keeps_final_short_predicate_without_another_call(self):
+        frozen=self.frozen('complete-v1');job=submit_job(self.db,self.sid,'ai',frozen)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=self.selection()))as generated:result=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,1)
+        self.assertEqual(result.body['sections'][0]['quotes'][-1]['text'],'돌아갔다')
+        self.assertEqual(result.body['selection_incomplete_parts'],[])
+        self.assertEqual(result.body['unquoted_sources'],[])
+        self.assertFalse(result.body['sections'][0]['review_required'])
+
+    async def test_frozen_request_without_policy_keeps_original_four_units(self):
+        frozen=self.frozen();job=submit_job(self.db,self.sid,'ai',frozen)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=self.selection()))as generated:result=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,1)
+        self.assertEqual(result.body['sections'][0]['quotes'][-1]['text'],'그 방향으로')
+        self.assertNotIn('돌아갔다',result.body['sections'][0]['text'])
+        self.assertNotIn('summary_excerpt_policy',frozen)
+
+    async def test_cached_parts_remain_byte_identical_for_both_frozen_policies(self):
+        for policy in (None,'complete-v1'):
+            with self.subTest(policy=policy):
+                frozen=self.frozen(policy);job=submit_job(self.db,self.sid,'ai',frozen)
+                with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=self.selection())):first=await summarize_session(self.db,frozen,job['id'])
+                before=[tuple(row)for row in self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],))]
+                with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=AssertionError('cached parts must not regenerate')))as generated:resumed=await summarize_session(self.db,frozen,job['id'])
+                generated.assert_not_awaited()
+                after=[tuple(row)for row in self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],))]
+                self.assertEqual(after,before);self.assertEqual(resumed.body['sections'],first.body['sections'])
+                self.assertEqual(cached_summary_parts(self.db,job['id'])['parts'][0]['sections'],first.body['sections'])
+
+    async def test_short_final_unit_repairs_once_then_survives_as_reviewed_literal_fallback(self):
+        lines=['원문 '+str(i)+'의 긴 설명을 정리했습니다.'for i in range(10)]+['돌아갔다']
+        frozen=self.frozen('complete-v1','\n'.join(lines));job=submit_job(self.db,self.sid,'ai',frozen)
+        results=[ProviderResult(text=json.dumps({'evidence_ids':ids}),model='test',usage={},elapsed_ms=1)for ids in (['s1u0','s1u3','s1u6'],[])]
+        with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=results))as generated:result=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,2)
+        self.assertEqual(generated.call_args_list[1].args[3]['properties']['evidence_ids']['items']['enum'],['s1u7','s1u8','s1u9','s1u10'])
+        selected=result.body['sections'][:-1];fallback=result.body['sections'][-1]
+        self.assertEqual({group for section in selected for group in section['coverage_groups']},{0,1,2})
+        self.assertFalse(any(section['review_required']for section in selected))
+        self.assertEqual(fallback['quotes'][-1]['text'],'돌아갔다');self.assertTrue(fallback['review_required'])
+        self.assertEqual(fallback['coverage_groups'],[]);self.assertEqual(result.body['selection_incomplete_parts'],[0])
+        self.assertEqual(result.body['unquoted_sources'],[])
+        self.assertTrue(json.loads(self.db.execute('select body from artifact_parts where job_id=?',(job['id'],)).fetchone()[0])['selection_incomplete'])
+
+    async def test_copied_cache_is_rejected_across_policy_boundaries_in_both_read_paths(self):
+        for source_policy,target_policy in ((None,'complete-v1'),('complete-v1',None)):
+            with self.subTest(source_policy=source_policy,target_policy=target_policy):
+                original=self.frozen(source_policy);source=submit_job(self.db,self.sid,'ai',original)
+                with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=self.selection())):await summarize_session(self.db,original,source['id'])
+                target_frozen=dict(original);target_frozen.pop('summary_excerpt_policy',None)
+                if target_policy:target_frozen['summary_excerpt_policy']=target_policy
+                target=submit_job(self.db,self.sid,'ai',target_frozen)
+                saved=self.db.execute('select body,metadata from artifact_parts where job_id=?',(source['id'],)).fetchone();info=json.loads(saved['metadata'])
+                if source_policy is None:info.pop('excerpt_policy',None)
+                with self.db:self.db.execute('insert into artifact_parts values(?,?,?,?)',(target['id'],0,saved['body'],json.dumps(info)))
+                with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=AssertionError('mixed cache must not generate')))as generated:
+                    with self.assertRaisesRegex(ValueError,'정책'):await summarize_session(self.db,target_frozen,target['id'])
+                    with self.assertRaisesRegex(ValueError,'정책'):cached_summary_parts(self.db,target['id'])
+                generated.assert_not_awaited()
+                self.assertEqual(self.db.execute('select count(*) from artifacts where job_id=?',(target['id'],)).fetchone()[0],0)
+
+    def multipart_frozen(self):
+        frozen=self.frozen('complete-v1');ref=save_note(self.db,self.sid,'새로운 마지막 조건은 변경하지 않는다.')
+        second=Evidence(ref=ref,text='새로운 마지막 조건은 변경하지 않는다.',label='노트').model_dump()
+        frozen['evidence'].append(second);frozen['summary_parts'].append([second])
+        return frozen
+
+    async def cache_first_part_before_interruption(self,frozen,job_id):
+        with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=[self.selection(),RuntimeError('검증용 두 번째 구간 중단')]))as generated:
+            with self.assertRaisesRegex(RuntimeError,'두 번째 구간 중단'):await summarize_session(self.db,frozen,job_id)
+        self.assertEqual(generated.await_count,2)
+        saved=self.db.execute('select part_no,body,metadata from artifact_parts where job_id=?',(job_id,)).fetchall()
+        self.assertEqual(len(saved),1);self.assertEqual(saved[0]['part_no'],0)
+        self.assertEqual(json.loads(saved[0]['metadata'])['excerpt_policy'],'complete-v1')
+        return tuple(saved[0])
+
+    async def test_partial_new_policy_resume_reuses_first_part_and_generates_only_the_missing_part(self):
+        frozen=self.multipart_frozen();job=submit_job(self.db,self.sid,'ai',frozen)
+        before=await self.cache_first_part_before_interruption(frozen,job['id'])
+        self.assertEqual(len(cached_summary_parts(self.db,job['id'])['parts']),1)
+        second=ProviderResult(text=json.dumps({'evidence_ids':['s2']}),model='test',usage={},elapsed_ms=1)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=second))as generated:result=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,1)
+        self.assertEqual(generated.call_args.args[3]['properties']['evidence_ids']['items']['enum'],['s2'])
+        after=self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],)).fetchall()
+        self.assertEqual(tuple(after[0]),before);self.assertEqual(len(after),2)
+        self.assertTrue(all(json.loads(row['metadata'])['excerpt_policy']=='complete-v1'for row in after))
+        self.assertEqual(result.body['completed_parts'],2);self.assertEqual(result.body['selection_incomplete_parts'],[])
+
+    async def test_partial_new_policy_resume_rejects_old_cache_in_later_part(self):
+        frozen=self.multipart_frozen();job=submit_job(self.db,self.sid,'ai',frozen)
+        await self.cache_first_part_before_interruption(frozen,job['id'])
+        legacy=dict(frozen);legacy.pop('summary_excerpt_policy');legacy['summary_parts']=[frozen['summary_parts'][1]]
+        old_job=submit_job(self.db,self.sid,'ai',legacy)
+        second=ProviderResult(text=json.dumps({'evidence_ids':['s2']}),model='test',usage={},elapsed_ms=1)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=second)):await summarize_session(self.db,legacy,old_job['id'])
+        saved=self.db.execute('select body,metadata from artifact_parts where job_id=?',(old_job['id'],)).fetchone();info=json.loads(saved['metadata']);info.pop('excerpt_policy',None)
+        with self.db:self.db.execute('insert into artifact_parts values(?,?,?,?)',(job['id'],1,saved['body'],json.dumps(info)))
+        before=[tuple(row)for row in self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],))]
+        with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=AssertionError('mixed cache must not generate')))as generated:
+            with self.assertRaisesRegex(ValueError,'정책'):await summarize_session(self.db,frozen,job['id'])
+            with self.assertRaisesRegex(ValueError,'정책'):cached_summary_parts(self.db,job['id'])
+        generated.assert_not_awaited()
+        after=[tuple(row)for row in self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],))]
+        self.assertEqual(after,before)
+        self.assertEqual(self.db.execute('select count(*) from artifacts where job_id=?',(job['id'],)).fetchone()[0],0)

@@ -1,0 +1,907 @@
+{
+  "date": "2026-10-17",
+  "host": {
+    "chip": "Apple M4",
+    "ram_bytes": 17179869184,
+    "os": "macOS arm64"
+  },
+  "privacy": "No audio, reference or recognized text, individual clip IDs, personal paths, prompts, or model response bodies are included. Private artifacts remain outside Git.",
+  "policy": {
+    "default_asr_changed": false,
+    "default_asr": "Whisper large-v3-turbo",
+    "recording_default": "after_stop",
+    "realtime_optional": true,
+    "qwen_role": "Installed-only review candidate, at most one automatic additional attempt; no second-engine inference after candidate failure; application requires user confirmation.",
+    "original_audio_transcripts_sources_preserved": true,
+    "new_automatic_suspicion_rule_added": false
+  },
+  "metric": {
+    "normalization": "NFKC, lowercase, Unicode letters/numbers only; spaces/punctuation removed; numeral spelling and parenthetical romanization differences count.",
+    "components": {
+      "S": "substitutions",
+      "D": "deletions",
+      "I": "insertions"
+    },
+    "alignment": "Minimum character edit alignment, diagonal/deletion/insertion tie order.",
+    "cer_is_not_semantic_hallucination_or_omission_rate": true,
+    "controls_without_reference_have_no_cer": true
+  },
+  "sources": [
+    {
+      "dataset": "Google FLEURS Korean",
+      "source_url": "https://huggingface.co/datasets/google/fleurs",
+      "revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+      "license": "CC BY 4.0",
+      "scope": "Read speech; clean, gain0.1 and Gaussian SNR10dB conditions repeat underlying utterances. Public speaker IDs/ages unavailable."
+    },
+    {
+      "dataset": "Seoul Corpus",
+      "source_url": "https://www.openslr.org/113/",
+      "revision": null,
+      "revision_note": "Selected files pinned by local source manifests; no global release revision recorded.",
+      "license": "CC BY-NC 2.0",
+      "scope": "Three adult respondent interviews and one male16 speaker in two recording parts. Interviewer turns lack lexical ground truth. No whole-conversation CER."
+    },
+    {
+      "dataset": "DEMAND",
+      "source_url": "https://zenodo.org/records/1227121",
+      "revision": null,
+      "revision_note": "Pinned record and selected local file hashes; complete archives were not downloaded.",
+      "license": "Producer CC BY-SA 3.0 applied conservatively; record metadata states CC BY 4.0",
+      "scope": "Real office/cafeteria ambient recordings, possibly including speech. SNR10dB mixtures are derived conditions, not on-site Korean meetings."
+    },
+    {
+      "dataset": "Pansori TEDxKR",
+      "source_url": "https://github.com/yc9701/pansori-tedxkr-corpus",
+      "resource_url": "https://www.openslr.org/58/",
+      "revision": "b24c3933cb44192e8f1e0ca76ccfe01526e5d09c",
+      "license": "CC BY-NC-ND 4.0",
+      "scope": "Original distributed single-presenter talk excerpts. New37 span19 source IDs; publisher identity/title duplication in4 clips prevents treating source IDs as independently verified people."
+    },
+    {
+      "dataset": "Deeply Korean Read Speech Corpus public subset",
+      "source_url": "https://github.com/deeplyinc/Korean-Read-Speech-Corpus",
+      "resource_url": "https://www.openslr.org/97/",
+      "revision": "1c9cdb8ca1ba79bf982c97b16fb40657420c9cba",
+      "license": "CC BY-NC-ND 4.0",
+      "scope": "Two speaker codes, read/acted scripts in three original rooms. New18 repeat6 paired scripts across rooms, fixed device/distance codes0; not simultaneous conversation or all device/distance conditions."
+    },
+    {
+      "dataset": "KMSAV public interview annotations",
+      "source_url": "https://github.com/etri/kmsav",
+      "revision": "8a96a7d147eccfc8236ae78f42d32f681f5a46e2",
+      "license": "Annotations CC BY-NC-SA 4.0; upstream media individually CC BY per retained provenance",
+      "scope": "Six previously cached manual-reference excerpts; not an independently held-out full interview or stable speaker-identity benchmark."
+    }
+  ],
+  "models": {
+    "whisper": {
+      "model": "large-v3-turbo",
+      "source_url": "https://huggingface.co/ggerganov/whisper.cpp",
+      "license": "MIT",
+      "sha256": "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69",
+      "native_engine": "whisper.cpp 1.9.5 / FFmpeg 9.0.2 / Silero 6.2.0",
+      "binary_sha256": "657e29d1edc97ec01c76f02486e562ad9a0513d7b381d8447cd952b5d2eecf20",
+      "ffmpeg_sha256": "07923887bf38d10637e5728d921568ca5d8bf474d39b5c0c2d3dda213b572232",
+      "vad_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987"
+    },
+    "qwen": {
+      "model": "mlx-community/Qwen3-ASR-1.7B-4bit",
+      "source_url": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-4bit",
+      "revision": "78a389c776a5483b2d0d4ea5494e11012e0d6159",
+      "license": "Apache-2.0",
+      "artifact_kind": "Community MLX4bit conversion, not official full-precision weights",
+      "weights_sha256": "9848eaf7a5c1589c671b35035ac27b72e248dd0c604eacae547e7e403d29db45",
+      "installed_frozen_engine_sha256": "e441ec6cb7900bf34e5fcab35fbf5cc80eea24bb28ae878aa9d3561da49a4f6c",
+      "bundled_versions": {
+        "mlx-audio": "0.5.8",
+        "mlx": "0.32.4",
+        "transformers": "5.20.0",
+        "numpy": "2.5.4",
+        "huggingface_hub": "2.2.0"
+      }
+    }
+  },
+  "whisper_settings": {
+    "language": "ko",
+    "padding_ms": 1000,
+    "min_speech_ms": 250,
+    "vad_enabled": true,
+    "preview": false,
+    "vocabulary_hints_supplied": false,
+    "beam_best_of_native_defaults": 5,
+    "input_normalization": "FFmpeg mono PCM16 16kHz",
+    "source_commit": "04a110ac1987de2b456831c6430baa22ff11419c",
+    "transcription_source_sha256": "27e65b29a78116957966a9d4c7a17d1e69958c71c9b76a9e5b5c41f8960cfccf",
+    "execution_scope": "Shared production transcribe_range source and same pinned native binaries as installed app; isolated full clips, not the complete native app UI/capture path.",
+    "comparison_mode": "after_stop_final"
+  },
+  "baseline155": {
+    "scored_conditions": 155,
+    "unique_audio_sha256": 155,
+    "duplicate_sha_rows": 0,
+    "audio_seconds_including_repeated_conditions": 769.891375,
+    "unmixed_original_speech_conditions": 85,
+    "derived_noise_or_gain_conditions": 70,
+    "unscored_controls": 4,
+    "successful": 155,
+    "failed": 0,
+    "empty_scored_outputs": 9,
+    "recognized_identical_to_prior_corresponding_results": 155,
+    "previous90": {
+      "clips": 90,
+      "edits": 185,
+      "reference_chars": 1829,
+      "substitutions": 88,
+      "deletions": 86,
+      "insertions": 11,
+      "cer": 0.10114816839803172
+    },
+    "additional65": {
+      "clips": 65,
+      "edits": 136,
+      "reference_chars": 1739,
+      "substitutions": 54,
+      "deletions": 78,
+      "insertions": 4,
+      "cer": 0.078205865439908
+    },
+    "aggregate": {
+      "clips": 155,
+      "edits": 321,
+      "reference_chars": 3568,
+      "substitutions": 142,
+      "deletions": 164,
+      "insertions": 15,
+      "cer": 0.08996636771300448
+    },
+    "groups": {
+      "cafeteria-adult": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 3,
+        "edits": 28,
+        "reference_chars": 152,
+        "substitutions": 20,
+        "deletions": 6,
+        "insertions": 2,
+        "cer": 0.18421052631578946
+      },
+      "clean-adult": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 3,
+        "edits": 13,
+        "reference_chars": 152,
+        "substitutions": 6,
+        "deletions": 7,
+        "insertions": 0,
+        "cer": 0.08552631578947369
+      },
+      "clean5": {
+        "clips": 5,
+        "successful": 5,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 13,
+        "reference_chars": 223,
+        "substitutions": 10,
+        "deletions": 3,
+        "insertions": 0,
+        "cer": 0.05829596412556054
+      },
+      "kmsav-manual6": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 13,
+        "reference_chars": 103,
+        "substitutions": 3,
+        "deletions": 10,
+        "insertions": 0,
+        "cer": 0.1262135922330097
+      },
+      "lowgain5": {
+        "clips": 5,
+        "successful": 5,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 22,
+        "reference_chars": 223,
+        "substitutions": 10,
+        "deletions": 12,
+        "insertions": 0,
+        "cer": 0.09865470852017937
+      },
+      "new-adult-cafeteria15": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 55,
+        "reference_chars": 271,
+        "substitutions": 25,
+        "deletions": 28,
+        "insertions": 2,
+        "cer": 0.2029520295202952
+      },
+      "new-adult-clean15": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 15,
+        "reference_chars": 271,
+        "substitutions": 7,
+        "deletions": 7,
+        "insertions": 1,
+        "cer": 0.055350553505535055
+      },
+      "new-adult-office15": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 16,
+        "reference_chars": 271,
+        "substitutions": 8,
+        "deletions": 7,
+        "insertions": 1,
+        "cer": 0.05904059040590406
+      },
+      "new-fleurs20": {
+        "clips": 20,
+        "successful": 20,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 50,
+        "reference_chars": 926,
+        "substitutions": 14,
+        "deletions": 36,
+        "insertions": 0,
+        "cer": 0.05399568034557235
+      },
+      "office-adult": {
+        "clips": 15,
+        "successful": 15,
+        "failed": 0,
+        "empty_outputs": 3,
+        "edits": 13,
+        "reference_chars": 152,
+        "substitutions": 6,
+        "deletions": 7,
+        "insertions": 0,
+        "cer": 0.08552631578947369
+      },
+      "rooms6": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 1,
+        "reference_chars": 213,
+        "substitutions": 1,
+        "deletions": 0,
+        "insertions": 0,
+        "cer": 0.004694835680751174
+      },
+      "snr105": {
+        "clips": 5,
+        "successful": 5,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 16,
+        "reference_chars": 223,
+        "substitutions": 13,
+        "deletions": 3,
+        "insertions": 0,
+        "cer": 0.07174887892376682
+      },
+      "spontaneous12": {
+        "clips": 12,
+        "successful": 12,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 54,
+        "reference_chars": 256,
+        "substitutions": 14,
+        "deletions": 37,
+        "insertions": 3,
+        "cer": 0.2109375
+      },
+      "talk6": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 12,
+        "reference_chars": 132,
+        "substitutions": 5,
+        "deletions": 1,
+        "insertions": 6,
+        "cer": 0.09090909090909091
+      }
+    },
+    "controls": [
+      {
+        "group": "digital-zero-1",
+        "status": "done",
+        "known_speech_free": true,
+        "possible_background_speech": null,
+        "product_would_skip_exact_zero": true,
+        "empty_output": true,
+        "output_normalized_chars": 0
+      },
+      {
+        "group": "digital-zero-6",
+        "status": "done",
+        "known_speech_free": true,
+        "possible_background_speech": null,
+        "product_would_skip_exact_zero": true,
+        "empty_output": true,
+        "output_normalized_chars": 0
+      },
+      {
+        "group": "OOFFICE-ambient",
+        "status": "done",
+        "known_speech_free": false,
+        "possible_background_speech": true,
+        "product_would_skip_exact_zero": null,
+        "empty_output": true,
+        "output_normalized_chars": 0
+      },
+      {
+        "group": "PCAFETER-ambient",
+        "status": "done",
+        "known_speech_free": false,
+        "possible_background_speech": true,
+        "product_would_skip_exact_zero": null,
+        "empty_output": true,
+        "output_normalized_chars": 0
+      }
+    ],
+    "elapsed_seconds_including_post_hash": 275.4883583749179
+  },
+  "new55_separate": {
+    "files": 55,
+    "audio_bytes": 5273332,
+    "audio_seconds": 228.548375,
+    "prior155_sha_overlap": 0,
+    "publisher_references_not_independently_retranscribed": true,
+    "successful": 55,
+    "failed": 0,
+    "empty_outputs": 0,
+    "pansori_source_groups": 19,
+    "pansori_source_groups_with_edits": 11,
+    "deeply_speaker_codes": 2,
+    "deeply_paired_scripts": 6,
+    "groups": {
+      "new-deeply18-20261017": {
+        "clips": 18,
+        "successful": 18,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 4,
+        "reference_chars": 432,
+        "substitutions": 4,
+        "deletions": 0,
+        "insertions": 0,
+        "cer": 0.009259259259259259
+      },
+      "new-pansori37": {
+        "clips": 37,
+        "successful": 37,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 31,
+        "reference_chars": 829,
+        "substitutions": 14,
+        "deletions": 4,
+        "insertions": 13,
+        "cer": 0.03739445114595899
+      }
+    },
+    "deeply_rooms": {
+      "AirbnbStudio": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 2,
+        "reference_chars": 144,
+        "substitutions": 2,
+        "deletions": 0,
+        "insertions": 0,
+        "cer": 0.013888888888888888
+      },
+      "AnechoicChamber": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 0,
+        "reference_chars": 144,
+        "substitutions": 0,
+        "deletions": 0,
+        "insertions": 0,
+        "cer": 0.0
+      },
+      "DanceStudio": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "empty_outputs": 0,
+        "edits": 2,
+        "reference_chars": 144,
+        "substitutions": 2,
+        "deletions": 0,
+        "insertions": 0,
+        "cer": 0.013888888888888888
+      }
+    },
+    "elapsed_seconds_including_post_hash": 98.3433697919827,
+    "manifest_sha256": "aa36e6e20bf6e2ced7512a5b7251cd90ab27f23d9281ebdce841a13dff00947c",
+    "collection_selection_sha256": "aac82a29366ffc59f5e51e805671a58a62d54c3c77a6f9c03f33f2ee57c7e4e7",
+    "collection_policy_sha256": "0913e474444472201f699406b2501a06b861d6fff0f47035367c2f426d5a86c2"
+  },
+  "qwen_selected24": {
+    "selection_after_whisper_error_analysis_before_qwen_output": true,
+    "selection": "18 vulnerable:3clean-adult turns below250ms,3new-cafeteria one per adult respondent,4spontaneous,3lowgain,2talk,3FLEURS;6baseline-exact controls within corresponding groups. Deletion/insertion/edit ranks and SHA tie-break fixed before Qwen.",
+    "controls_are_same_condition_not_necessarily_same_utterance_or_exact_duration": true,
+    "vulnerable": 18,
+    "baseline_correct_controls": 6,
+    "successful": 24,
+    "failed": 0,
+    "improved": 9,
+    "worsened": 5,
+    "tied": 10,
+    "baseline": {
+      "clips": 24,
+      "edits": 125,
+      "reference_chars": 662,
+      "substitutions": 25,
+      "deletions": 92,
+      "insertions": 8,
+      "cer": 0.18882175226586104
+    },
+    "qwen": {
+      "clips": 24,
+      "edits": 83,
+      "reference_chars": 662,
+      "substitutions": 32,
+      "deletions": 44,
+      "insertions": 7,
+      "cer": 0.12537764350453173
+    },
+    "role_and_group_aggregates": {
+      "all-baseline-correct-controls": {
+        "clips": 6,
+        "successful": 6,
+        "failed": 0,
+        "comparisons": {
+          "tied": 4,
+          "worsened": 2
+        },
+        "baseline": {
+          "edits": 0,
+          "reference_chars": 141,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "cer": 0.0
+        },
+        "qwen": {
+          "edits": 4,
+          "reference_chars": 141,
+          "substitutions": 1,
+          "deletions": 1,
+          "insertions": 2,
+          "cer": 0.028368794326241134
+        }
+      },
+      "all-vulnerable": {
+        "clips": 18,
+        "successful": 18,
+        "failed": 0,
+        "comparisons": {
+          "tied": 6,
+          "improved": 9,
+          "worsened": 3
+        },
+        "baseline": {
+          "edits": 125,
+          "reference_chars": 521,
+          "substitutions": 25,
+          "deletions": 92,
+          "insertions": 8,
+          "cer": 0.2399232245681382
+        },
+        "qwen": {
+          "edits": 79,
+          "reference_chars": 521,
+          "substitutions": 31,
+          "deletions": 43,
+          "insertions": 5,
+          "cer": 0.15163147792706333
+        }
+      },
+      "clean-adult": {
+        "clips": 4,
+        "successful": 4,
+        "failed": 0,
+        "comparisons": {
+          "tied": 4
+        },
+        "baseline": {
+          "edits": 4,
+          "reference_chars": 11,
+          "substitutions": 0,
+          "deletions": 4,
+          "insertions": 0,
+          "cer": 0.36363636363636365
+        },
+        "qwen": {
+          "edits": 4,
+          "reference_chars": 11,
+          "substitutions": 3,
+          "deletions": 1,
+          "insertions": 0,
+          "cer": 0.36363636363636365
+        }
+      },
+      "lowgain5": {
+        "clips": 4,
+        "successful": 4,
+        "failed": 0,
+        "comparisons": {
+          "improved": 1,
+          "tied": 2,
+          "worsened": 1
+        },
+        "baseline": {
+          "edits": 21,
+          "reference_chars": 190,
+          "substitutions": 9,
+          "deletions": 12,
+          "insertions": 0,
+          "cer": 0.11052631578947368
+        },
+        "qwen": {
+          "edits": 16,
+          "reference_chars": 190,
+          "substitutions": 11,
+          "deletions": 5,
+          "insertions": 0,
+          "cer": 0.08421052631578947
+        }
+      },
+      "new-adult-cafeteria15": {
+        "clips": 4,
+        "successful": 4,
+        "failed": 0,
+        "comparisons": {
+          "improved": 2,
+          "worsened": 1,
+          "tied": 1
+        },
+        "baseline": {
+          "edits": 24,
+          "reference_chars": 85,
+          "substitutions": 6,
+          "deletions": 17,
+          "insertions": 1,
+          "cer": 0.2823529411764706
+        },
+        "qwen": {
+          "edits": 15,
+          "reference_chars": 85,
+          "substitutions": 7,
+          "deletions": 6,
+          "insertions": 2,
+          "cer": 0.17647058823529413
+        }
+      },
+      "new-fleurs20": {
+        "clips": 4,
+        "successful": 4,
+        "failed": 0,
+        "comparisons": {
+          "tied": 2,
+          "improved": 1,
+          "worsened": 1
+        },
+        "baseline": {
+          "edits": 33,
+          "reference_chars": 194,
+          "substitutions": 2,
+          "deletions": 31,
+          "insertions": 0,
+          "cer": 0.17010309278350516
+        },
+        "qwen": {
+          "edits": 33,
+          "reference_chars": 194,
+          "substitutions": 1,
+          "deletions": 31,
+          "insertions": 1,
+          "cer": 0.17010309278350516
+        }
+      },
+      "spontaneous12": {
+        "clips": 5,
+        "successful": 5,
+        "failed": 0,
+        "comparisons": {
+          "improved": 4,
+          "worsened": 1
+        },
+        "baseline": {
+          "edits": 33,
+          "reference_chars": 109,
+          "substitutions": 4,
+          "deletions": 28,
+          "insertions": 1,
+          "cer": 0.30275229357798167
+        },
+        "qwen": {
+          "edits": 8,
+          "reference_chars": 109,
+          "substitutions": 7,
+          "deletions": 1,
+          "insertions": 0,
+          "cer": 0.07339449541284404
+        }
+      },
+      "talk6": {
+        "clips": 3,
+        "successful": 3,
+        "failed": 0,
+        "comparisons": {
+          "improved": 1,
+          "tied": 1,
+          "worsened": 1
+        },
+        "baseline": {
+          "edits": 10,
+          "reference_chars": 73,
+          "substitutions": 4,
+          "deletions": 0,
+          "insertions": 6,
+          "cer": 0.136986301369863
+        },
+        "qwen": {
+          "edits": 7,
+          "reference_chars": 73,
+          "substitutions": 3,
+          "deletions": 0,
+          "insertions": 4,
+          "cer": 0.0958904109589041
+        }
+      }
+    },
+    "short_turns": {
+      "clips": 3,
+      "reference_chars": 4,
+      "baseline": {
+        "substitutions": 0,
+        "deletions": 4,
+        "insertions": 0,
+        "empty_outputs": 3
+      },
+      "qwen": {
+        "substitutions": 3,
+        "deletions": 1,
+        "insertions": 0,
+        "empty_outputs": 0
+      },
+      "exact_reference_matches": 0
+    },
+    "execution": "Actual installed frozen qwen-worker; product normalization/result validation reused, child dispatch only redirected to installed binary; no inference response stubs or legacy environment.",
+    "options": {
+      "language": "Korean",
+      "temperature": 0,
+      "batch_size": 1,
+      "max_tokens": 1024,
+      "hints_supplied": false,
+      "offline": true
+    },
+    "elapsed_seconds_including_post_hash": 57.3636425830191,
+    "max_mlx_allocation_bytes": 2599240968,
+    "max_worker_rss_bytes": 1811873792,
+    "memory_metrics_not_additive": true
+  },
+  "short_vad_diagnostic": {
+    "same_short_turns": 3,
+    "short_durations_seconds": [
+      0.21025,
+      0.208,
+      0.195375
+    ],
+    "unscored_controls": 4,
+    "extra_asr_calls": 14,
+    "baseline250_reused": true,
+    "padding_ms_all_variants": 1000,
+    "hints_supplied": false,
+    "rows": [
+      {
+        "mode": "vad250-reused",
+        "short_turns": {
+          "clips": 3,
+          "edits": 4,
+          "reference_chars": 4,
+          "substitutions": 0,
+          "deletions": 4,
+          "insertions": 0,
+          "cer": 1.0,
+          "empty_outputs": 3
+        },
+        "unscored_controls": [
+          {
+            "group": "digital-zero-1",
+            "known_speech_free": true,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "digital-zero-6",
+            "known_speech_free": true,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "OOFFICE-ambient",
+            "known_speech_free": false,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "PCAFETER-ambient",
+            "known_speech_free": false,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          }
+        ]
+      },
+      {
+        "mode": "vad100",
+        "short_turns": {
+          "clips": 3,
+          "edits": 11,
+          "reference_chars": 4,
+          "substitutions": 2,
+          "deletions": 2,
+          "insertions": 7,
+          "cer": 2.75,
+          "empty_outputs": 2
+        },
+        "unscored_controls": [
+          {
+            "group": "digital-zero-1",
+            "known_speech_free": true,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "digital-zero-6",
+            "known_speech_free": true,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "OOFFICE-ambient",
+            "known_speech_free": false,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          },
+          {
+            "group": "PCAFETER-ambient",
+            "known_speech_free": false,
+            "empty_output": true,
+            "output_normalized_chars": 0
+          }
+        ]
+      },
+      {
+        "mode": "vad-off",
+        "short_turns": {
+          "clips": 3,
+          "edits": 27,
+          "reference_chars": 4,
+          "substitutions": 4,
+          "deletions": 0,
+          "insertions": 23,
+          "cer": 6.75,
+          "empty_outputs": 0
+        },
+        "unscored_controls": [
+          {
+            "group": "digital-zero-1",
+            "known_speech_free": true,
+            "empty_output": false,
+            "output_normalized_chars": 9
+          },
+          {
+            "group": "digital-zero-6",
+            "known_speech_free": true,
+            "empty_output": false,
+            "output_normalized_chars": 9
+          },
+          {
+            "group": "OOFFICE-ambient",
+            "known_speech_free": false,
+            "empty_output": false,
+            "output_normalized_chars": 5
+          },
+          {
+            "group": "PCAFETER-ambient",
+            "known_speech_free": false,
+            "empty_output": false,
+            "output_normalized_chars": 5
+          }
+        ]
+      }
+    ],
+    "failed": 0,
+    "elapsed_seconds_including_post_hash": 16.870887459022924,
+    "interpretation": "100ms/off reduced deletion counts but did not recover correct short turns; substitutions/insertions increased. Off generated text for known digital silence; production skips exactly-zero PCM. Real ambience may include speech so its output is not all labeled hallucination."
+  },
+  "verification": {
+    "all_source_manifest_models_hashes_before_after_equal": true,
+    "new55_git_blob_bytes_sha256_selfcheck_passed": true,
+    "results_permissions_octal": "0600",
+    "private_directory_permissions_octal": "0700",
+    "product_code_settings_or_app_changed_by_these_diagnostics": false,
+    "evidence_hashes": {
+      "baseline155": {
+        "selection_sha256": "66fb41da404f2581ec7725d4a1c6bfc1bcd3436b75f72aed5645f0832862b749",
+        "private_result_sha256": "984b58ccc90be317c8cc182effaf87a8576c896281a4dbc1184220cbdbbbac28",
+        "safe_summary_sha256": "70a58bb6d409b42d16ae852ba82fc1d52f6dcf167c13364705d1a9d84650ff92",
+        "configuration_sha256": "b06d81b30895ab53e6b6718f49142f6ed3a2f3097ef400d1e2f9d270e55457b1"
+      },
+      "qwen24": {
+        "selection_sha256": "ff88e0b687ac6109dc29c8c3bf85842ba0fd1fdc1690f0893b56815c65057303",
+        "private_result_sha256": "c4a1cc9c1d8b8c24c598076f8ec21ad316c36e9b310b4b5de9f84927927cf61e",
+        "safe_summary_sha256": "c3e4774dd50e6444a36080c6c55e838edf4390e3a371741e00aa476a75ca4cfa",
+        "configuration_sha256": "ca4694404182f3b4d421193da3f40957157dd34dba8944617dde72cbcae549e2"
+      },
+      "vad": {
+        "selection_sha256": "2c80ecc833e5bedfdf267d6f18014c981a1be6fc0290945245f3b7fef8274aa7",
+        "private_result_sha256": "6d07f76574e7f7a7916884d9210696c8c12458e78c8d5a475038a205e1cd52aa",
+        "safe_summary_sha256": "bf5fa8fc0e73d6408bb686b50b48669fc6bb4c8db2181a0f818d5be200ed4ef9"
+      },
+      "new55": {
+        "selection_sha256": "555beb306067a52fd2a41d267bf4d67065642dc0ba5a197483664325e452ec16",
+        "private_result_sha256": "0426541e4034d24acb265d6232545ae0d9a82fb577cd5d83b981d39f30ff1437",
+        "safe_summary_sha256": "b8252bf551a8fddf2b6140f1875bc46186955cecd2807ed4f22abe90e6902f8c",
+        "configuration_sha256": "e983f69fa1abe719e336bc6adf364c38f502314914d4e299cb2d2e4ead110700"
+      }
+    }
+  },
+  "reproduction": {
+    "requires_private_fixtures_and_harnesses": true,
+    "private_root": ".local-state/fidelity-20261017/",
+    "harnesses": [
+      ".local-state/fidelity-20261017/baseline-asr-155.py",
+      ".local-state/fidelity-20261017/qwen-selected24.py",
+      ".local-state/fidelity-20261017/short-vad-diagnostic.py",
+      ".local-state/fidelity-20261017/new55-whisper-baseline.py"
+    ],
+    "new_output_directory_required": true,
+    "does_not_download_audio_or_models": true
+  },
+  "limitations": [
+    "155 conditions repeat underlying utterances across gain/noise conditions; not155 independent recordings or speakers.",
+    "New55 are newly selected source files, not55 new speakers or a population-representative meeting benchmark. Model-training overlap is unknown.",
+    "Spontaneous12 includes one male16 speaker; adult response clips span3respondents. Not all everyday speech is adult meeting speech.",
+    "Publisher references and pre-existing manual annotations were not independently corrected by listening; number spellings and transcription errors affect CER.",
+    "No complete lexical/time/speaker ground truth for whole multi-speaker conversation or overlap; no whole-conversation CER, overlap-aware accuracy, or semantic hallucination rate.",
+    "The24Qwen clips were selected after Whisper errors; selected-set improvements and correct-control regressions are not an unbiased all-input model ranking.",
+    "Timestamps are native segment estimates; sentence/word alignment accuracy and automatic detection of every within-sentence omission remain unverified.",
+    "Per-clip model verification/cold process loading, OS caches and shared Mac activity affect times; elapsed values are not controlled latency rankings.",
+    "No new primary-model/default/VAD change, automatic adoption, confidence threshold, or broader automatic review policy was made.",
+    "Audio, references, recognized outputs and private evaluation harnesses are not included in the public repository or app. Source licenses/conditions were retained from acquisition provenance; this report does not newly establish redistribution rights."
+  ]
+}
