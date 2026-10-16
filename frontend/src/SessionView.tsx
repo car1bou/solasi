@@ -8,6 +8,7 @@ import ConceptView from './ConceptView';
 import MeetingView from './MeetingView';
 import StudyView from './StudyView';
 import QuestionView from './QuestionView';
+import {navigate} from './native-lifecycle';
 import {api} from './api';
 import type {Session,Course} from './types';
 export default function SessionView({session,course,onDeleted,onRecordingChange}:{session:Session;course?:Course;onRecordingChange?:(active:boolean)=>void;onDeleted:(pending?:number)=>Promise<void>}) {
@@ -32,7 +33,7 @@ export default function SessionView({session,course,onDeleted,onRecordingChange}
     <div className="segmented session-tabs" role="tablist" aria-label="기록 내용">{([['transcript','전사'],['material','자료'],['note','노트'],['concept','검색·개념'],['question','질문'],...(session.kind==='lecture'?([['study','요약·학습']] as const):([['minutes','회의록']] as const))] as const).map(([value,label])=><button key={value} role="tab" aria-selected={tab===value} onClick={()=>setTab(value)}>{label}</button>)}</div>
     <div hidden={tab!=='transcript'}><TranscriptView sessionId={session.id}/></div>
     <div hidden={tab!=='material'&&tab!=='note'}><MaterialView session={session} course={course} mode={tab==='material'?'material':'note'}/></div>
-    <div hidden={tab!=='concept'}><ConceptView session={session} onQuestion={prompt=>{setQuestion(prompt);setTab('question');}} onQuiz={id=>{setQuiz(id);setTab('study');}}/></div>
+    <div hidden={tab!=='concept'}><ConceptView session={session} onQuestion={prompt=>navigate(()=>{setQuestion(prompt);setTab('question');})} onQuiz={id=>navigate(()=>{setQuiz(id);setTab('study');})}/></div>
     <div hidden={tab!=='question'}><QuestionView session={session} initialPrompt={question}/></div>
     {session.kind==='lecture'&&<div hidden={tab!=='study'}><StudyView session={session} artifactId={quiz}/></div>}
     {session.kind==='meeting'&&<div hidden={tab!=='minutes'}><MeetingView session={session}/></div>}

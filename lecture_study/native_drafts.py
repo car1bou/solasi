@@ -7,11 +7,12 @@ import re
 import time
 from uuid import uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 
 MAX_UPLOAD = 64*1024*1024
 CHUNK_SIZE = 256*1024
+MAX_PREFERENCE = 4096
 
 
 def encoded(value):
@@ -34,6 +35,40 @@ def checked_draft(row):
         raise ValueError('초안 내용 오류')
     encoded(row)
     return row
+
+
+def preference_key(key):
+    if not isinstance(key, str) or (key != 'notebook-tools' and not re.fullmatch(
+            r'notebook-view:[0-9a-f]{32}:[0-9a-f]{64}', key)):
+        raise ValueError('필기 설정 키 오류')
+    return 'native_preference:'+key
+
+
+def checked_preference(key, value):
+    preference_key(key)
+    if not isinstance(value, dict): raise ValueError('필기 설정 형식 오류')
+    if key == 'notebook-tools':
+        numeric = {'penWidth':(.0005,.04), 'penOpacity':(.05,1),
+                   'highlighterWidth':(.0005,.04), 'highlighterOpacity':(.05,1), 'eraserSize':(.003,.06)}
+        if set(value) != {'tool','penColor','highlighterColor',*numeric}:
+            raise ValueError('필기 설정 항목 오류')
+        if value['tool'] not in ('pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'):
+            raise ValueError('필기 도구 오류')
+        for field in ('penColor','highlighterColor'):
+            if not isinstance(value[field], str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', value[field]):
+                raise ValueError('필기 색상 오류')
+    else:
+        numeric = {'zoom':(.1,3)}
+        if set(value) != {'zoomMode','zoom','rotation','notesOpen'}:
+            raise ValueError('페이지 보기 설정 항목 오류')
+        if (value['zoomMode'] not in ('fit','manual') or type(value['rotation']) is not int or
+                value['rotation'] not in (0,90,180,270) or type(value['notesOpen']) is not bool):
+            raise ValueError('페이지 보기 설정 오류')
+    for field,(low,high) in numeric.items():
+        if type(value[field]) not in (int,float) or not low <= value[field] <= high:
+            raise ValueError('필기 설정 값 범위 오류')
+    if len(encoded(value).encode('utf-8')) > MAX_PREFERENCE: raise ValueError('필기 설정 크기 오류')
+    return value
 
 
 class NativeDrafts:
@@ -60,6 +95,21 @@ class NativeDrafts:
         if value not in ('system', 'light', 'dark'): raise ValueError('화면 모드 오류')
         with self.db: self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', ('native_theme',value))
         return self.state()
+
+    def read_preference(self, key):
+        row = self.db.execute('SELECT value FROM settings WHERE key=?', (preference_key(key),)).fetchone()
+        if row is None: return {'value':None}
+        raw = row[0]
+        if not isinstance(raw, str) or len(raw.encode('utf-8')) > MAX_PREFERENCE:
+            raise ValueError('저장된 필기 설정 크기 오류')
+        return {'value':checked_preference(key,json.loads(raw))}
+
+    def write_preference(self, key, value):
+        stored_key = preference_key(key)
+        checked_preference(key,value)
+        with self.db:
+            self.db.execute('INSERT OR REPLACE INTO settings VALUES (?,?)', (stored_key,encoded(value)))
+        return {'value':value}
 
     def read(self, key, after='', limit=100000):
         checked_key(key)
@@ -187,6 +237,18 @@ def attach_native_drafts(app, db):
 
     @router.put('/theme')
     async def theme(body: dict): return store.theme(body.get('theme'))
+
+    @router.get('/preferences/{key}')
+    async def read_preference(key: str): return store.read_preference(key)
+
+    @router.put('/preferences/{key}')
+    async def write_preference(key: str, request: Request):
+        raw = await request.body()
+        if len(raw) > MAX_PREFERENCE: raise ValueError('필기 설정 크기 오류')
+        try: body = json.loads(raw)
+        except (UnicodeError,json.JSONDecodeError): raise ValueError('필기 설정 JSON 형식 오류') from None
+        if not isinstance(body, dict) or set(body) != {'value'}: raise ValueError('필기 설정 요청 형식 오류')
+        return store.write_preference(key,body['value'])
 
     @router.get('/drafts/read')
     async def read(key: str, after: str=''): return store.read(key,after,1)

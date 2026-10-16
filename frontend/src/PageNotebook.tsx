@@ -4,8 +4,10 @@ import {pageDraft} from './page-drafts';
 import {downloadJSON} from './api';
 import {clamp,eraseInk,inkBounds,inkPath,inside} from './ink';
 import type {Bounds,Point} from './ink';
+import {defaultTools,defaultView,loadNotebookPreferences,saveNotebookTools,saveNotebookView,notebookZoom,notebookExport} from './notebook-preferences';
+import type {NotebookTool,NotebookTools,NotebookView} from './notebook-preferences';
 
-type Tool='pen'|'highlighter'|'stroke-eraser'|'partial-eraser'|'lasso'|'pan';
+type Tool=NotebookTool;
 type Gesture={id:number;kind:Tool|'move'|'resize';origin:Point;base:InkStroke[];work:InkStroke[];stroke?:InkStroke;polygon:Point[];bounds?:Bounds;screen:Point;scroll:Point};
 const InkMark=React.memo(function InkMark({stroke,width,height}:{stroke:InkStroke;width:number;height:number}){return <path d={inkPath(stroke,width,height)} fill={stroke.color} opacity={stroke.opacity} pointerEvents="none"/>;});
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동'};
@@ -14,17 +16,25 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   const noteId=useId();
   const store=useMemo(()=>pageDraft(courseId,metadata.asset_id,metadata.sha256,page.page),[courseId,metadata.asset_id,metadata.sha256,page.page]);
   const state=useSyncExternalStore(store.subscribe,store.snapshot),latest=useRef(state),lastOwnInk=useRef<InkStroke[]|null>(null);latest.current=state;
-  const [tool,setTool]=useState<Tool>('pen'),[color,setColor]=useState('#254f3f'),[width,setWidth]=useState(.0025),[opacity,setOpacity]=useState(1),[eraserSize,setEraserSize]=useState(.014);
-  const [zoom,setZoom]=useState(1),[rotation,setRotation]=useState(0),[notesOpen,setNotesOpen]=useState(true),[imageReady,setImageReady]=useState(false),[imageError,setImageError]=useState(''),[inputError,setInputError]=useState('');
+  const [tools,setTools]=useState<NotebookTools>({...defaultTools}),[view,setView]=useState<NotebookView>({...defaultView}),[preferencesReady,setPreferencesReady]=useState(false),[preferenceWarning,setPreferenceWarning]=useState(''),[preferenceSaveWarnings,setPreferenceSaveWarnings]=useState({tools:'',view:''}),[availableWidth,setAvailableWidth]=useState(0);
+  const {tool,eraserSize}=tools,{rotation,notesOpen}=view,zoom=notebookZoom(view,page,availableWidth),color=tool==='highlighter'?tools.highlighterColor:tools.penColor,width=tool==='highlighter'?tools.highlighterWidth:tools.penWidth,opacity=tool==='highlighter'?tools.highlighterOpacity:tools.penOpacity;
+  const [imageReady,setImageReady]=useState(false),[imageError,setImageError]=useState(''),[inputError,setInputError]=useState(''),[exporting,setExporting]=useState(false),[exportStatus,setExportStatus]=useState('');
   const [preview,setPreview]=useState<InkStroke[]|null>(null),[liveStroke,setLiveStroke]=useState<InkStroke|null>(null),[polygon,setPolygon]=useState<Point[]>([]),[selected,setSelected]=useState<string[]>([]);
   const [history,setHistory]=useState<{past:InkStroke[][];future:InkStroke[][]}>({past:[],future:[]});
   const svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),gesture=useRef<Gesture|null>(null),touches=useRef(new Map<number,Point>()),pinch=useRef<{distance:number;zoom:number}|null>(null);
-  function download(name:string,value:unknown){void downloadJSON(name,value).catch(error=>setInputError((error as Error).message));}
+  async function download(name:string,value:unknown){if(exporting)return;setExporting(true);setExportStatus('내보내는 중…');setInputError('');try{const result=await downloadJSON(name,value);setExportStatus(result==='saved'?'파일 저장 완료':result==='cancelled'?'내보내기 취소됨':'다운로드를 요청했습니다. 저장 위치를 확인하세요.');}catch(error){setExportStatus('');setInputError('내보내기 실패: '+(error as Error).message);}finally{setExporting(false);}}
+  function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());void download(result.filename,result.value);}
+  function savedPreference(kind:'tools'|'view',saved:boolean){setPreferenceSaveWarnings(current=>({...current,[kind]:saved?'':(kind==='tools'?'필기 도구':'자료 보기')+' 설정을 저장하지 못했습니다. 이번 실행 동안 적용하며 메모·필기는 별도로 저장합니다.'}));}
+  function changeTools(next:Partial<NotebookTools>){const value={...tools,...next};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
+  function changeView(next:Partial<NotebookView>){const value={...view,...next};setView(value);void saveNotebookView(metadata.asset_id,metadata.sha256,value).then(saved=>savedPreference('view',saved));}
+  function setZoom(value:number){changeView({zoomMode:'manual',zoom:value});}
+  useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
+  useEffect(()=>{const element=viewport.current;if(!element)return;const measure=()=>{const style=getComputedStyle(element);setAvailableWidth(Math.max(0,element.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)));};measure();const observer=new ResizeObserver(measure);observer.observe(element);return()=>observer.disconnect();},[]);
   const displayed=preview||state.ink,selection=inkBounds(displayed.filter(stroke=>selected.includes(stroke.id)));
   useEffect(()=>{if(state.ink!==lastOwnInk.current){cancelGesture();setHistory({past:[],future:[]});setSelected([]);}},[state.ink]);
   useEffect(()=>{const refresh=()=>{void store.refresh();};window.addEventListener('focus',refresh);return()=>window.removeEventListener('focus',refresh);},[store]);
   useEffect(()=>{const finish=()=>finishGesture();window.addEventListener('solasi-finish-ink',finish);return()=>window.removeEventListener('solasi-finish-ink',finish);},[store]);
-  useEffect(()=>{const flush=()=>{void store.save();};const before=(event:BeforeUnloadEvent)=>{flush();if(!['saved','loading'].includes(store.state.status)){event.preventDefault();event.returnValue='';}};const cancel=()=>cancelGesture();window.addEventListener('beforeunload',before);window.addEventListener('blur',cancel);return()=>{flush();window.removeEventListener('beforeunload',before);window.removeEventListener('blur',cancel);};},[store]);
+  useEffect(()=>{const flush=()=>{finishGesture();void store.save();};const before=(event:BeforeUnloadEvent)=>{flush();if(!['saved','loading'].includes(store.state.status)){event.preventDefault();event.returnValue='';}};const finish=()=>finishGesture();window.addEventListener('beforeunload',before);window.addEventListener('blur',finish);return()=>{flush();window.removeEventListener('beforeunload',before);window.removeEventListener('blur',finish);};},[store]);
   function commit(ink:InkStroke[],base=latest.current.ink){
     if(base!==latest.current.ink){cancelGesture();setInputError('다른 창의 필기가 갱신되어 진행 중이던 입력을 취소했습니다. 최신 내용에서 다시 입력하세요.');return;}
     if(JSON.stringify(ink)===JSON.stringify(base))return;
@@ -37,7 +47,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   function inkPoint(event:PointerEvent|React.PointerEvent):InkPoint{return{...coordinates(event),pressure:event.pointerType==='pen'?clamp(event.pressure):.5,...(event.pointerType==='pen'?{tilt_x:clamp(event.tiltX,-90,90),tilt_y:clamp(event.tiltY,-90,90)}:{})};}
   function cancelGesture(){gesture.current=null;setPreview(null);setLiveStroke(null);setPolygon([]);touches.current.clear();pinch.current=null;}
   function down(event:React.PointerEvent<SVGSVGElement>){
-    if(!state.loaded||!imageReady)return;
+    if(!state.loaded||!imageReady||!preferencesReady)return;
     if(event.pointerType==='touch'){
       if(gesture.current?.stroke?.input==='pen')return;
       touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
@@ -59,7 +69,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   function move(event:React.PointerEvent<SVGSVGElement>){
     if(event.pointerType==='touch'&&touches.current.has(event.pointerId)){
       touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
-      if(touches.current.size>=2&&pinch.current){const [a,b]=[...touches.current.values()];setZoom(clamp(pinch.current.zoom*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(1,pinch.current.distance),.5,3));event.preventDefault();return;}
+      if(touches.current.size>=2&&pinch.current){const [a,b]=[...touches.current.values()];setZoom(clamp(pinch.current.zoom*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(1,pinch.current.distance),.1,3));event.preventDefault();return;}
     }
     const g=gesture.current;if(!g||g.id!==event.pointerId)return;event.preventDefault();
     const point=coordinates(event);
@@ -82,16 +92,17 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
     touches.current.clear();pinch.current=null;
     setPreview(null);setLiveStroke(null);setPolygon([]);
   }
-  function chooseTool(value:Tool){cancelGesture();setTool(value);if(value==='pen'){setWidth(.0025);setOpacity(1);}if(value==='highlighter'){setWidth(.018);setOpacity(.35);}if(value!=='lasso')setSelected([]);}
+  function chooseTool(value:Tool){finishGesture();changeTools({tool:value});if(value!=='lasso')setSelected([]);}
   const baseWidth=680*zoom,baseHeight=baseWidth*page.height/page.width,swapped=rotation%180!==0;
   return <section className="page-notebook" aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
-    <div className="notebook-heading"><strong>{page.page}쪽</strong><span role="status" className={'save-status '+state.status}>{statusLabels[state.status]}{state.revision>0?' · v'+state.revision:''}</span><button disabled={!state.loaded||state.status==='saved'||state.status==='conflict'} onClick={()=>void store.save()}>지금 저장</button><button aria-expanded={notesOpen} onClick={()=>setNotesOpen(!notesOpen)}>{notesOpen?'메모 접기':'메모 열기'}</button></div>
-    <div className="ink-toolbar" role="toolbar" aria-label="필기 도구">
+    <div className="notebook-heading"><strong>{page.page}쪽</strong><span role="status" className={'save-status '+state.status}>{statusLabels[state.status]}{state.revision>0?' · v'+state.revision:''}</span><button disabled={!state.loaded||state.status==='saved'||state.status==='conflict'} onClick={()=>void store.save()}>지금 저장</button><button disabled={!state.loaded||exporting} onClick={exportCurrent}>{exporting?'내보내는 중…':'메모·필기 JSON 내보내기'}</button><button disabled={!preferencesReady} aria-expanded={notesOpen} onClick={()=>changeView({notesOpen:!notesOpen})}>{notesOpen?'메모 접기':'메모 열기'}</button></div>
+    {exportStatus&&<p role="status">{exportStatus}</p>}{[preferenceWarning,preferenceSaveWarnings.tools,preferenceSaveWarnings.view].filter(Boolean).map((warning,index)=><p key={index} role="status">{warning}</p>)}{!preferencesReady&&<p role="status">보기·필기 설정을 불러오는 중…</p>}
+    <div className="ink-toolbar" role="toolbar" aria-label="필기 도구" inert={!preferencesReady}>
       <div className="ink-tool-group" role="group" aria-label="펜과 선택 도구">{(Object.keys(labels) as Tool[]).map(value=><button key={value} aria-pressed={tool===value} onClick={()=>chooseTool(value)}>{labels[value]}</button>)}</div>
       <div className="ink-tool-group" role="group" aria-label="필기 실행 이력"><button aria-label="필기 실행 취소" disabled={!history.past.length} onClick={()=>undo()}>↶</button><button aria-label="필기 다시 실행" disabled={!history.future.length} onClick={()=>undo(true)}>↷</button></div>
-      <div className="ink-tool-group" role="group" aria-label="펜 설정"><label>색<input type="color" value={color} onChange={e=>setColor(e.target.value)}/></label><label>굵기<input type="range" min="0.0005" max="0.04" step="0.0005" value={width} onChange={e=>setWidth(Number(e.target.value))}/></label><label>불투명도<input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>setOpacity(Number(e.target.value))}/></label>
-      {tool.includes('eraser')&&<label>지우개 크기<input type="range" min="0.003" max="0.06" step="0.001" value={eraserSize} onChange={e=>setEraserSize(Number(e.target.value))}/></label>}
-      </div><div className="ink-tool-group" role="group" aria-label="페이지 보기"><label>확대<select value={zoom} onChange={e=>setZoom(Number(e.target.value))}>{[.5,.75,1,1.25,1.5,2,3].map(value=><option key={value} value={value}>{Math.round(value*100)}%</option>)}{![.5,.75,1,1.25,1.5,2,3].includes(zoom)&&<option value={zoom}>{Math.round(zoom*100)}%</option>}</select></label><button onClick={()=>{cancelGesture();setRotation(value=>(value+90)%360);}}>회전 {rotation}°</button></div>
+      {(tool==='pen'||tool==='highlighter')&&<div className="ink-tool-group" role="group" aria-label={tool==='pen'?'펜 설정':'형광펜 설정'}><label>색<input type="color" value={color} onChange={e=>changeTools(tool==='highlighter'?{highlighterColor:e.target.value}:{penColor:e.target.value})}/></label><label>굵기<input type="range" min="0.0005" max="0.04" step="0.0005" value={width} onChange={e=>changeTools(tool==='highlighter'?{highlighterWidth:Number(e.target.value)}:{penWidth:Number(e.target.value)})}/></label><label>불투명도<input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>changeTools(tool==='highlighter'?{highlighterOpacity:Number(e.target.value)}:{penOpacity:Number(e.target.value)})}/></label></div>}
+      {tool.includes('eraser')&&<div className="ink-tool-group"><label>지우개 크기<input type="range" min="0.003" max="0.06" step="0.001" value={eraserSize} onChange={e=>changeTools({eraserSize:Number(e.target.value)})}/></label></div>}
+      <div className="ink-tool-group" role="group" aria-label="페이지 보기"><button aria-pressed={view.zoomMode==='fit'} onClick={()=>{finishGesture();changeView({zoomMode:'fit'});}}>폭에 맞춤</button><label>확대<select value={zoom} onChange={e=>{finishGesture();setZoom(Number(e.target.value));}}>{[.5,.75,1,1.25,1.5,2,3].map(value=><option key={value} value={value}>{Math.round(value*100)}%</option>)}{![.5,.75,1,1.25,1.5,2,3].includes(zoom)&&<option value={zoom}>{Math.round(zoom*100)}%</option>}</select></label><button onClick={()=>{finishGesture();changeView({rotation:(rotation+90)%360});}}>회전 {rotation}°</button></div>
       {!!selected.length&&<button onClick={()=>{commit(state.ink.filter(stroke=>!selected.includes(stroke.id)));setSelected([]);}}>선택 {selected.length}획 삭제</button>}
     </div>
     <p className="ink-help">펜·마우스로 필기 · 손가락으로 이동/두 손가락 확대 · 올가미 선택 후 이동, 오른쪽 아래 점으로 크기 조절 · ⌘Z/⌘⇧Z</p>
@@ -100,7 +111,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
     {!!state.recovered.length&&<details className="draft-backup"><summary>다른 창·이전 실행의 미저장 초안 {state.recovered.length}개 보존됨</summary>{state.recovered.map(draft=><div key={draft.key}><p>{draft.ink.length}획 · {draft.text.length}자{draft.updatedAt?' · '+new Date(draft.updatedAt).toLocaleString('ko-KR'):''}</p><button onClick={()=>download('복구-페이지-'+page.page+'.json',draft)}>초안 내보내기</button><button onClick={()=>{store.recover(draft);setHistory({past:[],future:[]});}}>현재 편집으로 복구</button></div>)}</details>}
     {state.backup&&<details className="draft-backup"><summary>충돌 해결 전 사본 보관됨</summary><p>{state.backup.ink.length}획 · {state.backup.text.length}자</p><button onClick={()=>download('보관-페이지-'+page.page+'.json',state.backup)}>보관 사본 내보내기</button></details>}
     <div className={'notebook-layout'+(notesOpen?'':' notes-closed')}>
-      <div className="page-viewport" ref={viewport} onWheel={event=>{if(event.ctrlKey||event.metaKey){event.preventDefault();setZoom(value=>clamp(value*Math.exp(-event.deltaY*.002),.5,3));}}}>
+      <div className="page-viewport" ref={viewport} onWheel={event=>{if(preferencesReady&&(event.ctrlKey||event.metaKey)){event.preventDefault();finishGesture();setZoom(clamp(zoom*Math.exp(-event.deltaY*.002),.1,3));}}}>
         <div className="page-rotation-frame" style={{width:swapped?baseHeight:baseWidth,height:swapped?baseWidth:baseHeight}}>
           <div className="ink-page" style={{width:baseWidth,height:baseHeight,transform:`translate(-50%,-50%) rotate(${rotation}deg)`}}>
             <img draggable={false} alt={filename+' '+page.page+'쪽 원본'} src={'/api/assets/'+metadata.asset_id+'/pages/'+page.page+'?document_sha256='+encodeURIComponent(metadata.sha256)} onLoad={()=>{setImageReady(true);setImageError('');}} onError={()=>{setImageReady(false);setImageError('원본 페이지를 열 수 없습니다. 파일 접근 권한·원본 변경 상태를 확인하고 자료를 다시 여세요.');}}/>

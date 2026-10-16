@@ -522,3 +522,7 @@ small,.muted{color:var(--muted)}
 .native-audio input[aria-label="원음 음량"]{width:70px}
 .native-audio span{font-variant-numeric:tabular-nums}
 .native-audio p{flex-basis:100%;margin:0}
+
+/* These fieldsets disable a whole editor without adding a second visual panel. */
+form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-width:0}
+.navigation-warning{position:sticky;top:8px;z-index:30}

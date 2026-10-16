@@ -41,7 +41,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
   return response.json();
 }
 export function connect(): Promise<void> {
-  if(nativeApp())return nativeCommand({op:'http',id:crypto.randomUUID(),path:'/api/health',method:'GET'}).then(()=>{});
+  if(nativeApp())return api('/health');
   if (!connection) connection = (async () => {
     const token = new URLSearchParams(location.hash.slice(1)).get('bootstrap');
     history.replaceState(null, '', location.pathname);
@@ -49,13 +49,13 @@ export function connect(): Promise<void> {
       ? await api<{csrf_token: string}>('/bootstrap', {method: 'POST', body: JSON.stringify({token})})
       : await api<{csrf_token: string}>('/client');
     csrf = result.csrf_token;
-  })();
+  })().catch(error=>{connection=null;throw error;});
   return connection;
 }
 export function sessionToken(): string {return csrf;}
-export async function downloadJSON(filename:string,value:unknown):Promise<void>{
+export async function downloadJSON(filename:string,value:unknown):Promise<'saved'|'cancelled'|'started'>{
   const text=JSON.stringify(value,null,2);
-  if(nativeApp()){await nativeCommand({op:'export_text',filename,text});return;}
+  if(nativeApp()){const result=await nativeCommand<{saved?:boolean;cancelled?:boolean}>({op:'export_text',filename,text});if(result.saved)return 'saved';if(result.cancelled)return 'cancelled';throw new Error('파일 저장 결과를 확인하지 못했습니다.');}
   const url=URL.createObjectURL(new Blob([text],{type:'application/json'})),anchor=document.createElement('a');
-  anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  anchor.href=url;anchor.download=filename;anchor.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return 'started';
 }

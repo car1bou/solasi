@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -117,6 +118,122 @@ class NativeDraftTests(unittest.TestCase):
             self.assertEqual(other.execute('SELECT count(*) FROM native_upload_parts').fetchone()[0],0)
             self.assertTrue(reopened.begin(10,kind='import')['id'])
         finally:other.close()
+
+
+def tool_preferences():
+    return dict(tool='pen',penColor='#254f3f',penWidth=.0025,penOpacity=1,
+                highlighterColor='#ffe066',highlighterWidth=.018,highlighterOpacity=.35,eraserSize=.014)
+
+
+def view_preferences():
+    return dict(zoomMode='fit',zoom=1,rotation=0,notesOpen=True)
+
+
+VIEW_KEY='notebook-view:'+('a'*32)+':'+('b'*64)
+
+
+class NativePreferenceTests(unittest.TestCase):
+    setUp=NativeDraftTests.setUp
+
+    def test_preferences_are_isolated_durable_and_do_not_add_tables_or_change_drafts(self):
+        original=draft()
+        with self.db:
+            self.db.execute('INSERT INTO native_drafts VALUES (?,?)',(original['key'],json.dumps(original)))
+            self.db.execute('INSERT INTO settings VALUES (?,?)',('unrelated-private-setting','private-value'))
+        schema=[tuple(row)for row in self.db.execute('SELECT type,name,sql FROM sqlite_master ORDER BY type,name')]
+        settings=[tuple(row)for row in self.db.execute('SELECT key,value FROM settings ORDER BY key')]
+        self.assertEqual(self.store.read_preference('notebook-tools'),{'value':None})
+        self.assertEqual(self.store.read_preference(VIEW_KEY),{'value':None})
+        self.assertEqual(self.store.write_preference('notebook-tools',tool_preferences()),{'value':tool_preferences()})
+        self.assertEqual(self.store.write_preference(VIEW_KEY,view_preferences()),{'value':view_preferences()})
+        self.assertEqual(self.store.read_preference(VIEW_KEY.replace('a'*32,'c'*32)),{'value':None})
+        self.assertEqual(self.store.read_preference(VIEW_KEY.replace('b'*64,'d'*64)),{'value':None})
+        other=open_db(self.root)
+        try:
+            reopened=NativeDrafts(other)
+            self.assertEqual(reopened.read_preference('notebook-tools'),{'value':tool_preferences()})
+            self.assertEqual(reopened.read_preference(VIEW_KEY),{'value':view_preferences()})
+        finally:other.close()
+        self.assertEqual([tuple(row)for row in self.db.execute('SELECT type,name,sql FROM sqlite_master ORDER BY type,name')],schema)
+        for key,value in settings:self.assertEqual(self.db.execute('SELECT value FROM settings WHERE key=?',(key,)).fetchone()[0],value)
+        self.assertEqual(self.store.read(original['key']),[original])
+        self.assertEqual(set(self.store.state()),{'vault_id','theme'})
+
+    def test_keys_cannot_access_arbitrary_settings_or_other_document_identifiers(self):
+        for key in ('native_theme','native_vault_id','unrelated-private-setting','../notebook-tools','notebook-tools:other','notebook-view:a:'+'b'*64,'notebook-view:'+'a'*32+':hash',VIEW_KEY+'::copy',VIEW_KEY+'\x00',None):
+            with self.subTest(key=key):
+                with self.assertRaises(ValueError):self.store.read_preference(key)
+                with self.assertRaises(ValueError):self.store.write_preference(key,view_preferences())
+
+    def test_invalid_values_leave_last_saved_tool_preferences_unchanged(self):
+        valid=tool_preferences();self.store.write_preference('notebook-tools',valid)
+        invalid=[None,[],{**valid,'extra':'unknown'},{k:v for k,v in valid.items()if k!='penColor'}]
+        for field,value in (('tool','unknown'),('tool',True),('penColor','#fff'),('highlighterColor','red'),('penWidth',True),('penWidth',.00049),('highlighterWidth',.04001),('penOpacity',float('nan')),('highlighterOpacity',float('inf')),('penOpacity',.049),('eraserSize',.06001),('eraserSize','0.014'),('penColor','#'+'a'*5000)):
+            invalid.append({**valid,field:value})
+        for value in invalid:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):self.store.write_preference('notebook-tools',value)
+                self.assertEqual(self.store.read_preference('notebook-tools'),{'value':valid})
+        for tool in ('pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'):
+            self.assertEqual(self.store.write_preference('notebook-tools',{**valid,'tool':tool})['value']['tool'],tool)
+
+    def test_view_limits_are_strict_and_do_not_coerce_types(self):
+        valid=view_preferences();self.store.write_preference(VIEW_KEY,valid)
+        for field,value in (('zoomMode','page'),('zoom',.099),('zoom',3.001),('zoom',True),('zoom','1'),('rotation',True),('rotation',90.0),('rotation',45),('notesOpen',1),('notesOpen','false')):
+            with self.subTest(field=field,value=value):
+                with self.assertRaises(ValueError):self.store.write_preference(VIEW_KEY,{**valid,field:value})
+                self.assertEqual(self.store.read_preference(VIEW_KEY),{'value':valid})
+        for rotation in (0,90,180,270):
+            value={**valid,'zoomMode':'manual','zoom':3,'rotation':rotation,'notesOpen':False}
+            self.assertEqual(self.store.write_preference(VIEW_KEY,value),{'value':value})
+
+    def test_corrupt_saved_value_is_reported_without_rewriting_it(self):
+        self.store.write_preference(VIEW_KEY,view_preferences())
+        key=self.db.execute('SELECT key FROM settings WHERE key LIKE ?',('%'+VIEW_KEY,)).fetchone()[0]
+        for raw in ('{bad json}',json.dumps({'notesOpen':True}),' '*5000+'{}'):
+            with self.db:self.db.execute('UPDATE settings SET value=? WHERE key=?',(raw,key))
+            with self.assertRaises(ValueError):self.store.read_preference(VIEW_KEY)
+            self.assertEqual(self.db.execute('SELECT value FROM settings WHERE key=?',(key,)).fetchone()[0],raw)
+
+    def test_failed_database_write_does_not_report_success_or_erase_previous_value(self):
+        valid=tool_preferences();self.store.write_preference('notebook-tools',valid)
+        with self.db:self.db.execute("CREATE TRIGGER fail_preference BEFORE INSERT ON settings BEGIN SELECT RAISE(FAIL,'disk unavailable'); END")
+        with self.assertRaises(sqlite3.IntegrityError):self.store.write_preference('notebook-tools',{**valid,'tool':'pan'})
+        self.assertEqual(self.store.read_preference('notebook-tools'),{'value':valid})
+
+
+class NativePreferenceApiTests(unittest.TestCase):
+    def setUp(self):
+        from fastapi import FastAPI
+        from fastapi.responses import JSONResponse
+        from fastapi.testclient import TestClient
+        from lecture_study.native_drafts import attach_native_drafts
+        NativeDraftTests.setUp(self)
+        app=FastAPI()
+        @app.exception_handler(ValueError)
+        async def invalid(request,exc):return JSONResponse({'detail':str(exc)},status_code=422)
+        attach_native_drafts(app,self.db)
+        self.client=TestClient(app);self.addCleanup(self.client.close)
+
+    def test_get_and_put_only_expose_the_requested_preference(self):
+        from urllib.parse import quote
+        for key,value in (('notebook-tools',tool_preferences()),(VIEW_KEY,view_preferences())):
+            path='/api/native/preferences/'+quote(key,safe='')
+            response=self.client.get(path);self.assertEqual(response.status_code,200);self.assertEqual(response.json(),{'value':None})
+            response=self.client.put(path,json={'value':value});self.assertEqual(response.status_code,200);self.assertEqual(response.json(),{'value':value})
+            self.assertEqual(self.client.get(path).json(),{'value':value})
+        self.assertEqual(self.client.get('/api/native/preferences/native_vault_id').status_code,422)
+
+    def test_invalid_or_oversized_requests_preserve_the_saved_value(self):
+        path='/api/native/preferences/notebook-tools';value=tool_preferences()
+        self.assertEqual(self.client.put(path,json={'value':value}).status_code,200)
+        for body in ({},{'value':None},{'value':value,'extra':True},{'value':{**value,'penWidth':'0.0025'}},[]):
+            with self.subTest(body=body):
+                self.assertEqual(self.client.put(path,json=body).status_code,422)
+                self.assertEqual(self.client.get(path).json(),{'value':value})
+        raw=' '*4096+json.dumps({'value':value})
+        self.assertEqual(self.client.put(path,content=raw,headers={'Content-Type':'application/json'}).status_code,422)
+        self.assertEqual(self.client.get(path).json(),{'value':value})
 
 
 if __name__=='__main__': unittest.main()

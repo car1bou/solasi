@@ -5,11 +5,19 @@ export function registerCloseGuard(label:string,dirty:()=>boolean){
   return()=>{closeGuards.delete(key);};
 }
 
+function unsavedEditors(preserved:string[]=[]){return [...new Set([...closeGuards.values()].filter(guard=>!preserved.includes(guard.label)&&guard.dirty()).map(guard=>guard.label))];}
+export function navigate(action:()=>void,preserved:string[]=[]){
+  const labels=unsavedEditors(preserved);
+  if(labels.length){window.dispatchEvent(new CustomEvent('solasi-navigation-blocked',{detail:labels.join(' · ')+'에 저장하지 않은 입력이 있습니다. 저장하거나 입력을 되돌린 뒤 이동하세요.'}));return false;}
+  window.dispatchEvent(new Event('solasi-finish-ink'));
+  action();window.dispatchEvent(new Event('solasi-navigated'));return true;
+}
+
 export function createCloseLifecycle(flush:()=>Promise<void>,resumeDrafts:()=>void){
   let attempt=0,closing=false;
   function resume(){attempt++;closing=false;document.getElementById('root')!.inert=false;resumeDrafts();}
   function checkEditors(){
-    const labels=[...closeGuards.values()].filter(guard=>guard.dirty()).map(guard=>guard.label);
+    const labels=unsavedEditors();
     if(labels.length)throw new Error([...new Set(labels)].join(' · ')+'에 저장하지 않은 수정이 있습니다. 저장하거나 수정을 취소한 뒤 다시 닫아 주세요.');
   }
   return {

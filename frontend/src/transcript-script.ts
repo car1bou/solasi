@@ -4,6 +4,15 @@ type SourceAudio={open_url:string|null;seek_seconds:number|null;end_seconds:numb
 
 export const transcriptStamp=(ms:number)=>{ms=Math.round(ms);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');};
 
+export function transcriptFocusIndex(event:Pick<KeyboardEvent,'key'|'shiftKey'|'altKey'|'ctrlKey'|'metaKey'>,index:number,count:number):number|null{
+  if(!count||event.shiftKey||event.altKey||event.ctrlKey||event.metaKey)return null;
+  if(event.key==='Home')return 0;
+  if(event.key==='End')return count-1;
+  if(['ArrowLeft','ArrowUp'].includes(event.key))return Math.max(0,index-1);
+  if(['ArrowRight','ArrowDown'].includes(event.key))return Math.min(count-1,index+1);
+  return null;
+}
+
 export function enforceTranscriptBounds(audio:Pick<HTMLMediaElement,'currentTime'|'paused'>,clip:TranscriptAudio,seeking=false):boolean{
   if(audio.currentTime<clip.seek_seconds||seeking&&audio.paused&&audio.currentTime>=clip.end_seconds)audio.currentTime=clip.seek_seconds;
   return audio.currentTime>=clip.end_seconds;

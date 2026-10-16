@@ -5,7 +5,7 @@ import {useCloseGuard} from './use-close-guard';
 import {api} from './api';
 import JobProgress from './JobProgress';
 import type {Job} from './types';
-import {enforceTranscriptBounds,resolveTranscriptAudio,selectTranscriptRange,transcriptStamp} from './transcript-script';
+import {enforceTranscriptBounds,resolveTranscriptAudio,selectTranscriptRange,transcriptStamp,transcriptFocusIndex} from './transcript-script';
 import type {TranscriptAudio,TranscriptSegment} from './transcript-script';
 
 type Segment=TranscriptSegment;
@@ -28,15 +28,21 @@ export function EmptyTranscriptRange({range:r,reviews,review}:{range:EmptyRange;
 export function TranscriptScript({sessionId,segments,reviews,refresh,review}:{sessionId:string;segments:Segment[];reviews:Review[];refresh:()=>Promise<void>;review:(chunk:string)=>Promise<void>}){
   const [selected,setSelected]=useState<Segment[]>([]),[editing,setEditing]=useState(false),[drafts,setDrafts]=useState<Record<string,string>>({});
   const [busy,setBusy]=useState<'listen'|'save'|null>(null),[error,setError]=useState('');
-  useCloseGuard('전사 수정',busy==='save'||editing&&selected.some(segment=>drafts[segment.id]!==segment.text));
+  const [focused,setFocused]=useState<string|null>(null),[discard,setDiscard]=useState<'selection'|'edit'|null>(null);
+  const dirty=editing&&selected.some(segment=>drafts[segment.id]!==segment.text);
+  useCloseGuard('전사 수정',busy==='save'||dirty);
   const [playback,setPlayback]=useState<{clips:TranscriptAudio[];index:number}|null>(null);
-  const script=useRef<HTMLParagraphElement>(null),audio=useRef<PlaybackHandle>(null),playRequest=useRef(0);
+  const script=useRef<HTMLParagraphElement>(null),audio=useRef<PlaybackHandle>(null),playRequest=useRef(0),listenButton=useRef<HTMLButtonElement>(null),keepEditingButton=useRef<HTMLButtonElement>(null),keyboardSelection=useRef(false);
   const confirmed=segments.filter(s=>s.final),provisional=segments.filter(s=>!s.final);
+  const focusId=confirmed.some(s=>s.id===focused)?focused:confirmed[0]?.id;
   useEffect(()=>()=>{playRequest.current++;audio.current?.pause();},[]);
-  function choose(rows:Segment[]){
+  useEffect(()=>{if(keyboardSelection.current){keyboardSelection.current=false;listenButton.current?.focus();}},[selected]);
+  useEffect(()=>{if(discard)keepEditingButton.current?.focus();},[discard]);
+  function choose(rows:Segment[],keyboard=false){
     if(editing||busy==='save')return;
     playRequest.current++;audio.current?.pause();setPlayback(null);setBusy(null);setError('');
     if(rows.length>200){setSelected([]);setError('한 번에 최대 200개 문장을 선택하세요');return;}
+    keyboardSelection.current=keyboard;
     setSelected(rows.map(s=>({...s})));
   }
   function readSelection(){
@@ -48,7 +54,12 @@ export function TranscriptScript({sessionId,segments,reviews,refresh,review}:{se
     const start=prefix.toString().length;
     choose(selectTranscriptRange(confirmed,start,start+range.toString().length));
   }
-  function clear(){playRequest.current++;audio.current?.pause();setPlayback(null);setSelected([]);setEditing(false);setError('');setBusy(null);}
+  function discardEdits(action:'selection'|'edit'){
+    setDiscard(null);setEditing(false);setError('');
+    if(action==='selection'){playRequest.current++;audio.current?.pause();setPlayback(null);setSelected([]);setBusy(null);script.current?.querySelector<HTMLSpanElement>('[tabindex="0"]')?.focus();}
+    else listenButton.current?.focus();
+  }
+  function requestDiscard(action:'selection'|'edit'){if(busy==='save')return;if(dirty)setDiscard(action);else discardEdits(action);}
   async function listen(){
     const request=++playRequest.current;
     audio.current?.pause();setPlayback(null);setError('');setBusy('listen');
@@ -59,7 +70,7 @@ export function TranscriptScript({sessionId,segments,reviews,refresh,review}:{se
     finally{if(request===playRequest.current)setBusy(null);}
   }
   async function save(){
-    setBusy('save');setError('');
+    setBusy('save');setError('');setDiscard(null);
     try{
       const data=await api<{segments:Segment[]}>('/sessions/'+sessionId+'/transcripts',{method:'PATCH',body:JSON.stringify({segments:selected.map(s=>({id:s.id,expected_revision:s.revision,text:drafts[s.id]}))})});
       setSelected(data.segments);setEditing(false);await refresh();
@@ -74,16 +85,18 @@ export function TranscriptScript({sessionId,segments,reviews,refresh,review}:{se
   const selectedRange=selected.length?transcriptStamp(selected[0].start_ms)+'–'+transcriptStamp(selected[selected.length-1].end_ms):'';
   return <div className="transcript-script-view">
     <div className="subheading transcript-heading"><h3>대본</h3><div className="transcript-exports"><a href={'/api/sessions/'+sessionId+'/transcripts/export?format=txt'} download>TXT 내보내기</a><a href={'/api/sessions/'+sessionId+'/transcripts/export?format=md'} download>Markdown 내보내기</a></div></div>
-    <p className="transcript-help">문장을 클릭하거나 글을 드래그해 선택한 뒤 듣거나 수정하세요. 한 번에 최대 200개 문장을 선택할 수 있습니다.</p>
+    <p id={'transcript-help-'+sessionId} className="transcript-help">문장을 클릭하거나 글을 드래그해 선택한 뒤 듣거나 수정하세요. 키보드는 방향키·Home·End로 문장을 이동하고 Enter·Space로 선택합니다. 한 번에 최대 200개 문장을 선택할 수 있습니다.</p>
     <p className="transcript-help">단어별 시각이 없어 일부 단어를 선택해도 닿은 확정 전사 구간 전체를 재생합니다. Markdown 원음 링크는 앱 실행과 인증이 필요하며, 내보낸 파일에 원음이 포함되지는 않습니다.</p>
-    {confirmed.length?<p ref={script} className="transcript-script" aria-label="확정 전사 대본" onPointerUp={readSelection} onKeyUp={readSelection}>{confirmed.map(s=><React.Fragment key={s.id}><span role="button" tabIndex={0} className={selected.some(item=>item.id===s.id)?'selected':''} aria-label={transcriptStamp(s.start_ms)+'–'+transcriptStamp(s.end_ms)+' '+s.text+' 문장 선택'} onClick={()=>{if(window.getSelection()?.isCollapsed!==false)choose([s]);}} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose([s]);}}}>{s.text}</span>{' '}</React.Fragment>)}</p>:<p className="muted">확정 전사가 생기면 대본이 여기에 표시됩니다.</p>}
+    <p className="sr-only" role="status" aria-live="polite">{selected.length?'선택 구간 '+selectedRange+' · '+selected.length+'개 문장. 선택 구간 듣기 또는 수정을 사용할 수 있습니다.':'선택한 전사 구간 없음.'}</p>
+    {confirmed.length?<p ref={script} className="transcript-script" aria-label="확정 전사 대본" onPointerUp={readSelection} onKeyUp={e=>{if(e.shiftKey)readSelection();}}>{confirmed.map((s,index)=><React.Fragment key={s.id}><span role="button" tabIndex={s.id===focusId?0:-1} className={selected.some(item=>item.id===s.id)?'selected':''} aria-pressed={selected.some(item=>item.id===s.id)} aria-describedby={'transcript-help-'+sessionId} aria-label={transcriptStamp(s.start_ms)+'–'+transcriptStamp(s.end_ms)+' '+s.text+' 문장 선택'} onFocus={()=>setFocused(s.id)} onClick={()=>{if(window.getSelection()?.isCollapsed!==false)choose([s]);}} onKeyDown={e=>{const next=transcriptFocusIndex(e,index,confirmed.length);if(next!==null){e.preventDefault();script.current?.querySelectorAll<HTMLSpanElement>('[role="button"]')[next]?.focus();}else if(!e.shiftKey&&!e.altKey&&!e.ctrlKey&&!e.metaKey&&(e.key==='Enter'||e.key===' ')){e.preventDefault();choose([s],true);}}}>{s.text}</span>{' '}</React.Fragment>)}</p>:<p className="muted">확정 전사가 생기면 대본이 여기에 표시됩니다.</p>}
     {!!provisional.length&&<div className="transcript-provisional" aria-label="잠정 전사"><strong>잠정 전사 · 확정 후 선택할 수 있습니다</strong>{provisional.map(s=><p key={s.id}><small>{transcriptStamp(s.start_ms)}–{transcriptStamp(s.end_ms)}</small> {s.text}</p>)}</div>}
     {!!selected.length&&<aside className="transcript-selection" aria-label="선택 전사 구간">
-      <div className="subheading"><strong>선택 구간 · {selectedRange} · {selected.length}개 문장</strong><button disabled={busy==='save'} onClick={clear} aria-label="전사 선택 닫기">×</button></div>
+      <div className="subheading"><strong>선택 구간 · {selectedRange} · {selected.length}개 문장</strong><button disabled={busy==='save'} onClick={()=>requestDiscard('selection')} aria-label="전사 선택 닫기">×</button></div>
       <p className="transcript-help">표시된 실제 전사 구간을 문장 순서대로 재생합니다. 누락 구간과 녹음 사이의 빈 시간은 건너뜁니다. 선택 당시의 문장과 버전을 유지합니다.</p>
-      <div className="transcript-selection-actions"><button disabled={busy!==null} onClick={()=>void listen()}>{busy==='listen'?'원음 확인 중':'선택 구간 듣기'}</button><button disabled={busy!==null||editing} onClick={()=>{setEditing(true);setDrafts(Object.fromEntries(selected.map(s=>[s.id,s.text])));setError('');}}>수정</button></div>
+      <div className="transcript-selection-actions"><button ref={listenButton} disabled={busy!==null} onClick={()=>void listen()}>{busy==='listen'?'원음 확인 중':'선택 구간 듣기'}</button><button disabled={busy!==null||editing} onClick={()=>{setEditing(true);setDrafts(Object.fromEntries(selected.map(s=>[s.id,s.text])));setError('');}}>수정</button></div>
       {clip&&playback&&<div className="transcript-playback"><p role="status">{playback.index+1}/{playback.clips.length} 구간 재생 · {transcriptStamp(selected[playback.index].start_ms)}–{transcriptStamp(selected[playback.index].end_ms)}</p><PlaybackAudio key={clip.id} ref={audio} controls preload="metadata" src={clip.open_url} aria-label="선택 구간 원음" onLoadedMetadata={e=>{const element=e.currentTarget;element.currentTime=clip.seek_seconds;void element.play().catch(()=>setError('재생 버튼을 눌러 원음을 들어보세요'));}} onPlay={e=>{if(enforceTranscriptBounds(e.currentTarget,clip))e.currentTarget.currentTime=clip.seek_seconds;}} onSeeking={e=>{if(enforceTranscriptBounds(e.currentTarget,clip,true))advance(playback.index);}} onTimeUpdate={e=>{if(enforceTranscriptBounds(e.currentTarget,clip))advance(playback.index);}} onEnded={()=>advance(playback.index)} onError={()=>{setPlayback(null);setError('원음을 재생할 수 없습니다');}}/></div>}
-      {editing?<div className="transcript-edit-panel"><p>문장 경계와 시각은 유지됩니다. 모든 문장이 함께 저장되며 하나라도 변경되었으면 저장하지 않습니다.</p>{selected.map((s,index)=><label key={s.id} htmlFor={'edit-transcript-'+s.id}>{index+1}. {transcriptStamp(s.start_ms)}–{transcriptStamp(s.end_ms)} · v{s.revision}<textarea id={'edit-transcript-'+s.id} value={drafts[s.id]||''} maxLength={10000} disabled={busy==='save'} onChange={e=>setDrafts({...drafts,[s.id]:e.target.value})}/></label>)}<div className="transcript-selection-actions"><button disabled={busy==='save'} onClick={()=>{setEditing(false);setError('');}}>수정 취소</button><button disabled={busy!==null||selected.some(s=>!drafts[s.id]?.trim())||selected.reduce((sum,s)=>sum+(drafts[s.id]?.length||0),0)>200000} onClick={()=>void save()}>{busy==='save'?'저장 중':'선택 문장 모두 저장'}</button></div></div>:<details><summary>선택한 문장과 원래 인식문 확인</summary>{selected.map(s=><div key={s.id} className="transcript-selected-segment"><small>{transcriptStamp(s.start_ms)}–{transcriptStamp(s.end_ms)} · v{s.revision}</small><p>{s.text}</p>{s.revision>1&&<details><summary>원래 인식문</summary><p>{s.original_text}</p></details>}</div>)}{[...new Map(selected.map(s=>[s.chunk_id,s])).values()].map(s=><button key={s.chunk_id} className="text-button" disabled={reviews.some(j=>['queued','running'].includes(j.status)&&j.request.chunk_id===s.chunk_id)} onClick={()=>void review(s.chunk_id)}>{transcriptStamp(s.start_ms)} 원음 다시 인식</button>)}</details>}
+      {editing?<div className="transcript-edit-panel"><p>문장 경계와 시각은 유지됩니다. 모든 문장이 함께 저장되며 하나라도 변경되었으면 저장하지 않습니다.</p>{selected.map((s,index)=><label key={s.id} htmlFor={'edit-transcript-'+s.id}>{index+1}. {transcriptStamp(s.start_ms)}–{transcriptStamp(s.end_ms)} · v{s.revision}<textarea id={'edit-transcript-'+s.id} value={drafts[s.id]||''} maxLength={10000} autoFocus={index===0} disabled={busy==='save'} onChange={e=>setDrafts({...drafts,[s.id]:e.target.value})}/></label>)}<div className="transcript-selection-actions"><button disabled={busy==='save'} onClick={()=>requestDiscard('edit')}>수정 취소</button><button disabled={busy!==null||selected.some(s=>!drafts[s.id]?.trim())||selected.reduce((sum,s)=>sum+(drafts[s.id]?.length||0),0)>200000} onClick={()=>void save()}>{busy==='save'?'저장 중':'선택 문장 모두 저장'}</button></div></div>:<details><summary>선택한 문장과 원래 인식문 확인</summary>{selected.map(s=><div key={s.id} className="transcript-selected-segment"><small>{transcriptStamp(s.start_ms)}–{transcriptStamp(s.end_ms)} · v{s.revision}</small><p>{s.text}</p>{s.revision>1&&<details><summary>원래 인식문</summary><p>{s.original_text}</p></details>}</div>)}{[...new Map(selected.map(s=>[s.chunk_id,s])).values()].map(s=><button key={s.chunk_id} className="text-button" disabled={reviews.some(j=>['queued','running'].includes(j.status)&&j.request.chunk_id===s.chunk_id)} onClick={()=>void review(s.chunk_id)}>{transcriptStamp(s.start_ms)} 원음 다시 인식</button>)}</details>}
+      {discard&&<section role="group" aria-label="전사 수정 취소 확인"><p role="alert">저장하지 않은 전사 수정이 있습니다. 수정을 취소하면 변경한 입력은 버리고 원래 문장을 유지합니다.</p><div className="transcript-selection-actions"><button ref={keepEditingButton} onClick={()=>{setDiscard(null);document.getElementById('edit-transcript-'+selected[0].id)?.focus();}}>계속 수정</button><button disabled={busy==='save'} onClick={()=>discardEdits(discard)}>수정 취소 확인</button></div></section>}
     </aside>}
     {error&&<p role="alert" className="transcript-error">{error}</p>}
   </div>;

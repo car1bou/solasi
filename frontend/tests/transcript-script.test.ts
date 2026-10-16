@@ -33,6 +33,24 @@ test('partial words select full touched confirmed segments and keep the selected
   }finally{await server.close();}
 });
 
+test('transcript keyboard navigation uses one bounded sentence cursor and leaves modified text selection alone',async()=>{
+  const server=await createServer({configFile:false,cacheDir:'../.local-state/transcript-test-vite',server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {transcriptFocusIndex}=await server.ssrLoadModule('/src/transcript-script.ts');
+    assert.equal(typeof transcriptFocusIndex,'function');
+    const event=(key:string,changes={})=>({key,shiftKey:false,altKey:false,ctrlKey:false,metaKey:false,...changes});
+    for(const key of ['ArrowRight','ArrowDown'])assert.equal(transcriptFocusIndex(event(key),0,300),1);
+    for(const key of ['ArrowLeft','ArrowUp'])assert.equal(transcriptFocusIndex(event(key),1,300),0);
+    assert.equal(transcriptFocusIndex(event('ArrowLeft'),0,300),0);
+    assert.equal(transcriptFocusIndex(event('ArrowRight'),299,300),299);
+    assert.equal(transcriptFocusIndex(event('Home'),200,300),0);
+    assert.equal(transcriptFocusIndex(event('End'),0,300),299);
+    assert.equal(transcriptFocusIndex(event('End'),0,0),null);
+    for(const modifier of ['shiftKey','altKey','ctrlKey','metaKey'])assert.equal(transcriptFocusIndex(event('ArrowRight',{[modifier]:true}),5,300),null);
+    for(const key of ['Tab','Enter',' ','Escape'])assert.equal(transcriptFocusIndex(event(key),5,300),null);
+  }finally{await server.close();}
+});
+
 test('playback resolves each selected source revision and uses stored WAV positions across gaps and recordings',async()=>{
   const server=await createServer({configFile:false,cacheDir:'../.local-state/transcript-test-vite',server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
   try{
@@ -97,6 +115,11 @@ test('script renders continuous confirmed text with keyboard sentence actions an
     const markup=renderToStaticMarkup(React.createElement(TranscriptScript,{sessionId:'sid',segments,reviews:[],refresh:async()=>{},review:async()=>{}}));
     assert.match(markup,/대본/);
     assert.match(markup,/role="button"[^>]*tabindex="0"|tabindex="0"[^>]*role="button"/);
+    assert.equal((markup.match(/tabindex="0"/g)||[]).length,1,'the transcript has a single Tab entry');
+    assert.equal((markup.match(/tabindex="-1"/g)||[]).length,2);
+    assert.match(markup,/aria-pressed="false"/);
+    assert.match(markup,/role="status"[^>]*aria-live="polite"/);
+    assert.match(markup,/방향키/);
     assert.match(markup,/aria-label="0:10\.000–0:11\.000 첫 문장\. 문장 선택"/);
     assert.match(markup,/첫 문장\./);
     assert.match(markup,/다음 문장\./);
@@ -104,6 +127,20 @@ test('script renders continuous confirmed text with keyboard sentence actions an
     assert.match(markup,/200/);
     assert.doesNotMatch(markup,/<audio|<textarea/);
     assert.doesNotMatch(markup,/class="transcript final"/);
+  }finally{await server.close();}
+});
+
+test('a long script keeps all 300 sentence actions but only one Tab stop',async()=>{
+  const server=await createServer({configFile:false,cacheDir:'../.local-state/transcript-test-vite',server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {TranscriptScript}=await server.ssrLoadModule('/src/TranscriptView.tsx');
+    const rows=Array.from({length:300},(_,i)=>({...segments[0],id:'sentence-'+i,start_ms:i*1000,end_ms:(i+1)*1000,text:'문장 '+i}));
+    const markup=renderToStaticMarkup(React.createElement(TranscriptScript,{sessionId:'long',segments:rows,reviews:[],refresh:async()=>{},review:async()=>{}}));
+    assert.equal((markup.match(/role="button"/g)||[]).length,300);
+    assert.equal((markup.match(/tabindex="0"/g)||[]).length,1);
+    assert.equal((markup.match(/tabindex="-1"/g)||[]).length,299);
+    assert.match(markup,/문장 299/);
+    assert.doesNotMatch(markup,/<audio|autoplay|<textarea/,'reading or selecting a sentence must not initiate audio');
   }finally{await server.close();}
 });
 
