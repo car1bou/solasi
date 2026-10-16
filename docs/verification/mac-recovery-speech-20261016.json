@@ -1,0 +1,622 @@
+{
+  "date": "2026-10-16",
+  "platform": "Apple M4 / 16GiB / macOS arm64",
+  "asr": {
+    "default_changed": false,
+    "reference_hints_supplied": false,
+    "metric": "NFKC, lowercase, Unicode letters/numbers; character edit rate, not semantic hallucination rate",
+    "new_original_files": 34,
+    "new_original_audio_bytes": 3812263,
+    "cached_additional_scored_ranges": 18,
+    "selection_sha256": "b47205becc1e62f18aa90ea6e25035d160eb29e2976ef3d3e02abdb163022efb",
+    "additional_manifest_sha256": "3695235bf6a4fa633ef99ba4af1f0c475f4336c2d8d4511f5ec94e931902f65d",
+    "aggregates": {
+      "existing_whisper": {
+        "clean-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 13,
+          "substitutions": 6,
+          "deletions": 7,
+          "insertions": 0,
+          "cer": 0.08552631578947369
+        },
+        "office-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 13,
+          "substitutions": 6,
+          "deletions": 7,
+          "insertions": 0,
+          "cer": 0.08552631578947369
+        },
+        "cafeteria-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 28,
+          "substitutions": 20,
+          "deletions": 6,
+          "insertions": 2,
+          "cer": 0.18421052631578946
+        },
+        "clean5": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 13,
+          "substitutions": 10,
+          "deletions": 3,
+          "insertions": 0,
+          "cer": 0.05829596412556054
+        },
+        "lowgain5": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 22,
+          "substitutions": 10,
+          "deletions": 12,
+          "insertions": 0,
+          "cer": 0.09865470852017937
+        },
+        "snr105": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 16,
+          "substitutions": 13,
+          "deletions": 3,
+          "insertions": 0,
+          "cer": 0.07174887892376682
+        },
+        "rooms6": {
+          "clips": 6,
+          "reference_chars": 213,
+          "edits": 1,
+          "substitutions": 1,
+          "deletions": 0,
+          "insertions": 0,
+          "cer": 0.004694835680751174
+        },
+        "talk6": {
+          "clips": 6,
+          "reference_chars": 132,
+          "edits": 12,
+          "substitutions": 5,
+          "deletions": 1,
+          "insertions": 6,
+          "cer": 0.09090909090909091
+        },
+        "spontaneous12": {
+          "clips": 12,
+          "reference_chars": 256,
+          "edits": 54,
+          "substitutions": 14,
+          "deletions": 37,
+          "insertions": 3,
+          "cer": 0.2109375
+        },
+        "kmsav-manual6": {
+          "clips": 6,
+          "reference_chars": 103,
+          "edits": 13,
+          "substitutions": 3,
+          "deletions": 10,
+          "insertions": 0,
+          "cer": 0.1262135922330097
+        }
+      },
+      "existing_loudnorm": {
+        "clean-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 12,
+          "substitutions": 6,
+          "deletions": 6,
+          "insertions": 0,
+          "cer": 0.07894736842105263
+        },
+        "office-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 13,
+          "substitutions": 6,
+          "deletions": 7,
+          "insertions": 0,
+          "cer": 0.08552631578947369
+        },
+        "cafeteria-adult": {
+          "clips": 15,
+          "reference_chars": 152,
+          "edits": 31,
+          "substitutions": 23,
+          "deletions": 6,
+          "insertions": 2,
+          "cer": 0.20394736842105263
+        },
+        "clean5": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 12,
+          "substitutions": 9,
+          "deletions": 3,
+          "insertions": 0,
+          "cer": 0.053811659192825115
+        },
+        "lowgain5": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 22,
+          "substitutions": 10,
+          "deletions": 12,
+          "insertions": 0,
+          "cer": 0.09865470852017937
+        },
+        "snr105": {
+          "clips": 5,
+          "reference_chars": 223,
+          "edits": 18,
+          "substitutions": 14,
+          "deletions": 4,
+          "insertions": 0,
+          "cer": 0.08071748878923767
+        },
+        "rooms6": {
+          "clips": 6,
+          "reference_chars": 213,
+          "edits": 2,
+          "substitutions": 2,
+          "deletions": 0,
+          "insertions": 0,
+          "cer": 0.009389671361502348
+        },
+        "talk6": {
+          "clips": 6,
+          "reference_chars": 132,
+          "edits": 12,
+          "substitutions": 5,
+          "deletions": 1,
+          "insertions": 6,
+          "cer": 0.09090909090909091
+        },
+        "spontaneous12": {
+          "clips": 12,
+          "reference_chars": 256,
+          "edits": 49,
+          "substitutions": 14,
+          "deletions": 32,
+          "insertions": 3,
+          "cer": 0.19140625
+        },
+        "kmsav-manual6": {
+          "clips": 6,
+          "reference_chars": 103,
+          "edits": 13,
+          "substitutions": 3,
+          "deletions": 10,
+          "insertions": 0,
+          "cer": 0.1262135922330097
+        }
+      },
+      "additional_whisper": {
+        "new-pansori16": {
+          "clips": 16,
+          "reference_chars": 358,
+          "edits": 13,
+          "substitutions": 2,
+          "deletions": 3,
+          "insertions": 8,
+          "cer": 0.036312849162011177
+        },
+        "new-deeply18": {
+          "clips": 18,
+          "reference_chars": 453,
+          "edits": 12,
+          "substitutions": 9,
+          "deletions": 3,
+          "insertions": 0,
+          "cer": 0.026490066225165563
+        },
+        "cached-kmsav18": {
+          "clips": 18,
+          "reference_chars": 244,
+          "edits": 47,
+          "substitutions": 22,
+          "deletions": 19,
+          "insertions": 6,
+          "cer": 0.19262295081967212
+        }
+      },
+      "additional_qwen_review": {
+        "new-pansori16": {
+          "clips": 16,
+          "reference_chars": 358,
+          "edits": 27,
+          "substitutions": 12,
+          "deletions": 5,
+          "insertions": 10,
+          "cer": 0.07541899441340782
+        },
+        "new-deeply18": {
+          "clips": 18,
+          "reference_chars": 453,
+          "edits": 7,
+          "substitutions": 1,
+          "deletions": 6,
+          "insertions": 0,
+          "cer": 0.01545253863134658
+        },
+        "cached-kmsav18": {
+          "clips": 18,
+          "reference_chars": 244,
+          "edits": 45,
+          "substitutions": 15,
+          "deletions": 18,
+          "insertions": 12,
+          "cer": 0.18442622950819673
+        }
+      }
+    },
+    "qwen_comparison": {
+      "improved": 15,
+      "tied": 26,
+      "worsened": 11
+    },
+    "loudnorm_default_rejected": true,
+    "sources": [
+      {
+        "dataset": "Pansori TEDxKR",
+        "revision": "b24c3933cb44192e8f1e0ca76ccfe01526e5d09c",
+        "source_url": "https://www.openslr.org/58/",
+        "clips": 16,
+        "new_speaker_ids": 8,
+        "age_metadata_available": false,
+        "license": "CC BY-NC-ND 4.0"
+      },
+      {
+        "dataset": "Deeply public subset",
+        "revision": "1c9cdb8ca1ba79bf982c97b16fb40657420c9cba",
+        "source_url": "https://www.openslr.org/97/",
+        "clips": 18,
+        "known_speakers": 2,
+        "rooms": 3,
+        "new_reference_texts": 5,
+        "devices": 1,
+        "distance_m": 0.4,
+        "license": "CC BY-NC-ND 4.0"
+      },
+      {
+        "dataset": "KMSAV cached interview",
+        "source_url": "https://github.com/etri/kmsav",
+        "new_collection": false,
+        "additional_manual_ranges": 18,
+        "reference_chars": 244,
+        "seconds": 56.144,
+        "annotations_license": "CC BY-NC-SA 4.0"
+      }
+    ],
+    "clips": [
+      {
+        "id": "67CV7J6E7Iic-ZBNO2Drz36c-0173",
+        "group": "new-pansori16",
+        "sha256": "53521dd89ea5fd94222a96ba8d1ba99f41fe4bbfcfd076d798ad14d8ad43d936"
+      },
+      {
+        "id": "67CV7J6E7Iic-ZBNO2Drz36c-0325",
+        "group": "new-pansori16",
+        "sha256": "eb8aa97f5eb2562940195c82adb7e1910cd5f18d980003ad23c43932c4b30308"
+      },
+      {
+        "id": "6rmA6riw7LC9-WRd7fHY3enA-0191",
+        "group": "new-pansori16",
+        "sha256": "9de542ee038488ec71233586e7a8badd90eaeaec0058c9247e0229955e8bd42f"
+      },
+      {
+        "id": "6rmA6riw7LC9-WRd7fHY3enA-0238",
+        "group": "new-pansori16",
+        "sha256": "fcea9a64f75bfb75cc52d47902ec240c50abb29557134132a0d9453b441e1990"
+      },
+      {
+        "id": "6rmA7JiB7ZWY-zRvDWVfib2c-0112",
+        "group": "new-pansori16",
+        "sha256": "f5419d2bfc76bfce110916206feb5397de94bd140521b02735b5626014b4ad00"
+      },
+      {
+        "id": "6rmA7JiB7ZWY-zRvDWVfib2c-0236",
+        "group": "new-pansori16",
+        "sha256": "04ecf9b29181c416473533b3b434f14c1e699febd3a788bffcdc5f2218e1fb08"
+      },
+      {
+        "id": "7Iug6re87Iud-8-dSwR5iUyY-0121",
+        "group": "new-pansori16",
+        "sha256": "ab94618fcac1d9f9e475d6629bc86b1f86d32721866709a511f4a19a35bd2f84"
+      },
+      {
+        "id": "7Iug6re87Iud-8-dSwR5iUyY-0174",
+        "group": "new-pansori16",
+        "sha256": "de29b603af9f7bf27bb266103ee417dd7680d49d19dba9434da80710e4371cbc"
+      },
+      {
+        "id": "7J207IOB7J2A-43V_QSHvEP0-0035",
+        "group": "new-pansori16",
+        "sha256": "991deb29221fc8f1dcde7ac9102d9042134e734f37bb37de72019c392d2a9409"
+      },
+      {
+        "id": "7J207IOB7J2A-43V_QSHvEP0-0064",
+        "group": "new-pansori16",
+        "sha256": "829f62ad5c7eece8faa506626c27964b199712bf4ed534126a6a7832f5d5eeae"
+      },
+      {
+        "id": "7J207ZiE7KCV-R15jiXaSYik-0161",
+        "group": "new-pansori16",
+        "sha256": "4e02f7a8a7ca613413304367404f02d3cecfe15d3b4c277a07dc7742dfe1b1a1"
+      },
+      {
+        "id": "7J207ZiE7KCV-R15jiXaSYik-0236",
+        "group": "new-pansori16",
+        "sha256": "1b78bb916b3fbf1f9506e72725786c813083565332ba72e01c91d84955ce06ce"
+      },
+      {
+        "id": "7Jyk7Jes7KSA-LnGadr1MDs8-0074",
+        "group": "new-pansori16",
+        "sha256": "6ddc646fe5566011b990ea41eff754ae58fc5405e85dcd65877b73e053699e12"
+      },
+      {
+        "id": "7Jyk7Jes7KSA-LnGadr1MDs8-0166",
+        "group": "new-pansori16",
+        "sha256": "e672efc201f19d5f9b72c0b45a00508498d0c17547d969f0439272e398369e2e"
+      },
+      {
+        "id": "7Zmp64aN66y4-beK1Iw23nc8-0143",
+        "group": "new-pansori16",
+        "sha256": "430975279bde211dd918ba233150701f53988ef04dbff845fec1991f385f5beb"
+      },
+      {
+        "id": "7Zmp64aN66y4-beK1Iw23nc8-0218",
+        "group": "new-pansori16",
+        "sha256": "52d9165ab6673ed5e34ecdb1660d42ed814ce06e9ddbd769e245ff3722b4efd7"
+      },
+      {
+        "id": "sub100100a00010",
+        "group": "new-deeply18",
+        "sha256": "92f5c198a378e86fcb52c3701dae69f6e71fa25ba110ba400ba72a964a2a92c5"
+      },
+      {
+        "id": "sub100120a00010",
+        "group": "new-deeply18",
+        "sha256": "9e68dc014dbbca762701424bfc44497668a63176b29634823e21aa1296ca094f"
+      },
+      {
+        "id": "sub100110a00010",
+        "group": "new-deeply18",
+        "sha256": "12918cc1cb44b2352e8f13fe0fe33490c666468ed4a5752711f4c362d3f21bda"
+      },
+      {
+        "id": "sub100101a00028",
+        "group": "new-deeply18",
+        "sha256": "493eec4709cf6b43160f829da6a867e7f9b6f8574799a57f7ecdac3e24f7afd2"
+      },
+      {
+        "id": "sub100121a00028",
+        "group": "new-deeply18",
+        "sha256": "a634e7fcc3b4e14aee68ed8cbd68083be5e81548ca1a5edddc6f6ed6fdacf68c"
+      },
+      {
+        "id": "sub100111a00028",
+        "group": "new-deeply18",
+        "sha256": "5d3f70fe24873648bc91510a2983ac12494b3b2a6444dae1fa6a67408fb639dc"
+      },
+      {
+        "id": "sub100102a00028",
+        "group": "new-deeply18",
+        "sha256": "e871a44321fb05f54df8e7a06c23e530a1e6fe53bba32f7a83d8127ac091f609"
+      },
+      {
+        "id": "sub100122a00028",
+        "group": "new-deeply18",
+        "sha256": "7d614e0cab32fb3c0286226ac539392088c264424bdafeca6f2663b106793b27"
+      },
+      {
+        "id": "sub100112a00028",
+        "group": "new-deeply18",
+        "sha256": "e92e2c4bb6f63d1df1a04eafce842216dad65631fa955eb785653d0cdbdaa2e1"
+      },
+      {
+        "id": "sub100100a00007",
+        "group": "new-deeply18",
+        "sha256": "2611f96c4cc7053c89efe9eea3d6a99a8aad61ef4124aec08cf06833b534d2a9"
+      },
+      {
+        "id": "sub100120a00007",
+        "group": "new-deeply18",
+        "sha256": "14e3d80d5799c20052e338f2bc35e70b54b31f07504550def1dc53eb4aa07634"
+      },
+      {
+        "id": "sub100110a00007",
+        "group": "new-deeply18",
+        "sha256": "fabc889b59a8c19fa84cac9b83489490bed4022231c92c079288602e45742c2f"
+      },
+      {
+        "id": "sub100101a00031",
+        "group": "new-deeply18",
+        "sha256": "510c578dc6d150b8606f2fc7165536091a63aa4c35ab0d929417d4d962b83b2c"
+      },
+      {
+        "id": "sub100121a00031",
+        "group": "new-deeply18",
+        "sha256": "282950dec44b3bcdda6536356ca2cec8086a22bba61d8e10978753172884c165"
+      },
+      {
+        "id": "sub100111a00031",
+        "group": "new-deeply18",
+        "sha256": "9dd8fd5f009f143d885903f535f6625498c36f1d3a7cbcd10bf9e941a941ffe5"
+      },
+      {
+        "id": "sub100102a00065",
+        "group": "new-deeply18",
+        "sha256": "2b57f62cdf7190278896db7c38e92c2ba96826a845c13ccfa7c5031e33217978"
+      },
+      {
+        "id": "sub100122a00065",
+        "group": "new-deeply18",
+        "sha256": "480c91809efd3bbcca337b722c2d52c829dd228b587e74e45a92280d8c388692"
+      },
+      {
+        "id": "sub100112a00065",
+        "group": "new-deeply18",
+        "sha256": "80cdc95603d9b913245591313e3f8d147aaa0bb128ebbd2e0f5bcada00258328"
+      },
+      {
+        "id": "FcD65i_7cas-label-000007.txt",
+        "group": "cached-kmsav18",
+        "sha256": "894708d0eb34da775fb7d253f18492ce88239f56638554cd7a387009f4029f50"
+      },
+      {
+        "id": "FcD65i_7cas-label-000009.txt",
+        "group": "cached-kmsav18",
+        "sha256": "00c0ceb419ca56d85feab3a77155e15afc377cb25e57971a4015911d99755cb8"
+      },
+      {
+        "id": "FcD65i_7cas-label-000013.txt",
+        "group": "cached-kmsav18",
+        "sha256": "749dad7f0fc58bca58413ca24e4799b4883cb151d936c869c3c58bba986321dc"
+      },
+      {
+        "id": "FcD65i_7cas-label-000014.txt",
+        "group": "cached-kmsav18",
+        "sha256": "a722959e3a48f51d11f100c82e501b2212d83f380b56a0b7abaabd2220003593"
+      },
+      {
+        "id": "FcD65i_7cas-label-000022.txt",
+        "group": "cached-kmsav18",
+        "sha256": "56535ca7848d9874dbcf6fd8fe91ed8752d019e2bad9bf29c7c756c21125ef6b"
+      },
+      {
+        "id": "FcD65i_7cas-label-000023.txt",
+        "group": "cached-kmsav18",
+        "sha256": "efd4c7d7fb37d507f4d0cd527b6d4fd7f527c3d06670b0200840d38a7a71dda7"
+      },
+      {
+        "id": "FcD65i_7cas-label-000024.txt",
+        "group": "cached-kmsav18",
+        "sha256": "936a8c54e54eecc5215a8c3728ad642138c0d7a2a7dfe13afaca5ea48e614ce2"
+      },
+      {
+        "id": "FcD65i_7cas-label-000031.txt",
+        "group": "cached-kmsav18",
+        "sha256": "61a839d461a28d7193e87e6639d61c7eb637f343882bd17238b734207c2c6d20"
+      },
+      {
+        "id": "FcD65i_7cas-label-000033.txt",
+        "group": "cached-kmsav18",
+        "sha256": "436db391cbc0d97c43b21e15876491628d83997e86a7a32935e245591de132a0"
+      },
+      {
+        "id": "FcD65i_7cas-label-000036.txt",
+        "group": "cached-kmsav18",
+        "sha256": "0947fc9378eccd73a6ac28d8c77726074b492c4a97db22f3ed19566c05dccefd"
+      },
+      {
+        "id": "FcD65i_7cas-label-000037.txt",
+        "group": "cached-kmsav18",
+        "sha256": "bbd653fe051f6667079fd8239728fbe732fc2657100fb3a1803fc32e18a4fc92"
+      },
+      {
+        "id": "FcD65i_7cas-label-000039.txt",
+        "group": "cached-kmsav18",
+        "sha256": "b8643c48c6aa9fccaddd63cc5420392bad27c959300a5b16f84b3b7b634362b5"
+      },
+      {
+        "id": "FcD65i_7cas-label-000043.txt",
+        "group": "cached-kmsav18",
+        "sha256": "1905b58f7156f65c54e08235df4aa61f6fcbb9bcaf11a71b77e7346e18d416b2"
+      },
+      {
+        "id": "FcD65i_7cas-label-000044.txt",
+        "group": "cached-kmsav18",
+        "sha256": "6b9e2abeac8bd3978c3340148a82149a0e9ab154048aee756b41d975679e5db1"
+      },
+      {
+        "id": "FcD65i_7cas-label-000046.txt",
+        "group": "cached-kmsav18",
+        "sha256": "28039b21954fc066d209bf5578ffaa44daf11ccf867a8b6174acb87f4daf1648"
+      },
+      {
+        "id": "FcD65i_7cas-label-000050.txt",
+        "group": "cached-kmsav18",
+        "sha256": "79f4621cc0bc85aba589452115560c6454686cc13f019504515a9848c115b40e"
+      },
+      {
+        "id": "FcD65i_7cas-label-000051.txt",
+        "group": "cached-kmsav18",
+        "sha256": "48e54a217194393acecf0eadf12110f71ada7114cc7fe60bc835583befa56fd9"
+      },
+      {
+        "id": "FcD65i_7cas-label-000058.txt",
+        "group": "cached-kmsav18",
+        "sha256": "8600e985126fb1279e898c25eb9b13e6f3b5e0b59bf002121ce3630f838b3c2c"
+      }
+    ],
+    "limitations": [
+      "Not independent speakers per clip; room/text pairs are repeated conditions.",
+      "Cached KMSAV original has previously been decoded; not an independent holdout.",
+      "Publisher/manual references were not independently corrected by listening; digit spelling and transcript errors affect CER.",
+      "No full aligned reference for the whole multi-speaker conversation; no whole-conversation CER or semantic hallucination rate.",
+      "Accuracy runs are separate from actual microphone durability; no new model download or API transmission.",
+      "Inference times are not reported: other validation tasks ran on the same Mac."
+    ]
+  },
+  "checks": {
+    "python_tests": 367,
+    "frontend_tests": 56,
+    "typescript_vite_build": true,
+    "installed_mac_build": "0.2.1 (9)",
+    "installed_app_code_signature_verified": true,
+    "installed_app_home_observed": true,
+    "production_database_tables_unchanged": 39,
+    "production_launch_settings_unchanged": true
+  },
+  "recovery": {
+    "actual_system_sleep_seconds": [
+      61,
+      58,
+      43
+    ],
+    "first_and_state_only_attempts_failed": true,
+    "final_input_return_attempt_succeeded": true,
+    "final_resume_uses_same_capture": true,
+    "new_segment_recording_and_frames_observed": true,
+    "between_segments_gap_ms": 48639.33333333333,
+    "longest_continuous_actual_microphone_seconds": 754.0666666666667,
+    "post_wake_audio_seconds_preserved": 68.5,
+    "native_app_sigkill": {
+      "server_gone": true,
+      "port_closed": true,
+      "elapsed_seconds": 1.2083087500650436
+    },
+    "preservation": {
+      "all_committed_pcm_prefixes_equal": true,
+      "all_page_revisions_equal": true,
+      "page_revisions": 5,
+      "no_recording_left_active": true
+    },
+    "failed_page_save_then_app_and_server_sigkill": {
+      "old_revisions_equal": true,
+      "old_revision_count": 5,
+      "recovered_revision": 6,
+      "memo_characters": 96,
+      "ink_strokes": 3,
+      "ink_point_counts": [
+        1,
+        2,
+        2
+      ],
+      "recovered_memo_and_ink_equal_exported_failed_draft": true,
+      "committed_pcm_prefixes_unchanged": true,
+      "fault": "QA page PUT 503 then exact app+server SIGKILL"
+    },
+    "limitations": [
+      "The final input-return fix was retested in a shorter capture with actual system sleep; no final 30-60 minute or overnight run.",
+      "Completed strokes and persisted local drafts only; no claim about a still-active pen-down gesture or storage transaction not yet completed.",
+      "No physical power failure, disk failure, external microphone matrix or fresh-machine install.",
+      "Only one automatic recovery; another interruption retains the manual restart policy."
+    ]
+  }
+}

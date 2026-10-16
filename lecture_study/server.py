@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse, FileResponse, StreamingResponse,Plai
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, ValidationError
 from .config import AppConfig,acquire_data_lock
+from .process_owner import native_owner,watch_owner
 from .runtime import probe_runtime,prepare_runtime,component_status
 from .db import open_db, now, new_id, create_session, session,course
 from .models import CourseInput, SessionInput, Input,OwnerInput,PageDocumentInput
@@ -45,6 +46,7 @@ def token_matches(value,expected):
     return isinstance(value,str) and secrets.compare_digest(value.encode('utf-8'),expected.encode('utf-8'))
 
 def create_app(config: AppConfig) -> FastAPI:
+    owner=native_owner()
     instance=acquire_data_lock(config.data_dir)
     try:
         db = open_db(config.data_dir)
@@ -57,6 +59,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app):
+        owner_task=asyncio.create_task(watch_owner(owner)) if owner else None
         try:
             saved=db.execute("SELECT value FROM settings WHERE key='local_connection'").fetchone()
             if saved:
@@ -73,6 +76,9 @@ def create_app(config: AppConfig) -> FastAPI:
         finally:
             app.state.closing=True
             try:
+                if owner_task:
+                    owner_task.cancel()
+                    await asyncio.gather(owner_task,return_exceptions=True)
                 for task in list(app.state.tasks):
                     task.cancel()
                 await asyncio.gather(*app.state.tasks,return_exceptions=True)

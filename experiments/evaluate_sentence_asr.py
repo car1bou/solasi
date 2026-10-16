@@ -1,7 +1,8 @@
-"""Same fixed 90 human clips; references are used only for scoring, no downloads.
+"""Fixed human clips; references are used only for scoring, no downloads.
 
 Run with app .venv for whisper/qwen-review, existing qwen-eval-venv for qwen.
 Raw results contain human transcripts: use /private/tmp, not tracked docs.
+Default: existing 90 conditions. --manifest PATH: a separately frozen selection.
 """
 import argparse,ast,asyncio,hashlib,json,math,os,time,unicodedata
 from pathlib import Path
@@ -20,7 +21,15 @@ def token_scores(body):
     return values
 
 
-async def main(engine,output):
+def load_clips(manifest=None):
+    paths={str(manifest):Path(manifest)} if manifest else {name:RUNTIME/name for name in MANIFESTS}
+    clips=[clip for path in paths.values() for clip in json.loads(path.read_text())['clips']]
+    if not clips or len({c['sha256']for c in clips})!=len(clips):raise ValueError('Empty or duplicate audio selection')
+    if manifest is None and len(clips)!=90:raise ValueError('The fixed selection must contain 90 clips')
+    return clips,{name:hashlib.sha256(path.read_bytes()).hexdigest()for name,path in paths.items()}
+
+
+async def main(engine,output,manifest=None):
     if output.exists():raise ValueError('Use a new output file')
     if output.is_relative_to(ROOT)and not output.is_relative_to(RUNTIME):raise ValueError('Human transcript output must stay outside tracked source')
     # Reuse pure metrics without importing app dependencies into the separate MLX environment.
@@ -29,11 +38,8 @@ async def main(engine,output):
     exec(compile(ast.Module(body=[metrics[n]for n in ('normalize','edit_distance','score','character_errors')],type_ignores=[]),'shared_metrics','exec'),globals())
     assert score('가 나','가나')['edits']==0 and score('가나다','가마')['edits']==2
     assert token_scores(b'word\t0.5\n[_SOT_]\t1.0\n')==[.5]
-    clips=[]
-    for name in MANIFESTS:
-        clips.extend(json.loads((RUNTIME/name).read_text())['clips'])
-    assert len(clips)==90 and len({c['sha256']for c in clips})==90
-    report={'completed':False,'engine':engine,'condition':'Same fixed human clips, Korean, no reference hints, serial offline diagnostic; no default model change or calibrated confidence claim','manifest_sha256':{name:hashlib.sha256((RUNTIME/name).read_bytes()).hexdigest()for name in MANIFESTS},'rows':[]}
+    clips,proof=load_clips(manifest)
+    report={'completed':False,'engine':engine,'condition':'Same fixed human clips, Korean, no reference hints, serial offline diagnostic; no default model change or calibrated confidence claim','manifest_sha256':proof,'rows':[]}
     if engine=='qwen':
         os.environ['HF_HUB_OFFLINE']='1';os.environ['TRANSFORMERS_OFFLINE']='1'
         model_path=RUNTIME/'qwen3-asr-1.7b-4bit';proof=json.loads((model_path/'provenance.json').read_text())
@@ -79,5 +85,5 @@ async def main(engine,output):
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('engine',choices=('whisper','qwen','qwen-review'));parser.add_argument('--output',type=Path,required=True)
-    args=parser.parse_args();asyncio.run(main(args.engine,args.output.resolve()))
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('engine',choices=('whisper','qwen','qwen-review'));parser.add_argument('--output',type=Path,required=True);parser.add_argument('--manifest',type=Path)
+    args=parser.parse_args();asyncio.run(main(args.engine,args.output.resolve(),args.manifest))

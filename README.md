@@ -118,6 +118,7 @@ npm run build
 - [Mac 대본·필기 저장·내보내기 검증](docs/mac-script-validation.md)
 - [긴 한국어 파일 전사·요약 동시 실행](docs/mac-long-file-validation.md)
 - [Mac 마이크 시작·핵심 원문 요약 재검증](docs/mac-microphone-summary-validation.md)
+- [Mac 실제 절전·강제 종료·미저장 필기 복구와 추가 한국어 음성](docs/mac-recovery-validation.md)
 - [사람 음성 ASR 비교](docs/asr-model-comparison.md)
 - [메모 보강·요약 병합·질문 후보](docs/assistance.md)
 - [연속 사람 음성 14분 38초 동시 실행](docs/long-human-recording.md)

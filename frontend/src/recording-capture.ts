@@ -3,7 +3,7 @@ import {encodeFrame,withinBuffer} from './audio-wire.ts';
 
 export type TranscriptionMode='after_stop'|'realtime';
 export type RecordingState={phase:'idle'|'starting'|'recording'|'recovering'|'stopping';seconds:number;pending:number;error:string;recovered:boolean};
-type Segment={id:string;rate:number;end:number;lastPCM:number;lastTick:number;mutedAt:number|null;ending:boolean;acceptFrames:boolean;confirmed:boolean;deferred:boolean;packets:Map<number,{frames:number;sent:number}>;context?:AudioContext;node?:AudioWorkletNode;microphone?:MediaStreamAudioSourceNode;mute?:GainNode;socket?:WebSocket;flush?:()=>void;closing?:Promise<void>};
+type Segment={id:string;rate:number;end:number;liveEnd:number;lastPCM:number;lastTick:number;mutedAt:number|null;ending:boolean;acceptFrames:boolean;confirmed:boolean;deferred:boolean;packets:Map<number,{frames:number;sent:number}>;context?:AudioContext;node?:AudioWorkletNode;microphone?:MediaStreamAudioSourceNode;mute?:GainNode;socket?:WebSocket;flush?:()=>void;closing?:Promise<void>};
 
 async function limited<T>(operation:Promise<T>,ms:number,message:string):Promise<T>{
   let timer:ReturnType<typeof setTimeout>;
@@ -53,7 +53,7 @@ export class RecordingCapture{
   }
   private async openSegment(){
     if(this.finished)return;
-    const previous=this.segment?.id,context=new AudioContext(),s:Segment={id:'',rate:context.sampleRate,end:0,lastPCM:Date.now(),lastTick:Date.now(),mutedAt:null,ending:false,acceptFrames:true,confirmed:false,deferred:false,packets:new Map(),context};
+    const previous=this.segment?.id,context=new AudioContext(),s:Segment={id:'',rate:context.sampleRate,end:0,liveEnd:0,lastPCM:Date.now(),lastTick:Date.now(),mutedAt:null,ending:false,acceptFrames:true,confirmed:false,deferred:false,packets:new Map(),context};
     this.segment=s;
     try{
       s.id=(await this.request<{recording_id:string}>('/sessions/'+this.sessionId+'/audio/start',{sample_rate:s.rate,transcription_mode:this.transcriptionMode,resume_from:previous||undefined})).recording_id;
@@ -89,6 +89,7 @@ export class RecordingCapture{
         if(data.type!=='frame'||!s.acceptFrames||this.segment!==s)return;
         if(!s.ending)this.checkHealth();
         s.end=data.first_frame+data.samples.length;s.lastPCM=Date.now();
+        if(context.state==='running'&&this.stream?.getAudioTracks().every(t=>t.readyState==='live'&&!t.muted))s.liveEnd=s.end;
         if(!withinBuffer(this.pending(s),data.samples.length,s.rate)||socket.readyState!==WebSocket.OPEN){if(this.current(s))void this.fail('녹음 전송 지연',true);return;}
         s.packets.set(data.seq,{frames:data.samples.length,sent:Date.now()});
         try{socket.send(encodeFrame(data.seq,data.first_frame,data.samples));}
@@ -124,7 +125,17 @@ export class RecordingCapture{
     if(!canRecover){this.recovering=false;await this.terminate(reason);return;}
     this.recovered=true;this.update({phase:'recovering',error:reason+' · 새 녹음 구간으로 복구 중'});
     try{
-      const s=this.segment;if(s){await this.closeSegment(s,true,reason);this.recordedSeconds+=s.end/s.rate;}
+      const s=this.segment;
+      // WebKit pauses before system sleep; a new context would spend recovery before input returns.
+      if(s?.context&&s.context.state!=='running'){
+        this.update({error:'오디오 복귀 대기 · 종료하면 받은 원음을 보존합니다'});
+        const before=s.end;let resumeError:unknown;
+        void s.context.resume().catch(e=>{resumeError=e;});
+        while(!this.finished&&!resumeError&&this.stream?.getAudioTracks().some(t=>t.readyState==='live')&&s.liveEnd<=before)await new Promise(resolve=>setTimeout(resolve,250));
+        if(resumeError)throw resumeError;
+      }
+      if(this.finished)return;
+      if(s){await this.closeSegment(s,true,reason);this.recordedSeconds+=s.end/s.rate;}
       if(this.finished)return;
       if(!this.stream?.getAudioTracks().some(t=>t.readyState==='live'))throw new Error('마이크 입력이 종료됐습니다');
       await this.openSegment();

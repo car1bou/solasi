@@ -115,6 +115,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             environment["PYTHONPATH"] = settings.source
             environment["PYTHONDONTWRITEBYTECODE"] = "1"
             environment["PYTHONUNBUFFERED"] = "1"
+            environment["SOLASI_OWNER_PID"] = String(ProcessInfo.processInfo.processIdentifier)
             process.environment = environment
             process.standardOutput = pipe
             process.standardError = log

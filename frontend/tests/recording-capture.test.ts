@@ -65,8 +65,49 @@ test('ended microphone is terminal and never prompts for a replacement',async t=
 
 test('suspended context recovers into a new segment and stop prevents late revival',async t=>{
   const f=setup(t);await f.capture.start();f.nodes[0].frame();await flush();f.contexts[0].state='suspended';f.contexts[0].dispatchEvent(new Event('statechange'));await flush();
+  f.nodes[0].frame();await flush();await f.tick(250);
   assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,2);await f.capture.stop();await f.tick(20000);
   assert.equal(f.states.at(-1).phase,'idle');assert.equal(f.track.readyState,'ended');assert.ok(f.contexts.every(c=>c.state==='closed'));
+});
+
+test('WebKit interruption waits for fresh unmuted input before spending the one recovery',async t=>{
+  const f=setup(t);await f.capture.start();f.nodes[0].frame();await flush();
+  t.mock.method(f.contexts[0],'resume',async()=>{});
+  f.contexts[0].state='interrupted';f.contexts[0].dispatchEvent(new Event('statechange'));await flush();
+  await f.tick(60000);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);
+  assert.equal(f.states.at(-1).phase,'recovering');
+  f.contexts[0].state='running';f.contexts[0].dispatchEvent(new Event('statechange'));await f.tick(250);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);
+  f.track.muted=true;f.nodes[0].frame();await flush();f.track.muted=false;await f.tick(250);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);
+  f.nodes[0].frame();await flush();await f.tick(250);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,2);
+  f.nodes.at(-1).frame();await flush();assert.equal(f.states.at(-1).phase,'recording');assert.equal(f.acquisitions(),1);
+});
+
+test('stop during WebKit interruption cannot revive recording',async t=>{
+  const f=setup(t);await f.capture.start();f.nodes[0].frame();await flush();
+  t.mock.method(f.contexts[0],'resume',async()=>{});
+  f.contexts[0].state='interrupted';f.contexts[0].dispatchEvent(new Event('statechange'));await flush();
+  await f.capture.stop();f.contexts[0].state='running';await f.tick(250);
+  assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);
+  assert.equal(f.states.at(-1).phase,'idle');assert.equal(f.track.readyState,'ended');
+});
+
+test('ended microphone during WebKit interruption closes without acquiring again',async t=>{
+  const f=setup(t);await f.capture.start();f.nodes[0].frame();await flush();
+  t.mock.method(f.contexts[0],'resume',async()=>{});
+  f.contexts[0].state='interrupted';f.contexts[0].dispatchEvent(new Event('statechange'));await flush();
+  f.track.readyState='ended';f.track.dispatchEvent(new Event('ended'));await f.tick(250);
+  assert.equal(f.states.at(-1).phase,'idle');assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);assert.equal(f.acquisitions(),1);
+});
+
+test('rejected WebKit resume is reported instead of waiting forever',async t=>{
+  const f=setup(t);await f.capture.start();f.nodes[0].frame();await flush();
+  t.mock.method(f.contexts[0],'resume',async()=>{throw new Error('resume refused');});
+  f.contexts[0].state='interrupted';f.contexts[0].dispatchEvent(new Event('statechange'));await flush();await f.tick(250);
+  assert.equal(f.states.at(-1).phase,'idle');assert.match(f.states.at(-1).error,/resume refused/);assert.equal(f.calls.filter(c=>c.url.endsWith('/audio/start')).length,1);
 });
 
 test('missing worklet flush response is persisted as interrupted',async t=>{

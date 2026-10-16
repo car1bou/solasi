@@ -110,7 +110,7 @@ def main():
         (resources / "launch.json").write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
         shutil.copyfile(source / "macos/Solasi.icns", resources / "Solasi.icns")
         with (contents / "Info.plist").open("wb") as handle:
-            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": BUNDLE_ID, "CFBundleName": "Solasi", "CFBundleDisplayName": "Solasi", "CFBundlePackageType": "APPL", "CFBundleIconFile": "Solasi.icns", "CFBundleShortVersionString": "0.2.1", "CFBundleVersion": "8", "LSMinimumSystemVersion": "13.0", "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.", "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True}}, handle)
+            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": BUNDLE_ID, "CFBundleName": "Solasi", "CFBundleDisplayName": "Solasi", "CFBundlePackageType": "APPL", "CFBundleIconFile": "Solasi.icns", "CFBundleShortVersionString": "0.2.1", "CFBundleVersion": "9", "LSMinimumSystemVersion": "13.0", "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.", "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True}}, handle)
         subprocess.run(["/usr/bin/xcrun", "swiftc", "-O", "-target", f"{architecture}-apple-macosx13.0", "-module-cache-path", str(Path(folder) / "module-cache"), str(source / "macos/Solasi.swift"), "-o", str(binary)], check=True)
         subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(bundle)], check=True)
         subprocess.run(["/usr/bin/codesign", "--verify", "--strict", "--verbose=2", str(bundle)], check=True)
