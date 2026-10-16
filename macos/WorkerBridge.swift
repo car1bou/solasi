@@ -83,12 +83,17 @@ final class WorkerBridge {
         var decoder = WorkerFrame()
         do {
             while true {
-                let bytes = output.fileHandleForReading.availableData
-                if bytes.isEmpty { return }
-                for (header, body) in try decoder.append(bytes) {
-                    // The worker waits for consumption ACK before sending another body chunk.
-                    DispatchQueue.main.sync { self.received(header, body) }
+                // This work item lives until EOF; release Foundation buffers after each read.
+                let hasData = try autoreleasepool {
+                    let bytes = output.fileHandleForReading.availableData
+                    if bytes.isEmpty { return false }
+                    for (header, body) in try decoder.append(bytes) {
+                        // The worker waits for consumption ACK before sending another body chunk.
+                        DispatchQueue.main.sync { self.received(header, body) }
+                    }
+                    return true
                 }
+                if !hasData { return }
             }
         } catch {
             DispatchQueue.main.async { if self.process.isRunning { self.process.terminate() } }
