@@ -30,7 +30,7 @@
 body{margin:0}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:9px 16px;color:var(--ink)}
-button:hover{border-color:var(--primary);background:var(--primary-soft)}
+button:where(:not(:disabled)):hover{border-color:var(--primary);background:var(--primary-soft)}
 button:disabled{cursor:wait;opacity:.5}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
 input,select,textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
@@ -318,7 +318,8 @@ h1{font-size:31px}
 
 /* Shared application chrome and reading surfaces. */
 body{background:var(--canvas)}
-button{transition:background .15s,border-color .15s,box-shadow .15s;min-height:38px}
+/* Native button state and theme feedback must paint immediately. */
+button{min-height:38px}
 button:not(:disabled):active{background:var(--selected);color:var(--selected-ink)}
 .skip-link{position:fixed;top:40px;left:12px;z-index:100;padding:10px 16px;border-radius:8px;background:var(--primary);color:var(--on-primary);transform:translateY(-200%)}
 .skip-link:focus{transform:none}
@@ -445,7 +446,7 @@ small,.muted{color:var(--muted)}
 .ink-toolbar button[aria-pressed=true]{color:var(--primary);background:var(--primary-soft);border-color:var(--accent-line)}
 .icon-button,.ink-toolbar .icon-button,.notebook-heading .icon-button{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;min-width:40px;height:40px;min-height:40px;padding:8px}
 .icon-label-button,.ink-toolbar .icon-label-button,.notebook-heading .icon-label-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;white-space:nowrap}
-.ink-toolbar .ink-tool-button[aria-pressed=true]{box-shadow:inset 0 -3px 0 currentColor}
+.ink-toolbar button[aria-pressed=true]{box-shadow:inset 0 -3px 0 currentColor}
 .ink-active-tool{color:var(--ink);font-weight:650}
 .ink-tool-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding-right:10px;border-right:1px solid var(--line)}
 .ink-tool-group:last-child{border-right:0;padding-right:0}
@@ -521,7 +522,6 @@ small,.muted{color:var(--muted)}
 }
 @media(any-pointer:coarse){.app-shell button,.sidebar .sidebar-add,.session-management button,.notebook-heading button,.recorder .primary,.ink-toolbar button{min-height:44px;min-width:44px}}
 @media(any-pointer:coarse){.icon-button,.ink-toolbar .icon-button,.notebook-heading .icon-button,.icon-label-button,.ink-toolbar .icon-label-button,.notebook-heading .icon-label-button{min-width:44px;min-height:44px}}
-@media(prefers-reduced-motion:reduce){button{transition:none}}
 .native-audio{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;max-width:100%;padding:.5rem 0}
 .native-audio input[aria-label="원음 재생 위치"]{flex:1;min-width:100px;width:auto}
 .native-audio input[aria-label="원음 음량"]{width:70px}
