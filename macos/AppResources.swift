@@ -51,6 +51,10 @@ enum AppResourcePolicy {
 final class ExclusiveExport {
     let destination: URL, staging: URL
     private var handle: FileHandle?
+    static func prepare(destination: URL?) -> Result<ExclusiveExport?, Error> {
+        guard let destination = destination else { return .success(nil) }
+        return Result { try ExclusiveExport(destination: destination) }
+    }
     init(destination: URL) throws {
         self.destination = destination
         staging = destination.deletingLastPathComponent().appendingPathComponent(".solasi-export-" + UUID().uuidString)
@@ -60,13 +64,20 @@ final class ExclusiveExport {
     }
     func append(_ data: Data) throws {
         guard let handle = handle else { throw BridgeFailure.invalid("내보내기가 이미 끝났습니다.") }
-        try handle.write(contentsOf: data)
+        do { try handle.write(contentsOf: data) }
+        catch { throw preserveFailure(error) }
     }
     func finish() throws {
-        try handle?.synchronize(); try handle?.close(); handle = nil
+        do { try handle?.synchronize(); try handle?.close(); handle = nil }
+        catch { throw preserveFailure(error) }
         guard renamex_np(staging.path, destination.path, UInt32(RENAME_EXCL)) == 0 else {
             throw BridgeFailure.invalid("기존 파일은 보존했습니다. 내보낸 사본: " + staging.path)
         }
+    }
+    func preserveFailure(_ error: Error) -> Error {
+        guard handle != nil else { return error }
+        try? handle?.close(); handle = nil
+        return BridgeFailure.invalid(error.localizedDescription + " · 일부만 저장된 사본(완성본 아님): " + staging.path)
     }
     func cancel() { try? handle?.close(); handle = nil; try? FileManager.default.removeItem(at: staging) }
 }

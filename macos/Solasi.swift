@@ -385,9 +385,11 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         if op == "export_text" {
             guard consumeClick(page), let text = body["text"] as? String, text.utf8.count <= 64 * 1024 * 1024,
                   let filename = body["filename"] as? String, filename.utf8.count < 256 else { replyHandler(nil, "내보내기 버튼을 다시 눌러 주세요."); return }
-            saveDestination(page: page, filename: filename) { export in
-                guard let export = export else { replyHandler(["cancelled":true], nil); return }
-                do { try export.append(Data(text.utf8)); try export.finish(); replyHandler(["saved":true], nil) }
+            saveDestination(page: page, filename: filename) { selection in
+                do {
+                    guard let export = try selection.get() else { replyHandler(["cancelled":true], nil); return }
+                    try export.append(Data(text.utf8)); try export.finish(); replyHandler(["saved":true], nil)
+                }
                 catch { replyHandler(nil, error.localizedDescription) }
             }
             return
@@ -464,18 +466,17 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         }
     }
 
-    private func saveDestination(page: AppWindow, filename: String, completion: @escaping (ExclusiveExport?) -> Void) {
+    private func saveDestination(page: AppWindow, filename: String, completion: @escaping (Result<ExclusiveExport?, Error>) -> Void) {
         let panel = NSSavePanel()
         panel.title = "Solasi 내보내기"; panel.message = "기존 파일은 보존합니다. 새 파일 이름을 선택하세요."
         panel.nameFieldStringValue = (filename as NSString).lastPathComponent; panel.canCreateDirectories = true
         panel.beginSheetModal(for: page.window) { result in
-            guard result == .OK, let destination = panel.url else { completion(nil); return }
+            guard result == .OK, let destination = panel.url else { completion(ExclusiveExport.prepare(destination: nil)); return }
             if FileManager.default.fileExists(atPath: destination.path) {
                 let alert = NSAlert(); alert.messageText = "기존 파일을 덮어쓰지 않습니다"; alert.informativeText = "다른 파일 이름이나 저장 위치를 선택하세요."
                 alert.beginSheetModal(for: page.window) { _ in self.saveDestination(page: page, filename: filename, completion: completion) }; return
             }
-            do { completion(try ExclusiveExport(destination: destination)) }
-            catch { page.showStatus("저장 위치를 준비할 수 없습니다. " + error.localizedDescription); completion(nil) }
+            completion(ExclusiveExport.prepare(destination: destination))
         }
     }
 
@@ -486,8 +487,10 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         let path = components.string!
         guard AppResourcePolicy.resourcePath(path) else { return }
         let suffix = components.queryItems?.first(where: { $0.name == "format" })?.value == "txt" ? "txt" : "md"
-        saveDestination(page: page, filename: "Solasi-내보내기." + suffix) { export in
-            guard let export = export else { return }
+        saveDestination(page: page, filename: "Solasi-내보내기." + suffix) { selection in
+            let export: ExclusiveExport
+            do { guard let selected = try selection.get() else { return }; export = selected }
+            catch { page.showStatus("저장 위치를 준비할 수 없습니다. " + error.localizedDescription); return }
             var successful = false
             self.worker.request(["op":"http","method":"GET","path":path]) { header, bytes in
                 switch header["event"] as? String {
@@ -496,10 +499,10 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
                     if !successful { throw BridgeFailure.invalid("내보낼 기록을 불러올 수 없습니다.") }
                 case "body": try export.append(bytes)
                 case "complete":
-                    guard successful else { export.cancel(); return }
+                    guard successful else { page.showStatus(export.preserveFailure(BridgeFailure.invalid("내보낼 기록을 불러올 수 없습니다.")).localizedDescription); return }
                     do { try export.finish(); page.showStatus("내보내기를 완료했습니다.") }
                     catch { page.showStatus(error.localizedDescription) }
-                case "error": export.cancel(); page.showStatus(header["message"] as? String ?? "내보내기에 실패했습니다.")
+                case "error": page.showStatus(export.preserveFailure(BridgeFailure.invalid(header["message"] as? String ?? "내보내기에 실패했습니다.")).localizedDescription)
                 default: break
                 }
             }

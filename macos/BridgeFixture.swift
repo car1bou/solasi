@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 @main
@@ -36,6 +37,14 @@ struct BridgeFixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
+        let cancelledSelection = try ExclusiveExport.prepare(destination: nil).get()
+        assert(cancelledSelection == nil)
+        let missingParent = root.appendingPathComponent("missing-parent/new.json")
+        switch ExclusiveExport.prepare(destination: missingParent) {
+        case .success: assertionFailure("A failed export destination is not a user cancellation")
+        case .failure(let error): assert((error as NSError).domain == NSPOSIXErrorDomain)
+        }
+        assert(!FileManager.default.fileExists(atPath: missingParent.path))
         let destination = root.appendingPathComponent("note.txt")
         try Data("original".utf8).write(to: destination)
         let export = try ExclusiveExport(destination: destination)
@@ -45,13 +54,38 @@ struct BridgeFixture {
         assert(original == Data("original".utf8))
         export.cancel()
         let fresh = root.appendingPathComponent("new.txt")
-        let saved = try ExclusiveExport(destination: fresh)
+        guard let saved = try ExclusiveExport.prepare(destination: fresh).get() else { fatalError("A selected destination must prepare an export") }
         try saved.append(Data("saved".utf8)); try saved.finish()
         let savedBytes = try Data(contentsOf: fresh)
         assert(savedBytes == Data("saved".utf8))
         let cancelled = try ExclusiveExport(destination: root.appendingPathComponent("cancelled.txt"))
         try cancelled.append(Data("partial".utf8)); cancelled.cancel()
         assert(!FileManager.default.fileExists(atPath: root.appendingPathComponent("cancelled.txt").path))
+        let failedWrite = try ExclusiveExport(destination: root.appendingPathComponent("failed-write.txt"))
+        try failedWrite.append(Data("preserved prefix".utf8))
+        var writeFailure: Error?
+        do {
+            var originalLimit = rlimit()
+            guard getrlimit(RLIMIT_FSIZE, &originalLimit) == 0 else { throw BridgeFailure.invalid("Cannot read fixture file limit") }
+            var writeLimit = originalLimit; writeLimit.rlim_cur = 0
+            let originalSignal = signal(SIGXFSZ, SIG_IGN)
+            defer { _ = setrlimit(RLIMIT_FSIZE, &originalLimit); _ = signal(SIGXFSZ, originalSignal) }
+            guard setrlimit(RLIMIT_FSIZE, &writeLimit) == 0 else { throw BridgeFailure.invalid("Cannot set fixture file limit") }
+            do { try failedWrite.append(Data("cannot append".utf8)); assertionFailure("A full export must fail") }
+            catch { writeFailure = error }
+        }
+        assert(writeFailure?.localizedDescription.contains(failedWrite.staging.path) == true)
+        let preservedPrefix = try Data(contentsOf: failedWrite.staging)
+        assert(preservedPrefix == Data("preserved prefix".utf8))
+        assert(!FileManager.default.fileExists(atPath: failedWrite.destination.path))
+        let streaming = try ExclusiveExport(destination: root.appendingPathComponent("interrupted-stream.txt"))
+        try streaming.append(Data("stream prefix".utf8))
+        let streamFailure = streaming.preserveFailure(BridgeFailure.invalid("stream interrupted"))
+        assert(streamFailure.localizedDescription.contains(streaming.staging.path))
+        assert(streaming.preserveFailure(streamFailure).localizedDescription == streamFailure.localizedDescription)
+        let preservedStream = try Data(contentsOf: streaming.staging)
+        assert(preservedStream == Data("stream prefix".utf8))
+        assert(!FileManager.default.fileExists(atPath: streaming.destination.path))
         print("Native bridge policy, framing, range and exclusive export fixtures passed")
     }
 }

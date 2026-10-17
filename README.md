@@ -114,6 +114,7 @@ npm run build
 ```
 
 - [실행·기능 검증 기록](docs/verification.md)
+- [Mac 실제 앱 전체 흐름·네이티브 저장 창·본문 접근 조사](docs/mac-native-flow-validation-20261017.md)
 - [미저장 입력·필기 설정·JSON·대본·요약 원문·재연결 UX 검증](docs/ux-recovery-validation-20261017.md)
 - [한국어210조건·추가55원음·Qwen 후보 재검증](docs/korean-asr-validation-20261017.md)
 - [긴 요약의 문맥·후반 누락과 Mac 내장 엔진 검증](docs/summary-context-validation-20261017.md)

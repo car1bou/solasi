@@ -84,10 +84,28 @@ def checked_excerpts(body,evidence):
     return body
 
 
+def consolidate_excerpts(sections,evidence):
+    units,restore=grounded_units(evidence,{e.ref.id:'s'+str(i)for i,e in enumerate(evidence)});positions={}
+    # Repeated words in one source may describe different events; only unique unit positions can overlap.
+    for i,unit in enumerate(units):
+        key=(restore[unit.ref.id],unit.text);positions[key]=i if key not in positions else None
+    result=[];previous=None
+    for section in sections:
+        indices=[positions.get((q['evidence_ids'][0],q['text']))for q in section['quotes']]
+        span=None
+        if not section['review_required']and all(i is not None for i in indices)and indices==list(range(indices[0],indices[-1]+1)):span=(indices[0],indices[-1])
+        if previous and span and previous[0]<=span[0]<=previous[1]:
+            quotes=result[-1]['quotes']+section['quotes'][previous[1]-span[0]+1:]
+            result[-1]=result[-1]|{'text':'\n'.join(q['text']for q in quotes),'quotes':quotes,'evidence_ids':list(dict.fromkeys(q['evidence_ids'][0]for q in quotes)),'coverage_groups':sorted(set(result[-1]['coverage_groups']+section['coverage_groups']))}
+            previous=(previous[0],max(previous[1],span[1]))
+        else:result.append(section);previous=span
+    return checked_excerpts({'sections':result},evidence)['sections']
+
+
 async def summarize_excerpts(db,frozen,job_id,**kwargs):
     from .answers import checked_evidence,evidence_schema,save_artifact
     from .outputs import generate,contextual_summary_messages,preceding_summary_context
-    request,evidence=checked_evidence(db,frozen);aliases={e.ref.id:'s'+str(i+1)for i,e in enumerate(evidence)};parts=[[Evidence.model_validate(e)for e in part]for part in frozen['summary_parts']];sections=[];metadata=[];incomplete=[]
+    request,evidence=checked_evidence(db,frozen);aliases={e.ref.id:'s'+str(i+1)for i,e in enumerate(evidence)};parts=[[Evidence.model_validate(e)for e in part]for part in frozen['summary_parts']];sections=[];original_sections=[];metadata=[];incomplete=[]
     profile=frozen.get('summary_tokenizer');limit=frozen.get('summary_output_limit',512);complete=frozen.get('summary_excerpt_policy')==COMPLETE_POLICY
     instruction=frozen.get('summary_instruction',INSTRUCTION)
     for part_no,part in enumerate(parts):
@@ -128,9 +146,9 @@ async def summarize_excerpts(db,frozen,job_id,**kwargs):
             with db:db.execute('INSERT INTO artifact_parts VALUES (?,?,?,?)',(job_id,part_no,json.dumps(body,ensure_ascii=False),json.dumps(info,ensure_ascii=False)))
         if profile and info.get('digest')!=profile['model_digest']:raise ValueError('보존한 구간의 모델과 토크나이저가 다릅니다')
         if body.get('selection_incomplete'):incomplete.append(part_no)
-        sections.extend(body['sections']);metadata.append(info)
+        original_sections.extend(body['sections']);sections.extend(consolidate_excerpts(body['sections'],evidence)if complete else body['sections']);metadata.append(info)
         with db:db.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps({'completed_parts':part_no+1,'total_parts':len(parts)}),job_id))
-    checked_evidence(db,frozen);body={'summary_format':'excerpts-v1','sections':sections,'part_sections':sections,'merged':False,'merge_steps':0,'completed_parts':len(parts),'covered_ranges':[{'source_id':e.ref.id,'start_ms':e.ref.start_ms,'end_ms':e.ref.end_ms}for e in evidence if e.ref.kind=='transcript'],'covered_source_ids':[e.ref.id for e in evidence],'cited_source_ids':[e.ref.id for e in evidence if any(e.ref.id in s['evidence_ids']for s in sections)],'part_coverage':[{'part_no':i,'source_ids':list(dict.fromkeys(e.ref.id for e in part))}for i,part in enumerate(parts)],'selection_incomplete_parts':incomplete,'unquoted_sources':unquoted_sources(sections,evidence)}
+    checked_evidence(db,frozen);body={'summary_format':'excerpts-v1','sections':sections,'part_sections':original_sections,'merged':False,'merge_steps':0,'completed_parts':len(parts),'covered_ranges':[{'source_id':e.ref.id,'start_ms':e.ref.start_ms,'end_ms':e.ref.end_ms}for e in evidence if e.ref.kind=='transcript'],'covered_source_ids':[e.ref.id for e in evidence],'cited_source_ids':[e.ref.id for e in evidence if any(e.ref.id in s['evidence_ids']for s in sections)],'part_coverage':[{'part_no':i,'source_ids':list(dict.fromkeys(e.ref.id for e in part))}for i,part in enumerate(parts)],'selection_incomplete_parts':incomplete,'unquoted_sources':unquoted_sources(sections,evidence)}
     warnings=['AI가 선택한 원문 발췌입니다. 중요한 내용의 선택 누락은 원문과 대조하세요.']
     if incomplete:warnings.append('앞·중간·뒤 선택을 충족하지 못한 구간은 원문을 보존했습니다.')
     if body['unquoted_sources']:warnings.append('직접 인용하지 않은 원문을 별도로 보존했습니다.')

@@ -229,6 +229,68 @@ class CompleteExcerptTests(unittest.TestCase):
                 self.assertLessEqual(sum(len(q['text'])for q in section['quotes'][:-1]),640)
 
 
+class ConsolidatedExcerptTests(unittest.TestCase):
+    def sources(self,count=25):
+        return [Evidence(ref=SourceRef(id='source-'+str(i),kind='transcript',session_id='session',start_ms=i*1000,end_ms=(i+1)*1000),text='서로 다른 원문 '+str(i)+'입니다.',label='전사')for i in range(count)]
+
+    def section(self,units,groups=None,review=False):
+        quotes=[{'text':e.text,'evidence_ids':[e.ref.id]}for e in units]
+        return {'title':'핵심 원문','text':'\n'.join(q['text']for q in quotes),'evidence_ids':list(dict.fromkeys(e.ref.id for e in units)),'quotes':quotes,'review_required':review,'coverage_groups':groups or []}
+
+    def consolidate(self,sections,evidence):
+        from lecture_study.summary_excerpts import consolidate_excerpts,checked_excerpts
+        result=consolidate_excerpts(sections,evidence)
+        checked_excerpts({'sections':result},evidence)
+        return result
+
+    def test_overlapping_context_chain_keeps_each_exact_source_unit_once_and_originals_unchanged(self):
+        evidence=self.sources();spans=[(2,10),(3,14),(10,18),(11,19),(12,22)]
+        sections=[self.section(evidence[start:end+1],[min(2,i)])for i,(start,end)in enumerate(spans)]
+        before=json.loads(json.dumps(sections));result=self.consolidate(sections,evidence)
+        self.assertEqual(result,[self.section(evidence[2:23],[0,1,2])]);self.assertEqual(sections,before)
+
+    def test_identical_text_with_different_source_ids_is_retained(self):
+        evidence=self.sources(3);evidence[2]=evidence[2].model_copy(update={'text':evidence[0].text})
+        sections=[self.section(evidence[:2],[0]),self.section(evidence[1:],[2])]
+        result=self.consolidate(sections,evidence)
+        self.assertEqual(result,[self.section(evidence,[0,2])])
+        self.assertEqual(self.consolidate([self.section([evidence[0]]),self.section([evidence[2]])],evidence),[self.section([evidence[0]]),self.section([evidence[2]])])
+
+    def test_repeated_unit_within_one_source_is_ambiguous_and_stays_separate(self):
+        from lecture_study.summary_grounding import grounded_units
+        original=Evidence(ref=SourceRef(id='same-source',kind='note',session_id='session'),text='가정의 앞 문장입니다. 결과는 같습니다. 실제 사건의 앞 문장입니다. 결과는 같습니다.',label='노트')
+        units,_=grounded_units([original],{'same-source':'alias'})
+        units=[e.model_copy(update={'ref':original.ref})for e in units]
+        sections=[self.section(units[:3],[0]),self.section(units[1:],[2])]
+        self.assertEqual(self.consolidate(sections,[original]),sections)
+
+    def test_partial_quote_without_an_exact_source_unit_stays_separate(self):
+        evidence=self.sources(4);partial=evidence[1].model_copy(update={'text':evidence[1].text[:5]})
+        sections=[self.section([evidence[0],partial]),self.section(evidence[1:])]
+        self.assertEqual(self.consolidate(sections,evidence),sections)
+
+    def test_reviewed_fallback_remains_unchanged_and_blocks_consolidation_across_it(self):
+        evidence=self.sources(7)
+        sections=[self.section(evidence[:4],[0]),self.section(evidence[2:5],[],True),self.section(evidence[3:6],[1]),self.section(evidence[4:],[2])]
+        result=self.consolidate(sections,evidence)
+        self.assertEqual(result,[sections[0],sections[1],self.section(evidence[3:],[1,2])])
+        self.assertEqual(result[1],sections[1]);self.assertTrue(result[1]['review_required'])
+
+    def test_gaps_reverse_chronology_and_noncontiguous_quotes_are_not_joined(self):
+        evidence=self.sources(10)
+        for sections in (
+            [self.section(evidence[:3]),self.section(evidence[4:7])],
+            [self.section(evidence[3:7]),self.section(evidence[2:8])],
+            [self.section([evidence[0],evidence[2]]),self.section(evidence[2:5])],
+            [self.section([evidence[3],evidence[2]]),self.section(evidence[2:5])],
+        ):
+            with self.subTest(quotes=[s['evidence_ids']for s in sections]):self.assertEqual(self.consolidate(sections,evidence),sections)
+
+    def test_fully_contained_exact_section_keeps_coverage_without_repeating_quotes(self):
+        evidence=self.sources(6);sections=[self.section(evidence,[0]),self.section(evidence[2:5],[1,2])]
+        self.assertEqual(self.consolidate(sections,evidence),[self.section(evidence,[0,1,2])])
+
+
 class CompleteExcerptDispatchTests(unittest.IsolatedAsyncioTestCase):
     setUp=test_answers.AnswerTests.setUp
 
@@ -280,6 +342,31 @@ class CompleteExcerptDispatchTests(unittest.IsolatedAsyncioTestCase):
                 after=[tuple(row)for row in self.db.execute('select part_no,body,metadata from artifact_parts where job_id=? order by part_no',(job['id'],))]
                 self.assertEqual(after,before);self.assertEqual(resumed.body['sections'],first.body['sections'])
                 self.assertEqual(cached_summary_parts(self.db,job['id'])['parts'][0]['sections'],first.body['sections'])
+
+    async def test_final_overlap_consolidation_preserves_original_parts_and_cached_retry(self):
+        lines=['원문 '+str(i)+'의 고유한 설명을 마쳤습니다.'for i in range(24)]
+        frozen=self.frozen('complete-v1','\n'.join(lines));job=submit_job(self.db,self.sid,'ai',frozen)
+        selection=ProviderResult(text=json.dumps({'evidence_ids':['s1u0','s1u8','s1u16','s1u20']}),model='test',usage={},elapsed_ms=1)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=selection))as generated:first=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,1);self.assertEqual(len(first.body['sections']),1)
+        self.assertEqual([q['text']for q in first.body['sections'][0]['quotes']],lines)
+        self.assertEqual(first.body['sections'][0]['coverage_groups'],[0,1,2])
+        self.assertEqual(first.body['selection_incomplete_parts'],[]);self.assertEqual(first.body['unquoted_sources'],[])
+        before=tuple(self.db.execute('select body,metadata from artifact_parts where job_id=?',(job['id'],)).fetchone())
+        original=json.loads(before[0])['sections'];self.assertEqual(len(original),4)
+        self.assertEqual(first.body['part_sections'],original)
+        self.assertEqual(cached_summary_parts(self.db,job['id'])['parts'][0]['sections'],original)
+        self.assertEqual(first.body['cited_source_ids'],[frozen['evidence'][0]['ref']['id']])
+        with patch('lecture_study.outputs.generate',new=AsyncMock(side_effect=AssertionError('cached parts must not regenerate')))as generated:resumed=await summarize_session(self.db,frozen,job['id'])
+        generated.assert_not_awaited()
+        self.assertEqual(tuple(self.db.execute('select body,metadata from artifact_parts where job_id=?',(job['id'],)).fetchone()),before)
+        self.assertEqual(resumed.body,first.body)
+
+    async def test_final_consolidation_does_not_cross_part_boundaries(self):
+        frozen=self.frozen('complete-v1');frozen['summary_parts']*=2;job=submit_job(self.db,self.sid,'ai',frozen)
+        with patch('lecture_study.outputs.generate',new=AsyncMock(return_value=self.selection()))as generated:result=await summarize_session(self.db,frozen,job['id'])
+        self.assertEqual(generated.await_count,2);self.assertEqual(len(result.body['sections']),2)
+        self.assertEqual(result.body['sections'],result.body['part_sections'])
 
     async def test_short_final_unit_repairs_once_then_survives_as_reviewed_literal_fallback(self):
         lines=['원문 '+str(i)+'의 긴 설명을 정리했습니다.'for i in range(10)]+['돌아갔다']
