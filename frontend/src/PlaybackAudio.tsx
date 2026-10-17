@@ -1,6 +1,7 @@
 import React,{forwardRef,useEffect,useImperativeHandle,useMemo,useRef,useState} from 'react';
 import {nativeApp,nativeCommand} from './api';
 import {NativeAudioController,type NativeAudioState} from './native-audio-controller';
+import Icon from './Icon';
 
 export type PlaybackHandle=Pick<HTMLAudioElement,'currentTime'|'duration'|'paused'|'play'|'pause'>;
 type Event={currentTarget:PlaybackHandle};
@@ -37,7 +38,7 @@ const NativeAudio=forwardRef<PlaybackHandle,Props>(function NativeAudio(props,re
     return()=>{window.removeEventListener('solasi-playback-state',update);void controller.dispose().catch(()=>{});};
   },[controller]);
   function seek(time:number){handle.currentTime=time;latest.current.onSeeking?.({currentTarget:handle});}
-  return <div className="native-audio" role="group" aria-label={props['aria-label']||'원음 재생'}><button type="button" aria-label={state.paused?'원음 재생':'원음 일시 정지'} onClick={()=>state.paused?void handle.play().catch(fail):handle.pause()}>{state.paused?'재생':'일시 정지'}</button><input type="range" aria-label="원음 재생 위치" min={0} max={state.duration||1} step={.1} value={Math.min(state.currentTime,state.duration||1)} disabled={!state.ready} onChange={event=>seek(Number(event.target.value))}/><span>{Math.floor(state.currentTime/60)}:{String(Math.floor(state.currentTime%60)).padStart(2,'0')}</span><input type="range" aria-label="원음 음량" min={0} max={1} step={.05} value={volume} onChange={event=>{const value=Number(event.target.value);setVolume(value);void controller.setVolume(value).catch(fail);}}/>{state.error&&<p role="alert">{state.error}</p>}</div>;
+  return <div className="native-audio" role="group" aria-label={props['aria-label']||'원음 재생'}><button type="button" className="icon-button" aria-label={state.paused?'원음 재생':'원음 일시 정지'} title={state.paused?'원음 재생':'원음 일시 정지'} onClick={()=>state.paused?void handle.play().catch(fail):handle.pause()}><Icon name={state.paused?'play':'pause'}/></button><input type="range" aria-label="원음 재생 위치" min={0} max={state.duration||1} step={.1} value={Math.min(state.currentTime,state.duration||1)} disabled={!state.ready} onChange={event=>seek(Number(event.target.value))}/><span>{Math.floor(state.currentTime/60)}:{String(Math.floor(state.currentTime%60)).padStart(2,'0')}</span><input type="range" aria-label="원음 음량" min={0} max={1} step={.05} value={volume} onChange={event=>{const value=Number(event.target.value);setVolume(value);void controller.setVolume(value).catch(fail);}}/>{state.error&&<p role="alert">{state.error}</p>}</div>;
 });
 
 export default forwardRef<PlaybackHandle,Props>(function PlaybackAudio(props,ref){
