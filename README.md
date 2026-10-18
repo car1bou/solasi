@@ -85,4 +85,4 @@ Solasi는 녹음, 전사, PDF 자료와 필기를 한 기록으로 연결하는 
 
 ## 라이선스
 
-프로젝트 자체의 이용·재배포 라이선스는 아직 지정되어 있지 않습니다. 포함된 외부 구성요소와 모델의 라이선스는 각각 적용됩니다. [런타임 고지](runtime-manifest.json)와 [제3자 라이선스](docs/licenses)를 확인하세요.
+프로젝트 자체의 이용·재배포 라이선스는 아직 지정되어 있지 않습니다. 포함된 외부 구성요소와 모델의 라이선스는 각각 적용됩니다. [런타임 고지](runtime-manifest.json), [제3자 라이선스](docs/licenses), [아이콘 고지](frontend/public/notices/lucide.txt)를 확인하세요.

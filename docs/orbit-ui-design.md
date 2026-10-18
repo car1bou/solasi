@@ -43,9 +43,15 @@
 
 예: 새 주요 동작은 기존 `primary` 버튼을 사용하고, 내용 구획은 `card`를 사용한다. 선택한 기록 탭은 `aria-selected`, 필기 도구는 `aria-pressed`로 상태를 전달한다. 장식 SVG는 접근성 이름을 갖지 않는다. 시스템 글꼴을 사용하며 웹 폰트 요청은 없다.
 
+## UI 아이콘 · 0.3.8
+
+직접 그린 SVG를 [Lucide](https://github.com/lucide-icons/lucide/tree/1ef60af944de207e0d5176905a0759ba12e6ee8d/icons)의 한 아웃라인 세트로 교체했다. `Icon.tsx`의 기존 이름 28개와 호출 방식은 유지하며, 24×24 좌표·2px 선·둥근 끝·채움 없음으로 통일한다. 펜은 `pen`, 올가미는 `lasso`를 사용해 작은 크기에서 불필요한 기준선·포인터 디테일을 줄였다.
+
+두 지우개는 같은 `eraser` 도형과 짧은 ‘획’·‘부분’ 글자로 구분한다. 툴팁·접근성 이름·선택 동작은 유지한다. 아이콘 선화 교체에 범위를 맞추고 버튼 배경·선택 방식·탭 형태는 바꾸지 않는다. 런타임 라이브러리는 추가하지 않았고 [ISC·Feather MIT 고지](../frontend/public/notices/lucide.txt)를 앱 화면 자산에도 포함한다.
+
 ## macOS 아이콘과 창
 
-원본 PNG는 `frontend/public/solasi-icon.png`에 그대로 보존한다. `macos/Solasi.icns`는 16~1024px의 10개 표현을 포함한다. 설치기는 아이콘을 Resources에 복사하고 `CFBundleIconFile`로 지정한다. 설치본은 `0.2.1` / 빌드 `8`이다.
+원본 PNG는 `frontend/public/solasi-icon.png`에 그대로 보존한다. `macos/Solasi.icns`는 16~1024px의 10개 표현을 포함한다. 설치기는 아이콘을 Resources에 복사하고 `CFBundleIconFile`로 지정한다. 흑백 앱 아이콘 적용 당시 설치본은 `0.2.1` / 빌드 `8`이었다.
 
 Finder에서 아이콘이 보여도 Dock에서는 macOS 기본 앱 아이콘이 표시되는 사례가 사용자 캡처로 확인됐다. Dock 북마크는 현재 앱으로 해석됐고, 등록 정보와 번들의 아이콘 파일도 일치했다. 해당 앱의 등록 정보 갱신·재실행만으로는 해결되지 않았다. 실행 시 번들 아이콘을 읽어 `NSApp.applicationIconImage`에 지정한 빌드 7에서 사용자가 정상 표시를 확인했고, 같은 경로로 새 흑백 아이콘을 적용한 빌드 8도 사용자가 Dock 정상 표시를 확인했다. 전체 Dock 캐시나 권한 설정을 초기화하지 않았다.
 
@@ -54,6 +60,8 @@ Finder에서 아이콘이 보여도 Dock에서는 macOS 기본 앱 아이콘이 
 설치기는 기존 실행 설정과 데이터 경로·모델·포트를 보존하고 기존 앱을 백업한다. 실행 확인은 해당 실행 파일의 `txt` 매핑을 검사하므로 종료 후 권한 서비스가 파일을 읽는 상태와 실제 앱 실행을 구분한다. 실제 실행 중 교체 차단도 확인했다.
 
 ## Figma
+
+0.3.8의 UI 아이콘 교체는 아래 시안에 아직 반영하지 않았다.
 
 [편집 가능한 Figma 파일](https://www.figma.com/design/gAia3ddJxAb1ZI17MUWcBp), 페이지 `Solasi · Monochrome`.
 
