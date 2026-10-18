@@ -10,4 +10,4 @@
 
 ## 실행
 
-설치와 사용 방법은 [README](README.md), 현재 Mac 변경은 [대본·필기 검증](docs/mac-script-validation.md), 실제 모델 실측과 남은 품질 문제는 [긴 음성 검증](docs/mac-long-file-validation.md)을 확인하세요. 이전 전사·요약 개선 기록은 [전사 충실도 후속 검증](docs/fidelity-followup.md)에 있습니다.
+제품 소개는 [README](README.md), 사용 방법은 [사용 가이드](docs/guide.md), 소스 빌드·이행·검사 명령은 [개발 안내](docs/development.md)에 있습니다. 시점별 Mac·모델 검증은 [검증 기록 목록](docs/development.md#검증-기록), 남은 과제는 [개선 항목](docs/improvements.md)을 확인하세요.
