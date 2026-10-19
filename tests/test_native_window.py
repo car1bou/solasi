@@ -20,6 +20,9 @@ page.window.setFrame(NSRect(x: 100, y: 100, width: 680, height: 480), display: f
 page.window.contentView?.layoutSubtreeIfNeeded()
 precondition(page.window.frame.size == NSSize(width: 680, height: 480))
 precondition(page.window.minSize == NSSize(width: 680, height: 480))
+precondition(page.resizeHandle.frame.width >= 32 && page.resizeHandle.frame.height >= 28)
+let resized = WindowResizeHandle.resizedFrame(NSRect(x: 100,y: 100,width: 1200,height: 820), delta: NSPoint(x: -900,y: 700), minimum: NSSize(width: 680,height: 480))
+precondition(resized == NSRect(x: 100,y: 440,width: 680,height: 480))
 print("native drag region reserved; 680x480 frame accepted")
 '''
         with tempfile.TemporaryDirectory(prefix='solasi-window-') as folder:

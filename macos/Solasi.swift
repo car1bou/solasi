@@ -10,6 +10,45 @@ struct LaunchSettings: Decodable {
     let runtime: String
 }
 
+private final class WindowResizeHandle: NSView {
+    private var start: (frame: NSRect, mouse: NSPoint)?
+    override var acceptsFirstResponder: Bool { true }
+
+    static func resizedFrame(_ frame: NSRect, delta: NSPoint, minimum: NSSize) -> NSRect {
+        let size = NSSize(width: max(minimum.width, frame.width + delta.x), height: max(minimum.height, frame.height - delta.y))
+        return NSRect(x: frame.minX, y: frame.maxY - size.height, width: size.width, height: size.height)
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.secondaryLabelColor.setStroke()
+        let lines = NSBezierPath()
+        lines.lineWidth = 1.5
+        for offset in [CGFloat(7), 12, 17] {
+            lines.move(to: NSPoint(x: bounds.maxX - offset - 5, y: 5))
+            lines.line(to: NSPoint(x: bounds.maxX - 5, y: offset + 5))
+        }
+        lines.stroke()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        window.makeFirstResponder(self)
+        start = (window.frame, NSEvent.mouseLocation)
+    }
+    override func mouseDragged(with event: NSEvent) {
+        guard let window, let start else { return }
+        let point = NSEvent.mouseLocation
+        window.setFrame(Self.resizedFrame(start.frame, delta: NSPoint(x: point.x - start.mouse.x, y: point.y - start.mouse.y), minimum: window.minSize), display: true)
+    }
+    override func mouseUp(with event: NSEvent) { start = nil }
+    override func keyDown(with event: NSEvent) {
+        guard let window else { return }
+        let steps: [UInt16: NSPoint] = [123: NSPoint(x: -20,y: 0),124: NSPoint(x: 20,y: 0),125: NSPoint(x: 0,y: -20),126: NSPoint(x: 0,y: 20)]
+        guard let delta = steps[event.keyCode] else { super.keyDown(with: event);return }
+        window.setFrame(Self.resizedFrame(window.frame, delta: delta, minimum: window.minSize), display: true)
+    }
+}
+
 private final class AppWindow {
     let window: NSWindow
     let webView: WKWebView
@@ -17,6 +56,7 @@ private final class AppWindow {
     let retry = NSButton(title: "화면 다시 열기", target: nil, action: nil)
     var userClickAt = Date.distantPast
     var uiReady = false
+    let resizeHandle = WindowResizeHandle()
 
     init(configuration: WKWebViewConfiguration) {
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -33,7 +73,14 @@ private final class AppWindow {
         notice.edgeInsets = NSEdgeInsets(top: 32, left: 12, bottom: 8, right: 12)
         status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         retry.isHidden = true
-        let content = NSStackView(views: [notice, webView])
+        let sizing = NSView()
+        resizeHandle.toolTip = "창 크기 조절 · 드래그 또는 클릭 후 방향키"
+        resizeHandle.setAccessibilityElement(true)
+        resizeHandle.setAccessibilityRole(.splitter)
+        resizeHandle.setAccessibilityLabel("창 크기 조절")
+        sizing.addSubview(resizeHandle)
+        resizeHandle.translatesAutoresizingMaskIntoConstraints = false
+        let content = NSStackView(views: [notice, webView, sizing])
         content.orientation = .vertical
         content.alignment = .leading
         content.spacing = 0
@@ -45,7 +92,13 @@ private final class AppWindow {
             status.topAnchor.constraint(equalTo: notice.topAnchor, constant: 32),
             status.bottomAnchor.constraint(lessThanOrEqualTo: notice.bottomAnchor, constant: -8),
             webView.widthAnchor.constraint(equalTo: content.widthAnchor),
-            webView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200)
+            webView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
+            sizing.widthAnchor.constraint(equalTo: content.widthAnchor),
+            sizing.heightAnchor.constraint(equalToConstant: 28),
+            resizeHandle.widthAnchor.constraint(equalToConstant: 32),
+            resizeHandle.heightAnchor.constraint(equalTo: sizing.heightAnchor),
+            resizeHandle.trailingAnchor.constraint(equalTo: sizing.trailingAnchor),
+            resizeHandle.bottomAnchor.constraint(equalTo: sizing.bottomAnchor)
         ])
         window.center()
     }
@@ -170,6 +223,10 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         menu.addItem(windowItem)
         let windows = NSMenu(title: "윈도우")
         windows.addItem(withTitle: "최소화", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        let compact = windows.addItem(withTitle: "작은 창 (680×480)", action: #selector(compactWindow), keyEquivalent: "1")
+        compact.keyEquivalentModifierMask = [.command, .option]
+        let standard = windows.addItem(withTitle: "기본 크기 (1200×820)", action: #selector(standardWindow), keyEquivalent: "2")
+        standard.keyEquivalentModifierMask = [.command, .option]
         windows.addItem(withTitle: "창 닫기", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
         windowItem.submenu = windows
         NSApp.windowsMenu = windows
@@ -210,6 +267,14 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
 
     @objc private func showLog() { NSWorkspace.shared.open(logURL) }
+
+    private func resizeWindow(_ size: NSSize) {
+        guard let window = NSApp.keyWindow ?? mainWindow?.window else { return }
+        let frame = window.frame
+        window.setFrame(NSRect(x: frame.minX,y: frame.maxY - size.height,width: size.width,height: size.height), display: true, animate: true)
+    }
+    @objc private func compactWindow() { resizeWindow(NSSize(width: 680,height: 480)) }
+    @objc private func standardWindow() { resizeWindow(NSSize(width: 1200,height: 820)) }
 
     @objc private func retryPage(_ sender: NSButton) {
         guard let page = ([mainWindow].compactMap { $0 } + extraWindows).first(where: { $0.retry === sender }), worker.process.isRunning else { return }
