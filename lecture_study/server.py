@@ -387,8 +387,6 @@ def create_app(config: AppConfig) -> FastAPI:
         kind:str=Field(default='answer')
         prompt:str=Field(min_length=1,max_length=10000)
         scope:Scope
-        web:bool=False
-        web_query:str|None=Field(default=None,max_length=500)
         image_id:str|None=None
         note_source_id:str|None=None
         anchor_ms:int|None=Field(default=None,ge=0,strict=True)
@@ -397,10 +395,11 @@ def create_app(config: AppConfig) -> FastAPI:
         async def operation():
             if config.embedded and job['request']['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 요청입니다. 새 작업으로 실행하세요')
             if 'snapshot' in job['request']:
+                if job['request']['request'].get('web'):
+                    raise ValueError('웹 검색 기능이 종료된 이전 요청입니다. 로컬 자료로 새 질문을 실행하세요')
                 request=AIRequest.model_validate(job['request']['request'])
-                web_key=await asyncio.to_thread(app.state.secrets.get_secret,'exa') if request.web else None
                 async with local_embedding_client(job['id']) as client:
-                    frozen=await freeze_request(db,request,client,web_key,snapshot=job['request']['snapshot'],runtime_dir=config.runtime_dir if config.embedded or app.state.local_models.url==app.state.ollama_url else None)
+                    frozen=await freeze_request(db,request,client,snapshot=job['request']['snapshot'],runtime_dir=config.runtime_dir if config.embedded or app.state.local_models.url==app.state.ollama_url else None)
                 with db:db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(frozen,ensure_ascii=False),job['id']))
                 job['request']=frozen
             async with generation_slot(job['request']['request']['provider']['provider'],job['id']):

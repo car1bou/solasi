@@ -58,7 +58,7 @@ class AssistanceTests(unittest.IsolatedAsyncioTestCase):
     async def test_note_without_anchor_and_foreign_scope_are_rejected(self):
         with self.assertRaisesRegex(ValueError,'시점'):await freeze_request(self.db,self.request_for('note',note_source_id=self.ref.id))
         self.speech()
-        request=self.request_for('candidates').model_copy(update={'web':True,'web_query':'유료 검색'})
+        request=self.request_for('candidates').model_copy(update={'scope':self.request_for('candidates').scope.model_copy(update={'mode':'course'})})
         with self.assertRaisesRegex(ValueError,'현재 기록'):await freeze_request(self.db,request)
 
     async def test_candidate_admission_reaches_generic_submit_and_retry(self):

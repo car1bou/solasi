@@ -24,7 +24,7 @@ class Candidates(Input):
 
 
 def snapshot_details(db,request):
-    if request.web or request.scope.mode!='current' or request.scope.lecture_ids:
+    if request.scope.mode!='current' or request.scope.lecture_ids:
         raise ValueError('현재 기록의 확정 전사만 사용하세요')
     if request.kind!='note':return {}
     row=db.execute('SELECT anchor_ms FROM notes WHERE session_id=? AND source_id=?',(request.session_id,request.note_source_id)).fetchone()

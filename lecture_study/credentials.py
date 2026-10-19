@@ -1,7 +1,7 @@
 import keyring
 from keyring.errors import PasswordDeleteError
 
-PROVIDERS=('openai','gemini','claude','exa')
+PROVIDERS=('openai','gemini','claude')
 
 
 def safe_backend():

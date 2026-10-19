@@ -136,11 +136,17 @@ class AIRequest(OwnerInput):
     prompt: str=Field(default='',max_length=10000)
     scope: Scope
     provider: ProviderConfig
-    web: bool=False
-    web_query: str|None=Field(default=None,max_length=500)
     image_id: str|None=None
     note_source_id: str|None=None
     anchor_ms: int|None=Field(default=None,ge=0,strict=True)
+
+    @model_validator(mode='before')
+    @classmethod
+    def legacy_request(cls,value):
+        # Archived jobs retain retired search fields; new API input rejects them.
+        if isinstance(value,dict):
+            return {key:item for key,item in value.items() if key not in ('web','web_query')}
+        return value
 
     @model_validator(mode='after')
     def valid_target(self):
