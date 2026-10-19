@@ -13,9 +13,12 @@ type Gesture={id:number;kind:Tool|'move'|'resize';origin:Point;base:InkStroke[];
 const InkMark=React.memo(function InkMark({stroke,width,height}:{stroke:InkStroke;width:number;height:number}){return <path d={inkPath(stroke,width,height)} fill={stroke.color} opacity={stroke.opacity} pointerEvents="none"/>;});
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동'};
 const toolIcons={pen:'pen',highlighter:'highlighter','stroke-eraser':'stroke-eraser','partial-eraser':'partial-eraser',lasso:'lasso',pan:'hand'} as const;
+let rememberedEraser:Tool='stroke-eraser';
 const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장 대기',saving:'저장 중',failed:'저장 실패 · 초안 보존',conflict:'충돌 · 초안 보존'};
 export default function PageNotebook({courseId,document:metadata,page,filename}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string}){
-  const noteId=useId();
+  const noteId=useId(),settingsId=useId();
+  const settings=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLButtonElement|null>(null);
+  const [settingsOpen,setSettingsOpen]=useState(false),[eraserMode,setEraserMode]=useState<Tool>(rememberedEraser);
   const store=useMemo(()=>pageDraft(courseId,metadata.asset_id,metadata.sha256,page.page),[courseId,metadata.asset_id,metadata.sha256,page.page]);
   const state=useSyncExternalStore(store.subscribe,store.snapshot),latest=useRef(state),lastOwnInk=useRef<InkStroke[]|null>(null);latest.current=state;
   const [tools,setTools]=useState<NotebookTools>({...defaultTools}),[view,setView]=useState<NotebookView>({...defaultView}),[preferencesReady,setPreferencesReady]=useState(false),[preferenceWarning,setPreferenceWarning]=useState(''),[preferenceSaveWarnings,setPreferenceSaveWarnings]=useState({tools:'',view:''}),[availableWidth,setAvailableWidth]=useState(0);
@@ -27,10 +30,10 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   async function download(name:string,value:unknown){if(exporting)return;setExporting(true);setExportStatus('내보내는 중…');setInputError('');try{const result=await downloadJSON(name,value);setExportStatus(result==='saved'?'파일 저장 완료':result==='cancelled'?'내보내기 취소됨':'다운로드를 요청했습니다. 저장 위치를 확인하세요.');}catch(error){setExportStatus('');setInputError('내보내기 실패: '+(error as Error).message);}finally{setExporting(false);}}
   function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());void download(result.filename,result.value);}
   function savedPreference(kind:'tools'|'view',saved:boolean){setPreferenceSaveWarnings(current=>({...current,[kind]:saved?'':(kind==='tools'?'필기 도구':'자료 보기')+' 설정을 저장하지 못했습니다. 이번 실행 동안 적용하며 메모·필기는 별도로 저장합니다.'}));}
-  function changeTools(next:Partial<NotebookTools>){const value={...tools,...next};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
+  function changeTools(next:Partial<NotebookTools>){if(next.tool?.includes('eraser')){rememberedEraser=next.tool;setEraserMode(next.tool);}const value={...tools,...next};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
   function changeView(next:Partial<NotebookView>){const value={...view,...next};setView(value);void saveNotebookView(metadata.asset_id,metadata.sha256,value).then(saved=>savedPreference('view',saved));}
   function setZoom(value:number){changeView({zoomMode:'manual',zoom:value});}
-  useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
+  useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);if(result.tools.tool.includes('eraser')){rememberedEraser=result.tools.tool;setEraserMode(result.tools.tool);}setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
   useEffect(()=>{const element=viewport.current;if(!element)return;const measure=()=>{const style=getComputedStyle(element);setAvailableWidth(Math.max(0,element.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)));};measure();const observer=new ResizeObserver(measure);observer.observe(element);return()=>observer.disconnect();},[]);
   const displayed=preview||state.ink,selection=inkBounds(displayed.filter(stroke=>selected.includes(stroke.id)));
   useEffect(()=>{if(state.ink!==lastOwnInk.current){cancelGesture();setHistory({past:[],future:[]});setSelected([]);}},[state.ink]);
@@ -94,20 +97,49 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
     touches.current.clear();pinch.current=null;
     setPreview(null);setLiveStroke(null);setPolygon([]);
   }
-  function chooseTool(value:Tool){finishGesture();changeTools({tool:value});if(value!=='lasso')setSelected([]);}
+  function chooseTool(value:Tool,event:React.MouseEvent<HTMLButtonElement>){
+    finishGesture();
+    if(value===tool&&['pen','highlighter','stroke-eraser','partial-eraser'].includes(value)){
+      settingsTrigger.current=event.currentTarget;setSettingsOpen(open=>!open);return;
+    }
+    setSettingsOpen(false);changeTools({tool:value});if(value!=='lasso')setSelected([]);
+  }
+  useEffect(()=>{
+    if(!settingsOpen)return;
+    settings.current?.querySelector<HTMLElement>('input,button')?.focus();
+    const outside=(event:PointerEvent)=>{if(!settings.current?.contains(event.target as Node)&&!settingsTrigger.current?.contains(event.target as Node)){setSettingsOpen(false);if(event.target instanceof Element&&event.target.closest('.page-viewport')){event.preventDefault();event.stopPropagation();}}};
+    const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setSettingsOpen(false);settingsTrigger.current?.focus();}};
+    document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape,true);
+    return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape,true);};
+  },[settingsOpen]);
+  useEffect(()=>setSettingsOpen(false),[metadata.asset_id,page.page]);
   const baseWidth=680*zoom,baseHeight=baseWidth*page.height/page.width,swapped=rotation%180!==0;
   return <section className="page-notebook" aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
     <div className="notebook-heading"><strong>{page.page}쪽</strong><span role="status" className={'save-status '+state.status}>{statusLabels[state.status]}{state.revision>0?' · v'+state.revision:''}</span><button className="icon-button" aria-label="지금 저장" title="지금 저장" disabled={!state.loaded||state.status==='saved'||state.status==='conflict'} onClick={()=>void store.save()}><Icon name="save"/></button><button className="icon-label-button" aria-label="메모·필기 JSON 내보내기" title="메모·필기 JSON 내보내기" aria-busy={exporting} disabled={!state.loaded||exporting} onClick={exportCurrent}><Icon name="download"/><span>JSON</span></button><button className="icon-button" aria-label={notesOpen?'메모 접기':'메모 열기'} title={notesOpen?'메모 접기':'메모 열기'} disabled={!preferencesReady} aria-expanded={notesOpen} onClick={()=>changeView({notesOpen:!notesOpen})}><Icon name={notesOpen?'panel-close':'panel-open'}/></button></div>
     {exportStatus&&<p role="status">{exportStatus}</p>}{[preferenceWarning,preferenceSaveWarnings.tools,preferenceSaveWarnings.view].filter(Boolean).map((warning,index)=><p key={index} role="status">{warning}</p>)}{!preferencesReady&&<p role="status">보기·필기 설정을 불러오는 중…</p>}
     <div className="ink-toolbar" role="toolbar" aria-label="필기 도구" inert={!preferencesReady}>
-      <div className="ink-tool-group" role="group" aria-label="펜과 선택 도구">{(Object.keys(labels) as Tool[]).map(value=><button key={value} className={(value.includes('eraser')?'icon-label-button':'icon-button')+' ink-tool-button'} aria-label={labels[value]} title={labels[value]} aria-pressed={tool===value} onClick={()=>chooseTool(value)}><Icon name={toolIcons[value]}/>{value.includes('eraser')&&<span>{value==='stroke-eraser'?'획':'부분'}</span>}</button>)}</div>
+      <div className="ink-tool-picker">
+        <div className="ink-tool-group" role="group" aria-label="펜과 선택 도구">{(['pen','highlighter',tool.includes('eraser')?tool:eraserMode,'lasso','pan'] as Tool[]).map(value=>{
+          const configurable=['pen','highlighter','stroke-eraser','partial-eraser'].includes(value),active=tool===value,name=value.includes('eraser')?'지우개':labels[value];
+          return <button key={value.includes('eraser')?'eraser':value} className="icon-button ink-tool-button" aria-label={name} title={name+(configurable?' · 선택 후 다시 눌러 설정':'')} aria-pressed={active} aria-haspopup={configurable?'dialog':undefined} aria-expanded={configurable?active&&settingsOpen:undefined} aria-controls={configurable&&active&&settingsOpen?settingsId:undefined} onClick={event=>chooseTool(value,event)}><Icon name={toolIcons[value]}/></button>;
+        })}</div>
+        {settingsOpen&&<div id={settingsId} ref={settings} className="ink-tool-settings" role="dialog" aria-label={tool.includes('eraser')?'지우개 설정':labels[tool]+' 설정'}>
+          <div className="ink-settings-heading"><strong>{tool.includes('eraser')?'지우개':labels[tool]} 설정</strong><button className="icon-button" aria-label="도구 설정 닫기" onClick={()=>{setSettingsOpen(false);settingsTrigger.current?.focus();}}><Icon name="close"/></button></div>
+          {tool.includes('eraser')?<>
+            <div role="group" aria-label="지우기 방식" className="ink-eraser-modes">{(['stroke-eraser','partial-eraser'] as const).map(mode=><button key={mode} aria-pressed={tool===mode} onClick={()=>{finishGesture();changeTools({tool:mode});}}>{labels[mode]}</button>)}</div>
+            <label>지우개 크기<input type="range" min="0.003" max="0.06" step="0.001" value={eraserSize} onChange={e=>changeTools({eraserSize:Number(e.target.value)})}/></label>
+          </>:<>
+            <label>색<input type="color" value={color} onChange={e=>changeTools(tool==='highlighter'?{highlighterColor:e.target.value}:{penColor:e.target.value})}/></label>
+            <label>굵기<input type="range" min="0.0005" max="0.04" step="0.0005" value={width} onChange={e=>changeTools(tool==='highlighter'?{highlighterWidth:Number(e.target.value)}:{penWidth:Number(e.target.value)})}/></label>
+            <label>불투명도<input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>changeTools(tool==='highlighter'?{highlighterOpacity:Number(e.target.value)}:{penOpacity:Number(e.target.value)})}/></label>
+          </>}
+        </div>}
+      </div>
       <div className="ink-tool-group" role="group" aria-label="필기 실행 이력"><button className="icon-button" aria-label="필기 실행 취소" title="필기 실행 취소 (⌘Z)" disabled={!history.past.length} onClick={()=>undo()}><Icon name="undo"/></button><button className="icon-button" aria-label="필기 다시 실행" title="필기 다시 실행 (⌘⇧Z)" disabled={!history.future.length} onClick={()=>undo(true)}><Icon name="redo"/></button></div>
-      {(tool==='pen'||tool==='highlighter')&&<div className="ink-tool-group" role="group" aria-label={tool==='pen'?'펜 설정':'형광펜 설정'}><label>색<input type="color" value={color} onChange={e=>changeTools(tool==='highlighter'?{highlighterColor:e.target.value}:{penColor:e.target.value})}/></label><label>굵기<input type="range" min="0.0005" max="0.04" step="0.0005" value={width} onChange={e=>changeTools(tool==='highlighter'?{highlighterWidth:Number(e.target.value)}:{penWidth:Number(e.target.value)})}/></label><label>불투명도<input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>changeTools(tool==='highlighter'?{highlighterOpacity:Number(e.target.value)}:{penOpacity:Number(e.target.value)})}/></label></div>}
-      {tool.includes('eraser')&&<div className="ink-tool-group"><label>지우개 크기<input type="range" min="0.003" max="0.06" step="0.001" value={eraserSize} onChange={e=>changeTools({eraserSize:Number(e.target.value)})}/></label></div>}
       <div className="ink-tool-group" role="group" aria-label="페이지 보기"><button className="icon-button" aria-label="폭에 맞춤" title="폭에 맞춤" aria-pressed={view.zoomMode==='fit'} onClick={()=>{finishGesture();changeView({zoomMode:'fit'});}}><Icon name="fit"/></button><label>확대<select value={zoom} onChange={e=>{finishGesture();setZoom(Number(e.target.value));}}>{[.5,.75,1,1.25,1.5,2,3].map(value=><option key={value} value={value}>{Math.round(value*100)}%</option>)}{![.5,.75,1,1.25,1.5,2,3].includes(zoom)&&<option value={zoom}>{Math.round(zoom*100)}%</option>}</select></label><button className="icon-label-button" aria-label={'시계 방향으로 90도 회전 · 현재 '+rotation+'도'} title={'시계 방향으로 90도 회전 · 현재 '+rotation+'도'} onClick={()=>{finishGesture();changeView({rotation:(rotation+90)%360});}}><Icon name="rotate"/><span>{rotation}°</span></button></div>
       {!!selected.length&&<button onClick={()=>{commit(state.ink.filter(stroke=>!selected.includes(stroke.id)));setSelected([]);}}>선택 {selected.length}획 삭제</button>}
     </div>
-    <p className="ink-help"><strong className="ink-active-tool">{labels[tool]}</strong> · 펜·마우스로 필기 · 손가락으로 이동/두 손가락 확대 · 올가미 선택 후 이동, 오른쪽 아래 점으로 크기 조절 · ⌘Z/⌘⇧Z</p>
+    <p className="ink-help"><strong className="ink-active-tool">{labels[tool]}</strong> · 선택한 도구를 다시 누르면 설정 · 펜·마우스로 필기 · 손가락으로 이동/두 손가락 확대 · 올가미 선택 후 이동, 오른쪽 아래 점으로 크기 조절 · ⌘Z/⌘⇧Z</p>
     {(state.error||state.storageError||inputError||imageError)&&<div role="alert" className="notebook-error">{state.error&&<p>{state.error}</p>}{state.storageError&&<p>{state.storageError}</p>}{inputError&&<p>{inputError}</p>}{imageError&&<p>{imageError}</p>}{state.status==='failed'&&<button onClick={()=>store.retry()}>다시 불러오기·저장</button>}<button onClick={()=>download('페이지-'+page.page+'-초안.json',{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page,text:state.text,ink:state.ink})}>현재 초안 내보내기</button></div>}
     {state.status==='conflict'&&state.server&&<section className="conflict-panel"><h3>저장 충돌</h3><p>현재 초안과 서버 v{state.server.revision}을 모두 보존합니다. 선택하지 않은 내용은 비교용 사본으로 남깁니다.</p><details><summary>서버 메모·필기 확인</summary><pre className="source-text">{state.server.text||'(빈 메모)'}</pre><p>{state.server.ink.length}획</p><svg className="conflict-ink-preview" viewBox={`0 0 ${page.width} ${page.height}`} aria-label="서버 필기 미리보기">{state.server.ink.map(stroke=><InkMark key={stroke.id} stroke={stroke} width={page.width} height={page.height}/>)}</svg><button onClick={()=>download('서버-페이지-'+page.page+'.json',state.server)}>서버 내용 내보내기</button></details><button onClick={()=>store.resolve(true)}>내 초안을 다음 버전으로 저장</button><button onClick={()=>{store.resolve(false);setHistory({past:[],future:[]});}}>서버 내용 사용</button></section>}
     {!!state.recovered.length&&<details className="draft-backup"><summary>다른 창·이전 실행의 미저장 초안 {state.recovered.length}개 보존됨</summary>{state.recovered.map(draft=><div key={draft.key}><p>{draft.ink.length}획 · {draft.text.length}자{draft.updatedAt?' · '+new Date(draft.updatedAt).toLocaleString('ko-KR'):''}</p><button onClick={()=>download('복구-페이지-'+page.page+'.json',draft)}>초안 내보내기</button><button onClick={()=>{store.recover(draft);setHistory({past:[],future:[]});}}>현재 편집으로 복구</button></div>)}</details>}

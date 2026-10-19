@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="352" viewBox="0 0 800 352">
+<title>Solasi A outline icons at 20 and 24 CSS pixels</title>
+<desc>Exact application paths with a 1.65-unit round stroke. White and charcoal panels show both icon sizes without scaling the review sheet.</desc>
+<defs>
+<symbol id="pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(40 12 12)"><rect x="9" y="2" width="6" height="13.5" rx="2.8" /><path d="m9.3 15.1.5 4.4 2.2 3 2.2-3 .5-4.4M15 5h1.8v6" /><circle cx="12" cy="19" r=".65" fill="currentColor" stroke="none" /></g></symbol>
+<symbol id="highlighter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(40 12 12)"><path d="M10 2h4a2 2 0 0 1 2 2v11l-2 3h-4l-2-3V4a2 2 0 0 1 2-2ZM8 15h8M10 18v4h4v-4" /></g></symbol>
+<symbol id="eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><rect x="7" y="3" width="10" height="18" rx="2.2" /><path d="M7 14h10" /></g></symbol>
+<symbol id="lasso" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="11" rx="9.5" ry="5.8" transform="rotate(-25 12 11)" stroke-dasharray="2.5 2.6" /><path d="m16.3 17.4 1.5 2.5" /></symbol>
+<symbol id="hand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="M7 12V5.5a1.5 1.5 0 0 1 3 0V10 3.5a1.5 1.5 0 0 1 3 0V10 5a1.5 1.5 0 0 1 3 0v6-3.5a1.5 1.5 0 0 1 3 0V14c0 5-2.4 8-6.8 8-3 0-4.7-1.6-6.2-4L3 13.5a1.6 1.6 0 0 1 2.4-2Z" /></symbol>
+<symbol id="undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 5-4.5 4.5L7.5 14" /><path d="M3 9.5h10.5c7 0 9 7.2 4 10.5" /></symbol>
+<symbol id="redo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"><path d="m16.5 5 4.5 4.5-4.5 4.5" /><path d="M21 9.5H10.5c-7 0-9 7.2-4 10.5" /></symbol>
+</defs>
+<rect width="800" height="352" fill="#f3f3f2"/>
+<text x="24" y="32" font-family="system-ui,sans-serif" font-size="17" fill="#181818">SOLASI · A / precision outline</text>
+<text x="24" y="53" font-family="system-ui,sans-serif" font-size="11" fill="#656565">20 px and 24 px · original SVG paths · stroke 1.65 · currentColor</text>
+<rect x="16" y="72" width="768" height="128" rx="8" fill="#ffffff"/>
+<text x="30" y="107" font-family="system-ui,sans-serif" font-size="11" fill="#202020">20px</text>
+<use href="#pen" x="110" y="92" width="20" height="20" color="#202020"/>
+<use href="#highlighter" x="206" y="92" width="20" height="20" color="#202020"/>
+<use href="#eraser" x="302" y="92" width="20" height="20" color="#202020"/>
+<use href="#lasso" x="398" y="92" width="20" height="20" color="#202020"/>
+<use href="#hand" x="494" y="92" width="20" height="20" color="#202020"/>
+<use href="#undo" x="590" y="92" width="20" height="20" color="#202020"/>
+<use href="#redo" x="686" y="92" width="20" height="20" color="#202020"/>
+<text x="30" y="149" font-family="system-ui,sans-serif" font-size="11" fill="#202020">24px</text>
+<use href="#pen" x="110" y="134" width="24" height="24" color="#202020"/>
+<text x="122" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">pen</text>
+<use href="#highlighter" x="206" y="134" width="24" height="24" color="#202020"/>
+<text x="218" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">highlighter</text>
+<use href="#eraser" x="302" y="134" width="24" height="24" color="#202020"/>
+<text x="314" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">eraser</text>
+<use href="#lasso" x="398" y="134" width="24" height="24" color="#202020"/>
+<text x="410" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">lasso</text>
+<use href="#hand" x="494" y="134" width="24" height="24" color="#202020"/>
+<text x="506" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">hand</text>
+<use href="#undo" x="590" y="134" width="24" height="24" color="#202020"/>
+<text x="602" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">undo</text>
+<use href="#redo" x="686" y="134" width="24" height="24" color="#202020"/>
+<text x="698" y="176" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#202020">redo</text>
+<rect x="16" y="208" width="768" height="128" rx="8" fill="#242424"/>
+<text x="30" y="243" font-family="system-ui,sans-serif" font-size="11" fill="#f2f2f2">20px</text>
+<use href="#pen" x="110" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#highlighter" x="206" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#eraser" x="302" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#lasso" x="398" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#hand" x="494" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#undo" x="590" y="228" width="20" height="20" color="#f2f2f2"/>
+<use href="#redo" x="686" y="228" width="20" height="20" color="#f2f2f2"/>
+<text x="30" y="285" font-family="system-ui,sans-serif" font-size="11" fill="#f2f2f2">24px</text>
+<use href="#pen" x="110" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="122" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">pen</text>
+<use href="#highlighter" x="206" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="218" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">highlighter</text>
+<use href="#eraser" x="302" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="314" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">eraser</text>
+<use href="#lasso" x="398" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="410" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">lasso</text>
+<use href="#hand" x="494" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="506" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">hand</text>
+<use href="#undo" x="590" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="602" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">undo</text>
+<use href="#redo" x="686" y="270" width="24" height="24" color="#f2f2f2"/>
+<text x="698" y="312" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" fill="#f2f2f2">redo</text>
+</svg>
