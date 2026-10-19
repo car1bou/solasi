@@ -294,6 +294,7 @@ async def rebuild_embeddings(db,model,client,job_id=None):
     try:
         for i,row in enumerate(rows):
             while db.execute("SELECT 1 FROM recordings WHERE status='recording' UNION ALL SELECT 1 FROM transcript_ranges WHERE status IN ('queued','running') LIMIT 1").fetchone():
+                if isinstance(client,DirectEmbeddings):await client.close()
                 if job_id:
                     with db: db.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps({'paused_reason':'녹음·전사 중 · 색인 대기','completed_chunks':i,'total_chunks':len(rows)},ensure_ascii=False),job_id))
                 await asyncio.sleep(.5)

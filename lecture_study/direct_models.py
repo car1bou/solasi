@@ -56,6 +56,7 @@ class DirectModels:
         self.process = None
         self._engine_checked = False
         self._embedding_receipt = None
+        self._embedding = None
 
     def _generation_command(self):
         return [self.python, 'model-worker'] if getattr(sys,'frozen',False) else [self.python,'-m','lecture_study.model_worker']
@@ -105,8 +106,9 @@ class DirectModels:
         return process
 
     async def _close(self, process):
-        try:
-            if process.returncode is None:
+        async def reap():
+            try:
+                if process.returncode is not None:return
                 try:process.terminate()
                 except ProcessLookupError:pass
                 try:await asyncio.wait_for(process.wait(),2)
@@ -114,7 +116,13 @@ class DirectModels:
                     try:process.kill()
                     except ProcessLookupError:pass
                     await process.wait()
-        finally:self.processes.discard(process)
+            finally:self.processes.discard(process)
+        cleanup=asyncio.create_task(reap());cancelled=False
+        while not cleanup.done():
+            try:await asyncio.shield(cleanup)
+            except asyncio.CancelledError:cancelled=True
+        await cleanup
+        if cancelled:raise asyncio.CancelledError
 
     async def _call(self, payload=None, *, check=False):
         process = await self._spawn(self._generation_command()+(['--check'] if check else []))
@@ -173,6 +181,7 @@ class DirectModels:
         started=time.perf_counter()
         async with self.lock:
             acquired=time.perf_counter()
+            await self._release_embedding()
             if before_local: await before_local()
             admitted=time.perf_counter()
             status = await self.status(config.model)
@@ -185,35 +194,63 @@ class DirectModels:
             result.setdefault('usage',{}).setdefault('timings_ms',{}).update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_roundtrip_ms=(completed-prepared)*1000,total_ms=(time.perf_counter()-started)*1000)
             return result
 
-    async def embed(self, model, text, *, before_local=None,timings=None):
+    async def _release_embedding(self, owner=None):
+        if self._embedding is None or owner is not None and self._embedding[0] is not owner:return
+        _,process=self._embedding
+        self._embedding=None
+        await self._close(process)
+
+    async def release_embedding(self, owner):
+        if self._embedding is None or self._embedding[0] is not owner:return
+        async with self.lock:await self._release_embedding(owner)
+
+    async def embed(self, model, text, *, before_local=None,timings=None,owner=None):
         if not isinstance(text,str) or not text or len(text.encode())>100000: raise EmbeddingInputTooLong('임베딩 입력 한도')
         started=time.perf_counter()
         async with self.lock:
             acquired=time.perf_counter()
-            if before_local:await before_local()
-            admitted=time.perf_counter()
-            await self.status(model)
-            asset=await self.asset(model)
-            path=next(entry['path'] for entry in asset['files'] if entry['kind']=='model')
-            prepared=time.perf_counter()
-            process=await self._spawn([str(self.engine_dir/'EmbeddingWorker'),str(path),str(self.engine_dir/'lib')])
+            process=None
             try:
-                ready=await asyncio.wait_for(read_result(process.stdout),60)
-                if any(ready.get(key)!=value for key,value in {'ready':True,'dim':768,'pooling':'mean','context_tokens':2048,'engine':EMBEDDING_ENGINE}.items()): raise ValueError('직접 임베딩 엔진 정보가 다릅니다')
+                if owner is None or self._embedding is not None and self._embedding[0] is not owner:await self._release_embedding()
+                if before_local:await before_local()
+                admitted=time.perf_counter()
+                status=await self.status(model)
+                identity=(status['digest'],self._embedding_receipt)
+                if owner is not None:
+                    if owner.identity is not None and owner.identity!=identity:raise ValueError('색인 중 임베딩 모델·엔진이 변경되었습니다. 재색인하세요')
+                    owner.identity=identity
+                asset=await self.asset(model)
+                path=next(entry['path'] for entry in asset['files'] if entry['kind']=='model')
+                prepared=time.perf_counter()
+                reused=owner is not None and self._embedding is not None
+                if reused:
+                    process=self._embedding[1]
+                    if process.returncode is not None:raise ValueError('임베딩 엔진이 종료되었습니다. 재색인하세요')
+                else:
+                    process=await self._spawn([str(self.engine_dir/'EmbeddingWorker'),str(path),str(self.engine_dir/'lib')])
+                    if owner is not None:self._embedding=(owner,process)
+                    ready=await asyncio.wait_for(read_result(process.stdout),60)
+                    if any(ready.get(key)!=value for key,value in {'ready':True,'dim':768,'pooling':'mean','context_tokens':2048,'engine':EMBEDDING_ENGINE}.items()): raise ValueError('직접 임베딩 엔진 정보가 다릅니다')
                 loaded=time.perf_counter()
                 data=text.encode();process.stdin.write(struct.pack('>I',len(data))+data);await process.stdin.drain()
                 reply=await asyncio.wait_for(read_result(process.stdout),60)
                 if reply.get('error'):
-                    if reply['error'].get('code')=='context_limit': raise EmbeddingInputTooLong('임베딩 문맥 한도')
+                    if reply['error'].get('code')=='context_limit' and reply.get('fatal') is False: raise EmbeddingInputTooLong('임베딩 문맥 한도')
                     raise ValueError('직접 임베딩 처리 실패')
                 from .retrieval import vector
                 values=vector(reply.get('vector'))
                 if len(values)!=768: raise ValueError('직접 임베딩 차원이 다릅니다')
+                if ((await self.status(model))['digest'],self._embedding_receipt)!=identity:raise ValueError('임베딩 실행 중 모델·엔진이 변경되었습니다')
                 if timings is not None:
-                    timings.update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_start_load_ms=(loaded-prepared)*1000,inference_roundtrip_ms=(time.perf_counter()-loaded)*1000,total_before_cleanup_ms=(time.perf_counter()-started)*1000)
+                    timings.update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_start_load_ms=(loaded-prepared)*1000,inference_roundtrip_ms=(time.perf_counter()-loaded)*1000,total_before_cleanup_ms=(time.perf_counter()-started)*1000,worker_reused=reused)
                 return list(values)
-            except TimeoutError: raise ValueError('직접 임베딩 제한 시간 초과') from None
-            finally: await self._close(process)
+            except EmbeddingInputTooLong:raise
+            except BaseException as exc:
+                if owner is not None:await self._release_embedding(owner)
+                if isinstance(exc,TimeoutError):raise ValueError('직접 임베딩 제한 시간 초과') from None
+                raise
+            finally:
+                if owner is None and process is not None:await self._close(process)
 
     async def available(self):
         from .local_models import catalog
@@ -305,14 +342,24 @@ class DirectModels:
 
     async def stop(self):
         if self.pull_task and not self.pull_task.done():self.pull_task.cancel();await asyncio.gather(self.pull_task,return_exceptions=True)
+        self._embedding=None
         await asyncio.gather(*(self._close(process) for process in list(self.processes)))
 
 
 class DirectEmbeddings:
-    def __init__(self, manager, before_request):
+    def __init__(self, manager, before_request, *, reuse=False):
         self.manager,self.before_request=manager,before_request
+        self.reuse=reuse
+        self.identity=None
 
-    async def status(self, model): return await self.manager.status(model)
+    async def close(self):await self.manager.release_embedding(self)
+
+    async def status(self, model):
+        status=await self.manager.status(model)
+        if self.identity is not None and (status['digest'],self.manager._embedding_receipt)!=self.identity:
+            await self.close()
+            raise ValueError('색인 중 임베딩 모델·엔진이 변경되었습니다. 재색인하세요')
+        return status
 
     async def embed(self, model, text):
-        return await self.manager.embed(model,text,before_local=self.before_request)
+        return await self.manager.embed(model,text,before_local=self.before_request,**({'owner':self}if self.reuse else {}))

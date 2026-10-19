@@ -3,18 +3,21 @@ import json
 from .db import new_id, now, session,course
 
 
-async def wait_for_transcription(db,job_id):
+async def wait_for_transcription(db,job_id,*,on_wait=None,include_recording=False):
     paused=False
     def show_wait(waiting):
         row=db.execute('SELECT result FROM jobs WHERE id=?',(job_id,)).fetchone()
         if row is None:return
         progress=json.loads(row[0]) if row[0] else {}
-        if waiting:progress['paused_reason']='전사 처리 후 실행'
+        if waiting:progress['paused_reason']='녹음·전사 중 · 색인 대기' if include_recording else '전사 처리 후 실행'
         else:progress.pop('paused_reason',None)
         with db:db.execute('UPDATE jobs SET result=?,updated_at=? WHERE id=?',(json.dumps(progress,ensure_ascii=False),now(),job_id))
     try:
-        while db.execute("SELECT 1 FROM transcript_ranges WHERE final=1 AND status IN ('queued','running') LIMIT 1").fetchone():
-            if not paused:show_wait(True);paused=True
+        query="SELECT 1 FROM recordings WHERE status='recording' UNION ALL SELECT 1 FROM transcript_ranges WHERE status IN ('queued','running') LIMIT 1" if include_recording else "SELECT 1 FROM transcript_ranges WHERE final=1 AND status IN ('queued','running') LIMIT 1"
+        while db.execute(query).fetchone():
+            if not paused:
+                if on_wait:await on_wait()
+                show_wait(True);paused=True
             await asyncio.sleep(.1)
     finally:
         if paused:show_wait(False)

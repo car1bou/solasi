@@ -349,13 +349,16 @@ def create_app(config: AppConfig) -> FastAPI:
         return manager.progress
 
     @asynccontextmanager
-    async def local_embedding_client(job_id=None):
+    async def local_embedding_client(job_id=None,*,reuse=False):
         if config.embedded:
             app.state.active_embedding_clients+=1
-            try:yield DirectEmbeddings(app.state.direct_models,lambda:wait_for_transcription(db,job_id))
+            client=DirectEmbeddings(app.state.direct_models,lambda:wait_for_transcription(db,job_id,on_wait=app.state.direct_models._release_embedding,include_recording=reuse),reuse=reuse)
+            try:yield client
             finally:
-                app.state.active_embedding_clients-=1
-                if not app.state.closing and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
+                try:await client.close()
+                finally:
+                    app.state.active_embedding_clients-=1
+                    if not app.state.closing and db.execute("SELECT 1 FROM jobs WHERE kind='asr_review' AND status='queued' LIMIT 1").fetchone():kick_transcription()
         elif app.state.ollama_url is None:
             yield None
         else:
@@ -637,7 +640,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     def launch_index(job):
         async def operation():
-            async with app.state.embedding_lock,local_embedding_client(job['id']) as client:
+            async with app.state.embedding_lock,local_embedding_client(job['id'],reuse=True) as client:
                 if client is None: raise ValueError("로컬 임베딩 모델 연결이 끊겼습니다")
                 return await rebuild_embeddings(db,job['request']['model'],client,job['id'])
         return launch_job(app,job,operation)

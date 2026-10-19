@@ -144,6 +144,8 @@ npm run build
 
 ### 전사·요약 품질
 
+- [색인 작업의 임베딩 worker 재사용·양보·실측](embedding-worker-reuse-20261019.md)
+
 - [단계별 시간·중복 변환 제거와 동일 음성 비교](local-stage-performance-20261019.md)
 
 - [한국어 210조건·추가 55원음·Qwen 후보](korean-asr-validation-20261017.md)
