@@ -13,16 +13,15 @@ type Gesture={id:number;kind:Tool|'move'|'resize';origin:Point;base:InkStroke[];
 const InkMark=React.memo(function InkMark({stroke,width,height}:{stroke:InkStroke;width:number;height:number}){return <path d={inkPath(stroke,width,height)} fill={stroke.color} opacity={stroke.opacity} pointerEvents="none"/>;});
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동'};
 const toolIcons={pen:'pen',highlighter:'highlighter','stroke-eraser':'stroke-eraser','partial-eraser':'partial-eraser',lasso:'lasso',pan:'hand'} as const;
-let rememberedEraser:Tool='stroke-eraser';
 const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장 대기',saving:'저장 중',failed:'저장 실패 · 초안 보존',conflict:'충돌 · 초안 보존'};
 export default function PageNotebook({courseId,document:metadata,page,filename}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string}){
   const noteId=useId(),settingsId=useId();
   const settings=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLButtonElement|null>(null);
-  const [settingsOpen,setSettingsOpen]=useState(false),[eraserMode,setEraserMode]=useState<Tool>(rememberedEraser);
+  const [settingsOpen,setSettingsOpen]=useState(false);
   const store=useMemo(()=>pageDraft(courseId,metadata.asset_id,metadata.sha256,page.page),[courseId,metadata.asset_id,metadata.sha256,page.page]);
   const state=useSyncExternalStore(store.subscribe,store.snapshot),latest=useRef(state),lastOwnInk=useRef<InkStroke[]|null>(null);latest.current=state;
   const [tools,setTools]=useState<NotebookTools>({...defaultTools}),[view,setView]=useState<NotebookView>({...defaultView}),[preferencesReady,setPreferencesReady]=useState(false),[preferenceWarning,setPreferenceWarning]=useState(''),[preferenceSaveWarnings,setPreferenceSaveWarnings]=useState({tools:'',view:''}),[availableWidth,setAvailableWidth]=useState(0);
-  const {tool,eraserSize}=tools,{rotation,notesOpen}=view,zoom=notebookZoom(view,page,availableWidth),color=tool==='highlighter'?tools.highlighterColor:tools.penColor,width=tool==='highlighter'?tools.highlighterWidth:tools.penWidth,opacity=tool==='highlighter'?tools.highlighterOpacity:tools.penOpacity;
+  const {tool,eraserSize}=tools,eraserMode=tools.eraserMode||(tool==='partial-eraser'?'partial-eraser':'stroke-eraser'),{rotation,notesOpen}=view,zoom=notebookZoom(view,page,availableWidth),color=tool==='highlighter'?tools.highlighterColor:tools.penColor,width=tool==='highlighter'?tools.highlighterWidth:tools.penWidth,opacity=tool==='highlighter'?tools.highlighterOpacity:tools.penOpacity;
   const [imageReady,setImageReady]=useState(false),[imageError,setImageError]=useState(''),[inputError,setInputError]=useState(''),[exporting,setExporting]=useState(false),[exportStatus,setExportStatus]=useState('');
   const [preview,setPreview]=useState<InkStroke[]|null>(null),[liveStroke,setLiveStroke]=useState<InkStroke|null>(null),[polygon,setPolygon]=useState<Point[]>([]),[selected,setSelected]=useState<string[]>([]);
   const [history,setHistory]=useState<{past:InkStroke[][];future:InkStroke[][]}>({past:[],future:[]});
@@ -30,10 +29,10 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   async function download(name:string,value:unknown){if(exporting)return;setExporting(true);setExportStatus('내보내는 중…');setInputError('');try{const result=await downloadJSON(name,value);setExportStatus(result==='saved'?'파일 저장 완료':result==='cancelled'?'내보내기 취소됨':'다운로드를 요청했습니다. 저장 위치를 확인하세요.');}catch(error){setExportStatus('');setInputError('내보내기 실패: '+(error as Error).message);}finally{setExporting(false);}}
   function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());void download(result.filename,result.value);}
   function savedPreference(kind:'tools'|'view',saved:boolean){setPreferenceSaveWarnings(current=>({...current,[kind]:saved?'':(kind==='tools'?'필기 도구':'자료 보기')+' 설정을 저장하지 못했습니다. 이번 실행 동안 적용하며 메모·필기는 별도로 저장합니다.'}));}
-  function changeTools(next:Partial<NotebookTools>){if(next.tool?.includes('eraser')){rememberedEraser=next.tool;setEraserMode(next.tool);}const value={...tools,...next};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
+  function changeTools(next:Partial<NotebookTools>){const value={...tools,eraserMode,...next,...(next.tool==='stroke-eraser'||next.tool==='partial-eraser'?{eraserMode:next.tool}:{})};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
   function changeView(next:Partial<NotebookView>){const value={...view,...next};setView(value);void saveNotebookView(metadata.asset_id,metadata.sha256,value).then(saved=>savedPreference('view',saved));}
   function setZoom(value:number){changeView({zoomMode:'manual',zoom:value});}
-  useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);if(result.tools.tool.includes('eraser')){rememberedEraser=result.tools.tool;setEraserMode(result.tools.tool);}setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
+  useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
   useEffect(()=>{const element=viewport.current;if(!element)return;const measure=()=>{const style=getComputedStyle(element);setAvailableWidth(Math.max(0,element.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight)));};measure();const observer=new ResizeObserver(measure);observer.observe(element);return()=>observer.disconnect();},[]);
   const displayed=preview||state.ink,selection=inkBounds(displayed.filter(stroke=>selected.includes(stroke.id)));
   useEffect(()=>{if(state.ink!==lastOwnInk.current){cancelGesture();setHistory({past:[],future:[]});setSelected([]);}},[state.ink]);
@@ -107,6 +106,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   useEffect(()=>{
     if(!settingsOpen)return;
     settings.current?.querySelector<HTMLElement>('input,button')?.focus();
+    settings.current?.scrollIntoView({block:'nearest'});
     const outside=(event:PointerEvent)=>{if(!settings.current?.contains(event.target as Node)&&!settingsTrigger.current?.contains(event.target as Node)){setSettingsOpen(false);if(event.target instanceof Element&&event.target.closest('.page-viewport')){event.preventDefault();event.stopPropagation();}}};
     const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setSettingsOpen(false);settingsTrigger.current?.focus();}};
     document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape,true);

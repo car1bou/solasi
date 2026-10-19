@@ -46,3 +46,13 @@ for(const [theme,pattern] of [['light',/:root\s*\{([^}]+)\}/],['dark',/:root\[da
     }
   });
 }
+
+test('tool settings reveal their full bounds and can scroll in short windows',()=>{
+  const notebook=readFileSync(new URL('../src/PageNotebook.tsx',import.meta.url),'utf8');
+  const settings=css.match(/\.ink-tool-settings\s*\{([^}]+)\}/)?.[1];
+  assert.ok(settings);
+  assert.match(settings,/max-width:calc\(100vw - 48px\)/);
+  assert.match(settings,/max-height:calc\(100dvh - 32px\)/);
+  assert.match(settings,/overflow:auto/);
+  assert.ok(notebook.includes("settings.current?.scrollIntoView({block:'nearest'})"));
+});

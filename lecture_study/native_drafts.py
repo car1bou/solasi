@@ -50,10 +50,12 @@ def checked_preference(key, value):
     if key == 'notebook-tools':
         numeric = {'penWidth':(.0005,.04), 'penOpacity':(.05,1),
                    'highlighterWidth':(.0005,.04), 'highlighterOpacity':(.05,1), 'eraserSize':(.003,.06)}
-        if set(value) != {'tool','penColor','highlighterColor',*numeric}:
+        if set(value) - {'eraserMode'} != {'tool','penColor','highlighterColor',*numeric}:
             raise ValueError('필기 설정 항목 오류')
         if value['tool'] not in ('pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'):
             raise ValueError('필기 도구 오류')
+        if 'eraserMode' in value and value['eraserMode'] not in ('stroke-eraser','partial-eraser'):
+            raise ValueError('지우개 방식 오류')
         for field in ('penColor','highlighterColor'):
             if not isinstance(value[field], str) or not re.fullmatch(r'#[0-9a-fA-F]{6}', value[field]):
                 raise ValueError('필기 색상 오류')

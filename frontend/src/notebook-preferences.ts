@@ -2,7 +2,7 @@ import {api,nativeApp} from './api.ts';
 import type {InkStroke} from './types.ts';
 
 export type NotebookTool='pen'|'highlighter'|'stroke-eraser'|'partial-eraser'|'lasso'|'pan';
-export type NotebookTools={tool:NotebookTool;penColor:string;penWidth:number;penOpacity:number;highlighterColor:string;highlighterWidth:number;highlighterOpacity:number;eraserSize:number};
+export type NotebookTools={tool:NotebookTool;eraserMode?:'stroke-eraser'|'partial-eraser';penColor:string;penWidth:number;penOpacity:number;highlighterColor:string;highlighterWidth:number;highlighterOpacity:number;eraserSize:number};
 export type NotebookView={zoomMode:'fit'|'manual';zoom:number;rotation:number;notesOpen:boolean};
 export const defaultTools:NotebookTools={tool:'pen',penColor:'#254f3f',penWidth:.0025,penOpacity:1,highlighterColor:'#254f3f',highlighterWidth:.018,highlighterOpacity:.35,eraserSize:.014};
 export const defaultView:NotebookView={zoomMode:'fit',zoom:1,rotation:0,notesOpen:true};
@@ -11,7 +11,7 @@ const toolNames:NotebookTool[]=['pen','highlighter','stroke-eraser','partial-era
 const inRange=(value:unknown,min:number,max:number)=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max;
 function tools(value:unknown):NotebookTools{
   const row=value as NotebookTools|null;
-  return row&&toolNames.includes(row.tool)&&[row.penColor,row.highlighterColor].every(color=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color))&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
+  return row&&toolNames.includes(row.tool)&&(row.eraserMode===undefined||['stroke-eraser','partial-eraser'].includes(row.eraserMode))&&[row.penColor,row.highlighterColor].every(color=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color))&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
 }
 function view(value:unknown):NotebookView{
   const row=value as NotebookView|null;

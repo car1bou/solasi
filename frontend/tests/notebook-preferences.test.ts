@@ -12,7 +12,7 @@ test('notebook preferences keep each pen and document view independently across 
     const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
     const initial=await prefs.loadNotebookPreferences(asset,hash);
     assert.equal(initial.view.zoomMode,'fit');
-    const tools={...initial.tools,tool:'highlighter',penColor:'#123456',penWidth:.004,highlighterColor:'#abcdef',highlighterOpacity:.4,eraserSize:.02};
+    const tools={...initial.tools,tool:'highlighter',eraserMode:'partial-eraser',penColor:'#123456',penWidth:.004,highlighterColor:'#abcdef',highlighterOpacity:.4,eraserSize:.02};
     assert.equal(await prefs.saveNotebookTools(tools),true);
     const view={zoomMode:'manual',zoom:1.5,rotation:90,notesOpen:false};
     assert.equal(await prefs.saveNotebookView(asset,hash,view),true);
@@ -52,7 +52,7 @@ test('native preferences use committed app storage and storage errors remain rec
   try{
     const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
     const initial=await prefs.loadNotebookPreferences('a'.repeat(32),'b'.repeat(64));
-    const tools={...initial.tools,penColor:'#654321'};
+    const tools={...initial.tools,tool:'pen',eraserMode:'partial-eraser',penColor:'#654321'};
     assert.equal(await prefs.saveNotebookTools(tools),true);
     assert.deepEqual(values.get('notebook-tools'),tools);
     server.moduleGraph.invalidateAll();

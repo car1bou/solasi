@@ -159,6 +159,18 @@ class NativePreferenceTests(unittest.TestCase):
         self.assertEqual(self.store.read(original['key']),[original])
         self.assertEqual(set(self.store.state()),{'vault_id','theme'})
 
+    def test_eraser_mode_survives_restart_when_another_tool_is_selected(self):
+        self.store.write_preference('notebook-tools', tool_preferences())
+        for mode in ('stroke-eraser','partial-eraser'):
+            value={**tool_preferences(),'tool':'highlighter','eraserMode':mode}
+            self.store.write_preference('notebook-tools',value)
+            other=open_db(self.root)
+            try:self.assertEqual(NativeDrafts(other).read_preference('notebook-tools')['value'],value)
+            finally:other.close()
+            for invalid in (None,True,'pen','partial',{},[]):
+                with self.assertRaises(ValueError):self.store.write_preference('notebook-tools',{**value,'eraserMode':invalid})
+                self.assertEqual(self.store.read_preference('notebook-tools')['value'],value)
+
     def test_keys_cannot_access_arbitrary_settings_or_other_document_identifiers(self):
         for key in ('native_theme','native_vault_id','unrelated-private-setting','../notebook-tools','notebook-tools:other','notebook-view:a:'+'b'*64,'notebook-view:'+'a'*32+':hash',VIEW_KEY+'::copy',VIEW_KEY+'\x00',None):
             with self.subTest(key=key):
