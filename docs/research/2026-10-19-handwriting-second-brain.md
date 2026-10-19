@@ -47,7 +47,7 @@
 
 - 확인·수정한 인식문부터 지식에 편입한다.
 - 로컬 유휴 시간 자동 색인 갱신·관련 기록 및 개념 연결 후보 제안을 기본 동작으로 구체화한다. 개념은 자동 확정·병합하지 않는다.
-- 상세 설계: `docs/superpowers/specs/2026-10-19-handwriting-second-brain-design.md`. 상세 설계는 사용자 검토 대기이며 아직 구현되지 않았다.
+- 상세 설계: `docs/superpowers/specs/2026-10-19-handwriting-second-brain-design.md`. 상세 설계는 사용자 승인 완료이며 구현 계획 검토 대기다. 손글씨 인식·자동화는 아직 구현되지 않았다.
 
 ## 공식 자료
 
