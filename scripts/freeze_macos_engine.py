@@ -79,6 +79,7 @@ def main():
                 (engines/'lib'/source.name).symlink_to(os.readlink(source))
         for name in ('receipt.json','LICENSE.llama.cpp','LICENSE.ollama'):shutil.copy2(embedding/name,engines/name)
         subprocess.run(['/usr/bin/xcrun','swiftc','-O','-target','arm64-apple-macosx13.3','-module-cache-path',str(stage/'swift-cache'),str(ROOT/'macos/MaterialMetadata.swift'),'-o',str(output/'MaterialMetadata')],check=True)
+        subprocess.run(['/usr/bin/xcrun','swiftc','-O','-target','arm64-apple-macosx13.3','-module-cache-path',str(stage/'swift-cache'),str(ROOT/'macos/HandwritingRecognition.swift'),'-o',str(output/'HandwritingRecognition')],check=True)
         versions={distribution.metadata['Name']:distribution.version for distribution in importlib.metadata.distributions()}
         files={}
         for path in sorted(output.rglob('*')):

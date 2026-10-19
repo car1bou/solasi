@@ -1,8 +1,8 @@
 # 손글씨와 과목 지식 연결 조사
 
-확인일: 2026-10-19. 상태: 조사와 제안. 손글씨 인식·자동 연결은 아직 구현하지 않았다.
+확인일: 2026-10-19. 아래는 구현 전 조사와 제안이다. 이후 구현 및 실제 공개 이미지 비교 결과는 [검증 기록](../handwriting-second-brain-20261019.md)을 참조한다.
 
-## 현재 코드에서 확인한 사실
+## 구현 전 코드에서 확인한 사실
 
 - `course_materials.save_page_document`는 PDF 해시·페이지·버전과 텍스트 및 원본 획을 함께 보존한다. 검색에는 `body.text`만 들어간다.
 - `InkPoint`는 정규화 좌표·압력·선택적 기울기를 저장하며 점별 시각은 저장하지 않는다. 기존 점에 추측 시각을 부여하면 안 된다.
@@ -58,4 +58,4 @@
 - ML Kit Android 입력·모델 관리: https://developers.google.com/ml-kit/vision/digital-ink-recognition/android
 - Qwen3.5 4B 공식 모델 카드: https://huggingface.co/Qwen/Qwen3.5-4B
 
-공식 기능과 코드 경로를 조사했다. 이번 조사에서는 실제 한국어 손글씨의 CER·수식 정확도·추론 지연을 측정하지 않았다.
+공식 기능과 코드 경로를 조사했다. 후속 실행에서 공개 한국어 손글씨 이미지 비교를 수행했다. 결과와 범위는 `docs/handwriting-second-brain-20261019.md`에 기록한다.

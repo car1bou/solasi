@@ -112,7 +112,7 @@ def resolve_source(db,ref):
     actual=SourceRef.model_validate_json(saved["ref"])
     result={"status":"deleted" if saved["deleted"] else "current","ref":actual.model_dump(),"text_snapshot":saved["text_snapshot"],"open_url":None,"seek_seconds":None,"end_seconds":None}
     if saved["deleted"]: return result
-    if actual.kind in ('material','page_note'):
+    if actual.kind in ('material','page_note','ink_note'):
         asset=db.execute("SELECT * FROM assets WHERE id=?",(actual.asset_id,)).fetchone()
         if not asset: result["status"]="deleted";return result
         original=source_status(db,dict(asset))
@@ -127,12 +127,17 @@ def resolve_source(db,ref):
         result["original_status"]=original
         if original=="missing": result["status"]="changed" if actual.document_sha256 else "deleted"
         elif original!="current" or not actual.document_sha256 and actual.version!=asset["version"]: result["status"]="changed"
-        if actual.kind=='page_note':
+        if actual.kind in ('page_note','ink_note'):
             document=db.execute('SELECT revision FROM page_documents WHERE id=?',(actual.document_id,)).fetchone()
             if not document:result['status']='deleted';return result
             if document['revision']!=actual.version:result['status']='changed'
             result['document_url']=f'/api/courses/{actual.course_id}/assets/{actual.asset_id}/pages/{actual.page}/document?document_sha256={actual.document_sha256}&revision={actual.version}'
-        if result["status"]=="current" or actual.kind=='page_note' and original=='current':
+        if actual.kind=='ink_note':
+            ink=db.execute('SELECT ink FROM page_document_revisions WHERE document_id=? AND revision=?',(actual.document_id,actual.version)).fetchone()
+            result['ink_snapshot']=json.loads(ink[0]) if ink else []
+            recognition=db.execute('SELECT status FROM ink_recognitions WHERE source_id=?',(actual.id,)).fetchone()
+            if recognition is None or recognition[0]!='approved':result['status']='changed'
+        if result["status"]=="current" or actual.kind in ('page_note','ink_note') and original=='current':
             query='?document_sha256='+digest if digest else ''
             result["open_url"]="/api/assets/"+actual.asset_id+"/original"+query+("#page="+str(actual.page) if asset["kind"]=="pdf" and actual.page else "")
             if actual.page and asset["kind"] in ("pdf","png","jpg"): result["image_url"]="/api/assets/"+actual.asset_id+"/pages/"+str(actual.page)+query

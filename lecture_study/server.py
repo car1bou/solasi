@@ -74,6 +74,9 @@ def create_app(config: AppConfig) -> FastAPI:
                 try:release_capture(saved['id'])
                 except (KeyError,OSError,ValueError) as exc:
                     with db:db.execute('UPDATE recordings SET error=? WHERE id=?',(str(exc)[:300],saved['id']))
+            brain_task=asyncio.create_task(knowledge_loop())
+            app.state.tasks.add(brain_task)
+            brain_task.add_done_callback(app.state.tasks.discard)
             yield
         finally:
             app.state.closing=True
@@ -349,10 +352,10 @@ def create_app(config: AppConfig) -> FastAPI:
         return manager.progress
 
     @asynccontextmanager
-    async def local_embedding_client(job_id=None,*,reuse=False):
+    async def local_embedding_client(job_id=None,*,reuse=False,background=False):
         if config.embedded:
             app.state.active_embedding_clients+=1
-            client=DirectEmbeddings(app.state.direct_models,lambda:wait_for_transcription(db,job_id,on_wait=app.state.direct_models._release_embedding,include_recording=reuse),reuse=reuse)
+            client=DirectEmbeddings(app.state.direct_models,(lambda:admit_background(db)) if background else (lambda:wait_for_transcription(db,job_id,on_wait=app.state.direct_models._release_embedding,include_recording=reuse)),reuse=reuse)
             try:yield client
             finally:
                 try:await client.close()
@@ -944,6 +947,167 @@ def create_app(config: AppConfig) -> FastAPI:
         import mimetypes
         path=playable_path(db,ident)
         return FileResponse(path,media_type=mimetypes.guess_type(path.name)[0] or "audio/wav")
+
+    from .second_brain import reconcile,next_background_work,background_idle,source_scope,related_sources,save_related,propose_concepts,admit_background,BackgroundDeferred,course_scope
+    from .retrieval import sync_embeddings,ref_in_scope,scope_key,scope_ids,eligible_chunks
+
+    async def knowledge_loop():
+        last_concept=0
+        while not app.state.closing:
+            work=None
+            try:
+                reconcile(db)
+                provider=provider_config()
+                if provider.provider in ('local','ollama'):
+                    with db:
+                        for source_work in db.execute("SELECT * FROM brain_work WHERE kind='source' AND state='done'").fetchall():
+                            scope=Scope.model_validate(json.loads(source_work['request'])['scope'])
+                            if not db.execute('SELECT 1 FROM settings WHERE key=?',('concept_scan:'+source_work['source_id']+':'+scope_key(db,scope),)).fetchone():
+                                db.execute("INSERT OR IGNORE INTO brain_work(key,kind,source_id,state,request,updated_at) VALUES (?,'concept',?,'pending',?,?)",('concept:'+source_work['key'],source_work['source_id'],source_work['request'],now()))
+                        db.execute("UPDATE brain_work SET state='pending' WHERE kind='concept' AND state='waiting_api'")
+                work=next_background_work(db)
+                if work:
+                    if work['kind']=='concept':
+                        if provider.provider not in ('local','ollama'):
+                            with db:db.execute("UPDATE brain_work SET state='waiting_api' WHERE key=?",(work['key'],))
+                        elif time.monotonic()-last_concept>=30:
+                            async with app.state.generation_lock:
+                                if background_idle(db):
+                                    last_concept=time.monotonic()
+                                    await propose_concepts(db,work['source_id'],provider,direct_models=app.state.direct_models,ollama_url=app.state.ollama_url,before_local=lambda:admit_background(db),scope=Scope.model_validate(json.loads(work['request'])['scope']))
+                                    with db:db.execute("UPDATE brain_work SET state='done',error=NULL WHERE key=?",(work['key'],))
+                    elif work['kind']=='ink':
+                        body=json.loads(work['request']);snapshot=capture_ink(db,body['course_id'],body['asset_id'],body['page'],body['digest'])
+                        if snapshot['ink_hash']!=body['ink_hash']:
+                            with db:db.execute("UPDATE brain_work SET state='obsolete' WHERE key=?",(work['key'],))
+                        elif background_idle(db):
+                            async with app.state.generation_lock:
+                                if background_idle(db):
+                                    save_recognition(db,snapshot,await recognize_ink(snapshot))
+                                    with db:db.execute("UPDATE brain_work SET state='done',error=NULL,updated_at=? WHERE key=?",(now(),work['key']))
+                    else:
+                        async with app.state.embedding_lock,local_embedding_client(reuse=True,background=True) as client:
+                            if client is None:raise ValueError('로컬 임베딩 모델을 준비하세요')
+                            status=await sync_embeddings(db,'embeddinggemma',client,can_continue=lambda:background_idle(db),batch_limit=16)
+                            if not status.get('paused') and background_idle(db):
+                                related=await related_sources(db,Scope.model_validate(json.loads(work['request'])['scope']),work['source_id'],client)
+                                save_related(db,work['source_id'],related,work['key'])
+                await asyncio.sleep(3)
+            except asyncio.CancelledError:raise
+            except BackgroundDeferred:
+                await asyncio.sleep(1)
+            except Exception as exc:
+                if work:
+                    with db:db.execute("UPDATE brain_work SET state='failed',error=?,updated_at=? WHERE key=?",(str(exc)[:300],now(),work['key']))
+                await asyncio.sleep(5)
+
+    @app.get('/api/knowledge/status')
+    async def knowledge_status():
+        enabled=db.execute("SELECT value FROM settings WHERE key='second_brain_auto'").fetchone()
+        return {'enabled':json.loads(enabled[0]) if enabled else True,'idle':background_idle(db),'counts':{r[0]:r[1] for r in db.execute('SELECT state,count(*) FROM brain_work GROUP BY state')},'errors':[dict(r) for r in db.execute("SELECT key,error FROM brain_work WHERE state='failed' ORDER BY updated_at DESC LIMIT 5")],'index':index_status(db)}
+
+    class KnowledgeOptions(Input):
+        enabled:bool
+
+    @app.put('/api/knowledge/options')
+    async def knowledge_options(body:KnowledgeOptions):
+        with db:db.execute("INSERT OR REPLACE INTO settings VALUES ('second_brain_auto',?)",(json.dumps(body.enabled),))
+        return await knowledge_status()
+
+    @app.post('/api/knowledge/retry')
+    async def knowledge_retry():
+        with db:db.execute("UPDATE brain_work SET state='pending',error=NULL WHERE state='failed'")
+        return await knowledge_status()
+
+    @app.get('/api/knowledge/suggestions')
+    async def knowledge_suggestions(session_id:str|None=None,course_id:str|None=None,asset_id:str|None=None,page:int|None=None):
+        scope=Scope(session_id=session_id,course_id=course_id,asset_id=asset_id,page=page)
+        ids=scope_ids(db,scope);allowed={r['source_id'] for r in eligible_chunks(db,ids,None,session_id,scope)}
+        result=[]
+        for row in db.execute("SELECT * FROM brain_work WHERE kind='source' AND result IS NOT NULL AND state IN ('done','failed') ORDER BY updated_at DESC"):
+            if row['source_id'] not in allowed or scope_key(db,Scope.model_validate(json.loads(row['request'])['scope']))!=scope_key(db,scope):continue
+            related_scope=scope
+            if course_id:
+                related_session=db.execute("SELECT id FROM sessions WHERE course_id=? AND kind='lecture' AND deleted=0 ORDER BY lecture_no LIMIT 1",(course_id,)).fetchone()
+                related_scope=Scope(session_id=related_session[0]) if related_session else Scope(course_id=course_id)
+            related=json.loads(row['result']);related['evidence']=[e for e in related['evidence'] if ref_in_scope(db,SourceRef.model_validate(e['ref']),related_scope) and db.execute('SELECT 1 FROM searchable_chunks WHERE source_id=?',(e['ref']['id'],)).fetchone()]
+            concepts=[dict(c) for c in db.execute("SELECT * FROM concept_proposals WHERE source_id=? AND scope_key=? AND status='candidate'",(row['source_id'],scope_key(db,scope)))]
+            result.append({'source_id':row['source_id'],'related':related,'concepts':concepts})
+            if len(result)>=10:break
+        return result
+
+    class ConceptProposalInput(OwnerInput):
+        source_id:str=Field(min_length=1,max_length=500)
+
+    @app.post('/api/knowledge/concepts',status_code=202)
+    async def knowledge_concepts(body:ConceptProposalInput):
+        scope=course_scope(db,body.course_id) if body.course_id else Scope(session_id=body.session_id)
+        provider=provider_config()
+        source=db.execute('SELECT ref FROM sources WHERE id=? AND deleted=0',(body.source_id,)).fetchone()
+        if source is None:raise KeyError('원문을 찾을 수 없습니다')
+        ref=SourceRef.model_validate_json(source[0])
+        if not ref_in_scope(db,ref,scope):raise ValueError('과목 범위 밖의 원문입니다')
+        job=submit_job(db,scope.session_id,'concept_proposals',{'source_id':body.source_id},course_id=scope.course_id)
+        async def operation():
+            key=await asyncio.to_thread(app.state.secrets.get_secret,provider.provider) if provider.provider not in ('local','ollama') else None
+            async with generation_slot(provider.provider,job['id']):return await propose_concepts(db,body.source_id,provider,True,direct_models=app.state.direct_models,secret=key,ollama_url=app.state.ollama_url,scope=scope)
+        return launch_job(app,job,operation)
+
+    class ConceptDecision(OwnerInput):
+        apply:bool
+
+    @app.post('/api/knowledge/concepts/{ident}/decision')
+    async def knowledge_concept_decision(ident:str,body:ConceptDecision):
+        row=db.execute("SELECT * FROM concept_proposals WHERE id=? AND status='candidate'",(ident,)).fetchone()
+        if row is None:raise KeyError('검토할 후보가 없습니다')
+        if not db.execute('SELECT 1 FROM searchable_chunks WHERE source_id=?',(row['source_id'],)).fetchone():raise ValueError('원문이 변경되었습니다. 최신 후보를 검토하세요')
+        scope=course_scope(db,body.course_id) if body.course_id else Scope(session_id=body.session_id)
+        if row['scope_key']!=scope_key(db,scope):raise ValueError('과목 범위 밖의 후보입니다')
+        if body.apply:
+            ref=SourceRef.model_validate_json(db.execute('SELECT ref FROM sources WHERE id=?',(row['source_id'],)).fetchone()[0])
+            save_term(db,scope,row['canonical'],[],row['quote'],[ref])
+        with db:db.execute('UPDATE concept_proposals SET status=? WHERE id=?',('approved' if body.apply else 'rejected',ident))
+        return {'status':'approved' if body.apply else 'rejected'}
+
+    from .handwriting import capture_ink,recognize_ink,recognize_local_ink,save_recognition,list_recognitions,get_recognition,approve_recognition,reject_recognition
+
+    @app.get('/api/courses/{cid}/assets/{aid}/pages/{page}/handwriting')
+    async def handwriting_list(cid:str,aid:str,page:int,document_sha256:str):
+        return list_recognitions(db,cid,aid,page,document_sha256)
+
+    class InkRecognitionInput(Input):
+        document_sha256:str=Field(pattern=r'^[a-f0-9]{64}$')
+        force:bool=False
+        engine:Literal['vision','local']='vision'
+
+    @app.post('/api/courses/{cid}/assets/{aid}/pages/{page}/handwriting',status_code=202)
+    async def handwriting_start(cid:str,aid:str,page:int,body:InkRecognitionInput):
+        snapshot=capture_ink(db,cid,aid,page,body.document_sha256)
+        if body.force:
+            # Preserve previous proposals while allowing an explicit new recognition.
+            with db:db.execute("UPDATE ink_recognitions SET status='stale' WHERE document_id=? AND ink_hash=? AND status IN ('candidate','rejected')",(snapshot['id'],snapshot['ink_hash']))
+        job=submit_job(db,None,'handwriting',{'document_id':snapshot['id']},course_id=cid)
+        async def operation():
+            await wait_for_transcription(db,job['id'],include_recording=True)
+            async with app.state.generation_lock:
+                await wait_for_transcription(db,job['id'],include_recording=True)
+                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True)) if body.engine=='local' else await recognize_ink(snapshot)
+                return save_recognition(db,snapshot,result)
+        return launch_job(app,job,operation)
+
+    class InkApproval(Input):
+        text:str=Field(min_length=1,max_length=200000)
+        expected_ink_hash:str=Field(pattern=r'^[a-f0-9]{64}$')
+
+    @app.put('/api/courses/{cid}/handwriting/{ident}/approve')
+    async def handwriting_approve(cid:str,ident:str,body:InkApproval):
+        if get_recognition(db,ident)['course_id']!=cid:raise KeyError('과목의 후보가 아닙니다')
+        return approve_recognition(db,ident,body.text,body.expected_ink_hash)
+
+    @app.post('/api/courses/{cid}/handwriting/{ident}/reject')
+    async def handwriting_reject(cid:str,ident:str):
+        if get_recognition(db,ident)['course_id']!=cid:raise KeyError('과목의 후보가 아닙니다')
+        return reject_recognition(db,ident)
 
     @app.get("/api/sources/{ident}")
     async def source_details(ident: str):

@@ -40,7 +40,7 @@ while head:=sys.stdin.buffer.read(4):
     async def test_three_inputs_reuse_one_worker_and_close_at_scope_end(self):
         before=AsyncMock();client=self.client(before)
         for _ in range(3):self.assertEqual(len(await client.embed('embeddinggemma','한국어')),768)
-        self.assertEqual(len(self.children),1);self.assertEqual(before.await_count,3)
+        self.assertEqual(len(self.children),1);self.assertEqual(before.await_count,6)
         self.assertIsNone(self.children[0].returncode)
         await client.close()
         self.assertIsNotNone(self.children[0].returncode);self.assertFalse(self.manager.processes)

@@ -113,7 +113,7 @@ class RecordingModeTests(unittest.IsolatedAsyncioTestCase):
         folder=Path(self.temp.name)/'migration';db=open_db(folder);sid=create_session(db,'lecture','기존 녹음',None,None).id
         db.execute("INSERT INTO recordings(id,session_id,sample_rate,status,started_at) VALUES (?, ?,16000,'stopped','2026-10-14T00:00:00+00:00')",('a'*32,sid));db.commit()
         legacy_fixture(db,15);original=dict(db.execute('SELECT * FROM recordings').fetchone());db.close();db=open_db(folder)
-        row=dict(db.execute('SELECT * FROM recordings').fetchone());self.assertEqual({k:row[k]for k in original},original);self.assertEqual(row['transcription_mode'],'realtime');self.assertEqual(row['transcription_released'],1);self.assertEqual(row['capture_id'],'a'*32);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],17);db.close()
+        row=dict(db.execute('SELECT * FROM recordings').fetchone());self.assertEqual({k:row[k]for k in original},original);self.assertEqual(row['transcription_mode'],'realtime');self.assertEqual(row['transcription_released'],1);self.assertEqual(row['capture_id'],'a'*32);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],18);db.close()
 
     async def test_cancelled_held_job_is_not_started_by_grace_release(self):
         from lecture_study import server

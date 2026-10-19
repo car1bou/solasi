@@ -44,3 +44,15 @@ test('long summary shows prepared work before its first result and never resets 
     assert.equal(draw('running',null,{}),'');
   }finally{await server.close();}
 });
+
+test('confirmed ink without an OCR box still displays its saved strokes',async()=>{
+  const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {SourceImage}=await server.ssrLoadModule('/src/SourceLink.tsx');
+    const source={image_url:'/page.png',ref:{kind:'ink_note',page:1,bbox:null,source_width:600,source_height:800},ink_snapshot:[{id:'line',tool:'pen',color:'#123456',width:.01,opacity:1,input:'pen',points:[{x:.1,y:.2,pressure:.5},{x:.5,y:.3,pressure:.7}]}]};
+    const html=renderToStaticMarkup(React.createElement(SourceImage,{source}));
+    assert.match(html,/<svg/);assert.match(html,/<path/);assert.match(html,/#123456/);assert.doesNotMatch(html,/<rect/);
+    source.ref.bbox=[.1,.2,.4,.1] as any;
+    assert.match(renderToStaticMarkup(React.createElement(SourceImage,{source})),/<rect/);
+  }finally{await server.close();}
+});

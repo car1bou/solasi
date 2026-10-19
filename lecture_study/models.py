@@ -29,7 +29,7 @@ class Session(SessionInput):
 
 class SourceRef(BaseModel):
     id: str
-    kind: Literal["material", "transcript", "note", "page_note", "web", "ai_interpretation"]
+    kind: Literal["material", "transcript", "note", "page_note", "ink_note", "web", "ai_interpretation"]
     asset_id: str | None = None
     session_id: str | None = None
     course_id: str | None = None
@@ -39,7 +39,7 @@ class SourceRef(BaseModel):
     url: str | None = None
     page: int | None = None
     bbox: tuple[float, float, float, float] | None = None
-    coord_system: Literal["pdf_points", "pixels"] | None = None
+    coord_system: Literal["pdf_points", "pixels", "normalized"] | None = None
     source_width: float | None = None
     source_height: float | None = None
     start_ms: int | None = None

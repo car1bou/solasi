@@ -98,7 +98,7 @@ sys.stdout.buffer.write(struct.pack('>I',len(reply))+reply);sys.stdout.buffer.fl
         self.assertEqual(set(timings),{'lock_wait_ms','transcription_wait_ms','asset_prepare_ms','worker_roundtrip_ms','total_ms'})
         self.assertTrue(all(value>=0 for value in timings.values()))
         self.assertGreaterEqual(timings['total_ms'],timings['worker_roundtrip_ms'])
-        before.assert_awaited_once()
+        self.assertEqual(before.await_count,2)
         self.assertEqual(self.manager.processes, set())
 
     async def test_new_embedding_index_preserves_old_set_and_refuses_mixing(self):
@@ -247,3 +247,21 @@ sys.stdout.buffer.write(struct.pack('>I',len(reply))+reply);sys.stdout.buffer.fl
                 self.assertEqual(response.status_code,422)
                 self.assertEqual(json.loads(db.execute('SELECT request FROM jobs WHERE id=?',(job['id'],)).fetchone()[0]), original)
                 self.assertEqual((await client.get('/api/settings')).json()['provider']['provider'],'local')
+
+class BackgroundAdmissionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_admission_runs_after_asset_preparation_before_model_call(self):
+        from lecture_study.direct_models import DirectModels
+        from lecture_study.models import ProviderConfig
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import AsyncMock
+        with tempfile.TemporaryDirectory() as folder:
+            manager=DirectModels(Path(folder),Path(folder)/'cache');busy=[False]
+            manager.status=AsyncMock(return_value={'digest':'d'*64,'context_limit':8192})
+            async def view(model):busy[0]=True;return Path(folder)
+            manager.view=view;manager._call=AsyncMock(return_value={'text':'wrong','usage':{}})
+            async def admission():
+                if busy[0]:raise ValueError('yield')
+            with self.assertRaisesRegex(ValueError,'yield'):
+                await manager.generate(ProviderConfig(provider='local'),[{'role':'user','content':'x'}],[],None,output_limit=1,before_local=admission)
+            manager._call.assert_not_awaited()

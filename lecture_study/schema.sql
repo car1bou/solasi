@@ -80,11 +80,20 @@ CREATE TABLE IF NOT EXISTS chunks(id TEXT PRIMARY KEY,source_id TEXT NOT NULL RE
 CREATE INDEX IF NOT EXISTS chunks_source ON chunks(source_id,ordinal);
 CREATE VIRTUAL TABLE IF NOT EXISTS chunk_search USING fts5(chunk_id UNINDEXED,search_text,tokenize='trigram');
 CREATE TRIGGER IF NOT EXISTS chunks_deleted AFTER DELETE ON chunks BEGIN DELETE FROM chunk_search WHERE chunk_id=old.id; END;
+CREATE TABLE IF NOT EXISTS ink_recognitions (
+ id TEXT PRIMARY KEY,document_id TEXT NOT NULL REFERENCES page_documents(id),course_id TEXT NOT NULL REFERENCES courses(id),asset_id TEXT NOT NULL REFERENCES assets(id),
+ document_sha256 TEXT NOT NULL,page INTEGER NOT NULL,page_revision INTEGER NOT NULL,ink_hash TEXT NOT NULL,engine TEXT NOT NULL,
+ status TEXT NOT NULL CHECK(status IN ('candidate','approved','rejected','stale')),text TEXT NOT NULL,result TEXT NOT NULL,approved_text TEXT,source_id TEXT REFERENCES sources(id),created_at TEXT NOT NULL,approved_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ink_recognitions_current ON ink_recognitions(document_id,ink_hash,engine) WHERE status!='stale';
+CREATE TABLE IF NOT EXISTS brain_work(key TEXT PRIMARY KEY,kind TEXT NOT NULL,source_id TEXT,state TEXT NOT NULL,request TEXT NOT NULL,result TEXT,error TEXT,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS concept_proposals(id TEXT PRIMARY KEY,source_id TEXT NOT NULL REFERENCES sources(id),scope_key TEXT NOT NULL,canonical TEXT NOT NULL,quote TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL);
 CREATE VIEW IF NOT EXISTS searchable_chunks AS
  SELECT c.*,s.ref FROM chunks c JOIN sources s ON s.id=c.source_id
  WHERE s.deleted=0 AND (
  (json_extract(s.ref,'$.kind')='material' AND json_extract(s.ref,'$.document_sha256') IS NULL AND EXISTS(SELECT 1 FROM assets a WHERE a.id=json_extract(s.ref,'$.asset_id') AND a.version=json_extract(s.ref,'$.version') AND a.extraction_sha256=a.sha256 AND a.status IN ('ready','partial')))
  OR (json_extract(s.ref,'$.kind')='page_note' AND EXISTS(SELECT 1 FROM page_documents d JOIN page_document_revisions r ON r.document_id=d.id AND r.revision=d.revision JOIN assets a ON a.id=d.asset_id WHERE r.source_id=s.id AND d.document_sha256=a.sha256))
+ OR (json_extract(s.ref,'$.kind')='ink_note' AND EXISTS(SELECT 1 FROM ink_recognitions i JOIN assets a ON a.id=i.asset_id WHERE i.source_id=s.id AND i.status='approved' AND i.document_sha256=a.sha256))
  OR (json_extract(s.ref,'$.kind')='note' AND EXISTS(SELECT 1 FROM notes n WHERE n.source_id=s.id AND n.version=(SELECT max(version) FROM notes WHERE session_id=n.session_id)))
  OR (json_extract(s.ref,'$.kind')='transcript' AND EXISTS(SELECT 1 FROM transcripts t WHERE s.id=t.id||':v'||t.revision AND t.final=1 AND t.superseded_by IS NULL))
  );
@@ -101,4 +110,4 @@ CREATE TABLE IF NOT EXISTS attempt_revisions(attempt_id TEXT NOT NULL REFERENCES
 CREATE TABLE IF NOT EXISTS participants(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,name TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,UNIQUE(session_id,name));
 CREATE TABLE IF NOT EXISTS artifact_revisions(artifact_id TEXT NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,revision INTEGER NOT NULL,body TEXT NOT NULL,confirmed INTEGER NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(artifact_id,revision));
 CREATE TABLE IF NOT EXISTS question_card_preferences(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,card_id TEXT NOT NULL,state TEXT NOT NULL,PRIMARY KEY(session_id,card_id));
-PRAGMA user_version=17;
+PRAGMA user_version=18;

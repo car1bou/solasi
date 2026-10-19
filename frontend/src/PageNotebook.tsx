@@ -1,8 +1,10 @@
 import React,{useEffect,useId,useMemo,useRef,useState,useSyncExternalStore} from 'react';
 import type {DocumentMetadata,DocumentPage,InkPoint,InkStroke} from './types';
 import {pageDraft} from './page-drafts';
-import {downloadJSON} from './api';
+import {api,downloadJSON} from './api';
 import Icon from './Icon';
+import HandwritingReview from './HandwritingReview';
+import RelatedKnowledge from './RelatedKnowledge';
 import {clamp,eraseInk,inkBounds,inkPath,inside} from './ink';
 import type {Bounds,Point} from './ink';
 import {defaultTools,defaultView,loadNotebookPreferences,saveNotebookTools,saveNotebookView,notebookZoom,notebookExport,notebookColor} from './notebook-preferences';
@@ -27,7 +29,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   const [history,setHistory]=useState<{past:InkStroke[][];future:InkStroke[][]}>({past:[],future:[]});
   const svg=useRef<SVGSVGElement>(null),viewport=useRef<HTMLDivElement>(null),gesture=useRef<Gesture|null>(null),touches=useRef(new Map<number,Point>()),pinch=useRef<{distance:number;zoom:number}|null>(null);
   async function download(name:string,value:unknown){if(exporting)return;setExporting(true);setExportStatus('내보내는 중…');setInputError('');try{const result=await downloadJSON(name,value);setExportStatus(result==='saved'?'파일 저장 완료':result==='cancelled'?'내보내기 취소됨':'다운로드를 요청했습니다. 저장 위치를 확인하세요.');}catch(error){setExportStatus('');setInputError('내보내기 실패: '+(error as Error).message);}finally{setExporting(false);}}
-  function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());void download(result.filename,result.value);}
+  async function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());try{const handwriting=await api('/courses/'+courseId+'/assets/'+metadata.asset_id+'/pages/'+page.page+'/handwriting?document_sha256='+metadata.sha256);await download(result.filename,{...result.value,handwriting});}catch(error){setInputError('인식문 포함 내보내기 실패: '+(error as Error).message);}}
   function savedPreference(kind:'tools'|'view',saved:boolean){setPreferenceSaveWarnings(current=>({...current,[kind]:saved?'':(kind==='tools'?'필기 도구':'자료 보기')+' 설정을 저장하지 못했습니다. 이번 실행 동안 적용하며 메모·필기는 별도로 저장합니다.'}));}
   function changeTools(next:Partial<NotebookTools>){const value={...tools,eraserMode,...next,...(next.tool==='stroke-eraser'||next.tool==='partial-eraser'?{eraserMode:next.tool}:{})};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
   function applyColor(){const value=notebookColor(colorDraft);if(!value){setColorError('#RRGGBB 형식의 색상 코드를 입력하세요. 예: #2563EB');return;}setColorError('');changeTools(tool==='highlighter'?{highlighterColor:value}:{penColor:value});}
@@ -120,6 +122,8 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   const baseWidth=680*zoom,baseHeight=baseWidth*page.height/page.width,swapped=rotation%180!==0;
   return <section className="page-notebook" aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
     <div className="notebook-heading"><strong>{page.page}쪽</strong><span role="status" className={'save-status '+state.status}>{statusLabels[state.status]}{state.revision>0?' · v'+state.revision:''}</span><button className="icon-button" aria-label="지금 저장" title="지금 저장" disabled={!state.loaded||state.status==='saved'||state.status==='conflict'} onClick={()=>void store.save()}><Icon name="save"/></button><button className="icon-label-button" aria-label="메모·필기 JSON 내보내기" title="메모·필기 JSON 내보내기" aria-busy={exporting} disabled={!state.loaded||exporting} onClick={exportCurrent}><Icon name="download"/><span>JSON</span></button><button className="icon-button" aria-label={notesOpen?'메모 접기':'메모 열기'} title={notesOpen?'메모 접기':'메모 열기'} disabled={!preferencesReady} aria-expanded={notesOpen} onClick={()=>changeView({notesOpen:!notesOpen})}><Icon name={notesOpen?'panel-close':'panel-open'}/></button></div>
+    {state.loaded&&<HandwritingReview key={metadata.asset_id+metadata.sha256+page.page} courseId={courseId} assetId={metadata.asset_id} page={page.page} digest={metadata.sha256} revision={state.revision} saved={state.status==='saved'} width={page.width} height={page.height}/>}
+    <RelatedKnowledge courseId={courseId} assetId={metadata.asset_id} page={page.page}/>
     {exportStatus&&<p role="status">{exportStatus}</p>}{[preferenceWarning,preferenceSaveWarnings.tools,preferenceSaveWarnings.view].filter(Boolean).map((warning,index)=><p key={index} role="status">{warning}</p>)}{!preferencesReady&&<p role="status">보기·필기 설정을 불러오는 중…</p>}
     <div className="ink-toolbar" role="toolbar" aria-label="필기 도구" inert={!preferencesReady}>
       <div className="ink-tool-picker">

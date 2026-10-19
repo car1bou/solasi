@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
 import SourceLink from './SourceLink';
+import RelatedKnowledge from './RelatedKnowledge';
 import JobProgress from './JobProgress';
 import type {Job} from './types';
 import type {Session,SourceRef,Evidence,SearchResult,Term} from './types';
@@ -37,7 +38,7 @@ export default function ConceptView({session,onQuestion,onQuiz}:{session:Session
     try{const term=await api<Term>('/sessions/'+session.id+'/terms',{method:'PUT',body:JSON.stringify({term_id:termId,canonical,aliases:aliases.split(',').map(t=>t.trim()).filter(Boolean),explanation,evidence:refs})});setTermId(term.id);setTerms(await api<Term[]>('/sessions/'+session.id+'/terms'));setDetail(await api<ConceptDetail>('/sessions/'+session.id+'/terms/'+term.id));setStatus('저장됨 · v'+term.revision);}catch(e){setError((e as Error).message);}finally{setBusy(false);}
   }
   const visibleIds=new Set(result?.evidence.map(e=>e.ref.id)||[]);
-  return <div>
+  return <div><RelatedKnowledge sessionId={session.id}/>
     <section className="card"><h2>자료·전사 검색</h2><p role="status">{index?.ready?'의미 색인 준비됨 · '+index.model+(index.unindexed_chunks?' · 새 원문 재색인 필요':''):'의미 색인 준비 전'}</p><button type="button" disabled={working||!!indexJob&&['queued','running'].includes(indexJob.status)} onClick={()=>void rebuild()}>의미 색인 갱신</button>{indexJob&&<div role="status"><p>{indexJob.status==='done'?'색인 완료':indexJob.result?.paused_reason||({queued:'색인 대기',running:'색인 중',failed:'색인 실패',cancelled:'색인 취소',interrupted:'색인 중단'}[indexJob.status])}{indexJob.result?.total_chunks?' · '+indexJob.result.completed_chunks+'/'+indexJob.result.total_chunks:''}</p>{indexJob.error&&<p role="alert">{indexJob.error}</p>}{['queued','running'].includes(indexJob.status)&&<button type="button" onClick={()=>api<NonNullable<typeof indexJob>>('/jobs/'+indexJob.id+'/cancel',{method:'POST'}).then(setIndexJob).catch(e=>setError(e.message))}>색인 취소</button>}</div>}<form onSubmit={search}>
       <label>검색 범위<select value={mode} disabled={working} onChange={e=>setMode(e.target.value as typeof mode)}><option value="current">현재 기록</option>{session.course_id&&<><option value="course">같은 과목 전체</option><option value="selected">회차 선택</option></>}</select></label>
       {mode==='selected'&&<fieldset className="concept-options"><legend>검색 회차</legend>{lectures.map(s=><label key={s.id}><input type="checkbox" checked={selected.includes(s.id)} disabled={working} onChange={e=>setSelected(old=>e.target.checked?[...old,s.id]:old.filter(id=>id!==s.id))}/>{s.lecture_no}회차 · {s.title}</label>)}</fieldset>}

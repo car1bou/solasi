@@ -93,6 +93,8 @@ def save_page_document(db,course_id,asset_id,page,body):
         else:db.execute('UPDATE page_documents SET revision=? WHERE id=?',(revision,ident))
         ink=json.dumps([s.model_dump(exclude_none=True) for s in body.ink],ensure_ascii=False,separators=(',',':'))
         db.execute('INSERT INTO page_document_revisions VALUES (?,?,?,?,?,?)',(ident,revision,body.text,ink,ref.id,now()))
+        from .handwriting import ink_hash
+        db.execute("UPDATE ink_recognitions SET status='stale' WHERE document_id=? AND ink_hash!=? AND status!='stale'",(ident,ink_hash(json.loads(ink))))
         index_source(db,ref,body.text)
         checked_document_path(db,asset_id,body.document_sha256)
         db.commit()

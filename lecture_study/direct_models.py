@@ -188,10 +188,12 @@ class DirectModels:
             if expected_digest is not None and status['digest'] != expected_digest: raise ValueError('직접 실행 모델이 변경되었습니다. 새 작업을 요청하세요')
             view = await self.view(config.model)
             prepared=time.perf_counter()
+            if before_local: await before_local()
+            late_wait=time.perf_counter()-prepared
             result = await self._call({'view':str(view),'messages':messages,'images':[str(path) for path in images],'schema':schema,'output_limit':output_limit,'context_limit':min(config.context_limit,status['context_limit'])})
             completed=time.perf_counter()
             if (await self.status(config.model))['digest']!=status['digest']: raise ValueError('생성 중 직접 실행 모델이 변경되었습니다')
-            result.setdefault('usage',{}).setdefault('timings_ms',{}).update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_roundtrip_ms=(completed-prepared)*1000,total_ms=(time.perf_counter()-started)*1000)
+            result.setdefault('usage',{}).setdefault('timings_ms',{}).update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired+late_wait)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_roundtrip_ms=(completed-prepared-late_wait)*1000,total_ms=(time.perf_counter()-started)*1000)
             return result
 
     async def _release_embedding(self, owner=None):
@@ -222,6 +224,8 @@ class DirectModels:
                 asset=await self.asset(model)
                 path=next(entry['path'] for entry in asset['files'] if entry['kind']=='model')
                 prepared=time.perf_counter()
+                if before_local:await before_local()
+                late_wait=time.perf_counter()-prepared
                 reused=owner is not None and self._embedding is not None
                 if reused:
                     process=self._embedding[1]
@@ -242,7 +246,7 @@ class DirectModels:
                 if len(values)!=768: raise ValueError('직접 임베딩 차원이 다릅니다')
                 if ((await self.status(model))['digest'],self._embedding_receipt)!=identity:raise ValueError('임베딩 실행 중 모델·엔진이 변경되었습니다')
                 if timings is not None:
-                    timings.update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_start_load_ms=(loaded-prepared)*1000,inference_roundtrip_ms=(time.perf_counter()-loaded)*1000,total_before_cleanup_ms=(time.perf_counter()-started)*1000,worker_reused=reused)
+                    timings.update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired+late_wait)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_start_load_ms=(loaded-prepared-late_wait)*1000,inference_roundtrip_ms=(time.perf_counter()-loaded)*1000,total_before_cleanup_ms=(time.perf_counter()-started)*1000,worker_reused=reused)
                 return list(values)
             except EmbeddingInputTooLong:raise
             except BaseException as exc:

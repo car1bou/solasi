@@ -16,7 +16,7 @@ def normalize(text):
 
 
 def index_source(db,ref,text):
-    if ref.kind not in ('material','note','page_note','transcript') or not text.strip(): return
+    if ref.kind not in ('material','note','page_note','ink_note','transcript') or not text.strip(): return
     saved=db.execute('SELECT ref,text_snapshot FROM sources WHERE id=? AND deleted=0',(ref.id,)).fetchone()
     if not saved or SourceRef.model_validate_json(saved['ref'])!=ref or saved['text_snapshot']!=text:
         raise ValueError('출처 스냅샷이 일치하지 않습니다')
@@ -74,9 +74,9 @@ def scope_assets(db,scope,ids=None):
 def ref_in_scope(db,ref,scope,ids=None,assets=None):
     ids=scope_ids(db,scope) if ids is None else ids
     assets=scope_assets(db,scope,ids) if assets is None else assets
-    if ref.kind in ('material','page_note'):
+    if ref.kind in ('material','page_note','ink_note'):
         if ref.asset_id not in assets:return False
-        if ref.kind=='page_note' and ref.course_id!=scope_course(db,scope):return False
+        if ref.kind in ('page_note','ink_note') and ref.course_id!=scope_course(db,scope):return False
     elif ref.session_id not in ids:return False
     if scope.asset_id and ref.asset_id!=scope.asset_id:return False
     if scope.page is not None and ref.page!=scope.page:return False
@@ -108,7 +108,8 @@ def list_terms(db,sid):
 
 
 def save_term(db,sid,canonical,aliases,explanation,evidence,term_id=None):
-    key=scope_key(db,sid);ids=scope_ids(db,Scope(session_id=sid));canonical=canonical.strip()
+    scope=sid if isinstance(sid,Scope) else Scope(session_id=sid)
+    key=scope_key(db,sid);ids=scope_ids(db,scope);canonical=canonical.strip()
     if not canonical or len(canonical)>120 or len(explanation)>10000 or len(aliases)>30: raise ValueError('용어와 설명 길이를 확인하세요')
     if any(not isinstance(alias,str) or len(alias)>120 for alias in aliases): raise ValueError('별칭을 확인하세요')
     aliases=list(dict.fromkeys(alias.strip() for alias in aliases if alias.strip()))
@@ -117,7 +118,7 @@ def save_term(db,sid,canonical,aliases,explanation,evidence,term_id=None):
     for ref in evidence:
         saved=db.execute('SELECT * FROM sources WHERE id=? AND deleted=0',(ref.id,)).fetchone()
         if not saved or SourceRef.model_validate_json(saved['ref'])!=ref: raise ValueError('근거가 실제 출처와 다릅니다')
-        belongs=ref_in_scope(db,ref,Scope(session_id=sid),ids)
+        belongs=ref_in_scope(db,ref,scope,ids)
         if not belongs: raise ValueError('범위 밖의 근거입니다')
         checked.append(ref.model_dump())
     if term_id and not db.execute('SELECT 1 FROM terms WHERE id=? AND scope_key=?',(term_id,key)).fetchone(): raise KeyError('개념을 찾을 수 없습니다')
@@ -145,14 +146,14 @@ def eligible_chunks(db,ids,cutoff,cutoff_session_id=None,scope=None):
 
 
 def label_for(db,ref,ids,course_id=None):
-    if ref.kind in ('material','page_note'):
+    if ref.kind in ('material','page_note','ink_note'):
         asset=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone()
         owner=db.execute('SELECT s.title,s.lecture_no FROM sessions s JOIN session_assets sa ON s.id=sa.session_id WHERE sa.asset_id=? AND s.id IN (SELECT value FROM json_each(?)) ORDER BY s.lecture_no,s.started_at LIMIT 1',(ref.asset_id,json.dumps(ids))).fetchone()
         if course_id:owner=db.execute('SELECT title,NULL AS lecture_no FROM courses WHERE id=?',(course_id,)).fetchone()
         if ref.course_id:owner=db.execute('SELECT title,NULL AS lecture_no FROM courses WHERE id=?',(ref.course_id,)).fetchone()
         if owner is None:owner=db.execute('SELECT c.title,NULL AS lecture_no FROM courses c JOIN course_assets ca ON ca.course_id=c.id WHERE ca.asset_id=? ORDER BY c.created_at LIMIT 1',(ref.asset_id,)).fetchone()
         tail=(asset[0] if asset else '자료')+((' · '+str(ref.page)+'쪽') if ref.page else '')
-        if ref.kind=='page_note':tail+=' · 페이지 메모'
+        if ref.kind in ('page_note','ink_note'):tail+=' · '+('확인한 손글씨' if ref.kind=='ink_note' else '페이지 메모')
     else:
         owner=db.execute('SELECT title,lecture_no FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
         tail='노트' if ref.kind=='note' else str(ref.start_ms//60000)+':'+str(ref.start_ms//1000%60).zfill(2)
@@ -299,7 +300,7 @@ async def rebuild_embeddings(db,model,client,job_id=None):
                     with db: db.execute('UPDATE jobs SET result=? WHERE id=?',(json.dumps({'paused_reason':'녹음·전사 중 · 색인 대기','completed_chunks':i,'total_chunks':len(rows)},ensure_ascii=False),job_id))
                 await asyncio.sleep(.5)
             ref=SourceRef.model_validate_json(row['ref'])
-            title=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone() if ref.kind in ('material','page_note') else db.execute('SELECT title FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
+            title=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone() if ref.kind in ('material','page_note','ink_note') else db.execute('SELECT title FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
             parts=await embed_parts(client,model,row['text'],title[0] if title else '')
             for part in parts:
                 dim=dim or len(part)
@@ -366,3 +367,38 @@ async def retrieve(db,query,scope,cutoff_ms,limit=8,client=None,snapshot=None):
         except Exception as exc: warning='의미 검색 실패 · 키워드 검색: '+str(exc)[:200]
     snapshot_rows(db,snapshot)
     return SearchResult(evidence=collect_evidence(db,ranked,rows,ids,limit,snapshot.get('course_id')),mode=mode,warning=warning)
+
+
+async def sync_embeddings(db,model,client,job_id=None,can_continue=None,batch_limit=None):
+    """Resume complete chunks; publish changed-model indexes only after completion."""
+    active=index_status(db);digest=await model_digest(client,model);fmt=embedding_format(model,client)
+    compatible=active['ready'] and (active['model'],active['digest'],active['format'])==(model,digest,fmt)
+    if compatible:target={'id':active['index_id'],'dim':active['dim'],'status':'ready'}
+    else:
+        saved=db.execute("SELECT * FROM embedding_sets WHERE model=? AND digest=? AND format=? AND status='building' ORDER BY created_at DESC LIMIT 1",(model,digest,fmt)).fetchone()
+        target=dict(saved) if saved else {'id':new_id(),'dim':None,'status':'building'}
+        if not saved:
+            with db:db.execute("INSERT INTO embedding_sets VALUES (?,?,?,NULL,?,'building',?)",(target['id'],model,digest,fmt,now()))
+    rows=[dict(r) for r in db.execute('SELECT * FROM searchable_chunks c WHERE NOT EXISTS(SELECT 1 FROM embeddings e WHERE e.index_id=? AND e.chunk_id=c.id) ORDER BY id',(target['id'],))]
+    for i,row in enumerate(rows):
+        if (batch_limit is not None and i>=batch_limit) or (can_continue and not can_continue()):return index_status(db)|{'paused':True}
+        if db.execute("SELECT 1 FROM recordings WHERE status='recording' UNION ALL SELECT 1 FROM transcript_ranges WHERE status IN ('queued','running') LIMIT 1").fetchone():
+            if isinstance(client,DirectEmbeddings):await client.close()
+            return index_status(db)|{'paused':True}
+        ref=SourceRef.model_validate_json(row['ref'])
+        title=db.execute('SELECT filename FROM assets WHERE id=?',(ref.asset_id,)).fetchone() if ref.asset_id else db.execute('SELECT title FROM sessions WHERE id=?',(ref.session_id,)).fetchone()
+        parts=await embed_parts(client,model,row['text'],title[0] if title else '')
+        dim=target['dim'] or len(parts[0])
+        if any(len(v)!=dim for v in parts):raise ValueError('임베딩 차원이 변경되었습니다')
+        if await model_digest(client,model)!=digest:raise ValueError('임베딩 모델이 변경되었습니다. 재색인하세요')
+        with db:
+            for n,part in enumerate(parts):db.execute('INSERT OR IGNORE INTO embeddings VALUES (?,?,?,?)',(target['id'],row['id'],n,struct.pack('<'+'f'*len(part),*part)))
+            db.execute('UPDATE embedding_sets SET dim=? WHERE id=?',(dim,target['id']));target['dim']=dim
+            if job_id:db.execute('UPDATE jobs SET result=?,updated_at=? WHERE id=?',(json.dumps({'completed_chunks':i+1,'total_chunks':len(rows)}),now(),job_id))
+        await asyncio.sleep(0)
+    if target['dim'] is None:raise ValueError('색인할 원문이 없습니다')
+    if target['status']=='building':
+        with db:
+            db.execute("UPDATE embedding_sets SET status='ready' WHERE id=?",(target['id'],))
+            db.execute("INSERT OR REPLACE INTO settings VALUES ('active_embedding_index',?)",(json.dumps(target['id']),))
+    return index_status(db)
