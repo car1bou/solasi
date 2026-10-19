@@ -4,10 +4,13 @@ import {readFileSync} from 'node:fs';
 
 const css=readFileSync(new URL('../src/styles.css',import.meta.url),'utf8');
 
-test('every pressed toolbar button, including fit width, has the visible selection marker',()=>{
+test('pressed toolbar buttons use a flat fill and thin outline without an inset underline',()=>{
   const rules=[...css.matchAll(/\.ink-toolbar button\[aria-pressed=true\]\s*\{([^}]*)\}/g)];
-  assert.ok(rules.some(([,body])=>/box-shadow\s*:\s*inset\s+0\s+-3px\s+0\s+currentColor/.test(body)),
-    'the shared pressed-button selector must provide the marker, not only drawing-tool buttons');
+  const body=rules.map(([,value])=>value).join(';');
+  assert.match(body,/background:var\(--selected\)/);
+  assert.match(body,/border-color:var\(--primary\)/);
+  assert.ok(!/box-shadow\s*:\s*inset/.test(body));
+  assert.match(css,/\.ink-toolbar button\{[^}]*border-radius:8px;box-shadow:none/);
 });
 
 test('generic button hover excludes disabled controls without adding selector specificity',()=>{
@@ -40,7 +43,7 @@ for(const [theme,pattern] of [['light',/:root\s*\{([^}]+)\}/],['dark',/:root\[da
     assert.ok(block,`${theme} theme tokens must exist`);
     const tokens=Object.fromEntries([...block.matchAll(/--([\w-]+)\s*:\s*(#[0-9a-f]{6})\b/gi)].map(([,key,value])=>[key,value]));
     // Disabled controls are exempt; these thresholds apply to enabled controls.
-    for(const [foreground,background,minimum] of [['ink','surface',4.5],['muted','surface',4.5],['primary','primary-soft',3],['focus','surface',3],['focus','primary-soft',3]] as const){
+    for(const [foreground,background,minimum] of [['ink','surface',4.5],['muted','surface',4.5],['selected-ink','selected',4.5],['primary','selected',3],['primary','surface',3],['focus','surface',3],['focus','selected',3]] as const){
       const ratio=contrast(tokens[foreground],tokens[background]);
       assert.ok(ratio>=minimum,`${theme} ${foreground}/${background}: ${ratio.toFixed(2)}:1 must be at least ${minimum}:1`);
     }
