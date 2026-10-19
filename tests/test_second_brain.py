@@ -29,6 +29,17 @@ class BrainTests(unittest.IsolatedAsyncioTestCase):
         submit_job(self.db,self.sid,'ai',{})
         self.assertFalse(background_idle(self.db));self.assertIsNone(next_background_work(self.db))
 
+    def test_approved_ink_and_notes_do_not_wait_behind_material_backfill(self):
+        with self.db:
+            for ident,kind,stamp in [('material','material','01'),('note','note','02'),('page','page_note','03'),('approved','ink_note','04')]:
+                self.db.execute('INSERT INTO sources(id,ref,text_snapshot) VALUES (?,?,?)',(ident,json.dumps({'kind':kind}),'교착 상태'))
+                self.db.execute("INSERT INTO brain_work(key,kind,source_id,state,request,updated_at) VALUES (?,'source',?,'pending','{}',?)",(ident,ident,stamp))
+            self.db.execute("INSERT INTO brain_work(key,kind,state,request,updated_at) VALUES ('recognize','ink','pending','{}','05'),('concept','concept','pending','{}','00')")
+        for expected in ['recognize','approved','note','page','material','concept']:
+            work=next_background_work(self.db)
+            self.assertEqual(work['key'],expected)
+            with self.db:self.db.execute("UPDATE brain_work SET state='done' WHERE key=?",(work['key'],))
+
     async def test_external_calls_require_explicit_and_invalid_quotes_are_rejected(self):
         from unittest.mock import patch,AsyncMock
         from lecture_study.second_brain import propose_concepts

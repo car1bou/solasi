@@ -58,7 +58,13 @@ def reconcile(db):
 
 def next_background_work(db):
     if not background_idle(db):return None
-    row=db.execute("SELECT * FROM brain_work WHERE state='pending' ORDER BY CASE kind WHEN 'ink' THEN 0 WHEN 'source' THEN 1 ELSE 2 END,updated_at,key LIMIT 1").fetchone()
+    # Reviewed ink and saved notes should not wait behind an imported material backlog.
+    row=db.execute("""SELECT w.* FROM brain_work w LEFT JOIN sources s ON s.id=w.source_id
+        WHERE w.state='pending'
+        ORDER BY CASE w.kind WHEN 'ink' THEN 0 WHEN 'source' THEN 1 ELSE 2 END,
+        CASE WHEN w.kind='source' THEN CASE json_extract(s.ref,'$.kind')
+            WHEN 'ink_note' THEN 0 WHEN 'note' THEN 1 WHEN 'page_note' THEN 1 ELSE 2 END ELSE 0 END,
+        w.updated_at,w.key LIMIT 1""").fetchone()
     return dict(row) if row else None
 
 
