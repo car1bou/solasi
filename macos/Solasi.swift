@@ -112,6 +112,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
                 }, true);
                 """, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: clickWorld))
             mainWindow = makeWindow(configuration: configuration)
+            mainWindow?.window.setFrameAutosaveName("SolasiMainWindow")
             showWindow()
             try FileManager.default.createDirectory(at: logURL.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             if !FileManager.default.fileExists(atPath:logURL.path) { FileManager.default.createFile(atPath: logURL.path, contents: nil, attributes: [.posixPermissions: 0o600]) }
