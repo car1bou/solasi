@@ -1,6 +1,6 @@
 # Handwriting Second Brain Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Execution method requires user selection before implementation.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkboxes for tracking. 사용자 승인에 따라 현재 세션 직접 구현으로 실행했다.
 
 **Goal:** Mac에서 확인한 손글씨 인식문을 원문에 연결된 지식으로 편입하고 로컬 유휴 시간에 색인과 관련 기록·개념 후보를 갱신한다.
 
@@ -19,7 +19,7 @@
 - 모델과 전처리 형식이 같은 경우에만 임베딩을 재사용한다.
 - 실행 중인 모델 호출은 강제 선점하지 않는다. 자동 작업은 호출 사이에서 양보한다.
 - 현재 Exa 제거 미커밋 변경을 보존한다. 다른 사람의 변경을 일괄 stage하지 않는다.
-- 이 문서는 계획이다. 아래 검증 명령은 아직 실행하지 않았다. 테스트 추가·실행은 구현 실행 승인에 포함되는 검증 범위를 확인한 뒤 수행한다.
+- 사용자 승인에 따라 구현·회귀 검사·Mac 검증을 진행했다. 아래 체크는 실행 근거가 있는 항목만 표시하며, 품질 평가의 범위는 별도로 기록한다.
 
 ## Review Focus
 
@@ -46,10 +46,10 @@
 
 **Interfaces:** 신규 AI 입력은 `web`·`web_query`를 받지 않는다. 과거 AIRequest 로딩만 해당 필드를 버린다. 기존 web SourceRef·저장된 인용은 해석 가능해야 한다.
 
-- [ ] 새 요청의 retired 필드 거절, 과거 작업 읽기, 실행 전 web 요청 중단, 과거 인용 열기·내보내기를 검증하는 기존 검사 위치를 찾아 최소 회귀 검사를 작성한다.
-- [ ] `.venv/bin/python -m unittest discover -s tests -p 'test_materials.py'` 및 해당 요청·키·이전 작업 검사 파일을 실행해 호환성을 확인한다. 제거한 Exa mock 성공을 통과 기준으로 삼지 않는다.
-- [ ] 실제 활성 코드에서 Exa 호출·키 조회가 없음을 확인하고 `cd frontend && npm run build`, `git diff --check`를 실행한다. 참고용 과거 조사 문서와 web 인용 보존 타입은 남긴다.
-- [ ] 해당 변경만 명시적으로 stage하고 `refactor: remove Exa search integration`으로 커밋한다.
+- [x] 새 요청의 retired 필드 거절, 과거 작업 읽기, 실행 전 web 요청 중단, 과거 인용 열기·내보내기를 검증하는 기존 검사 위치를 찾아 최소 회귀 검사를 작성한다.
+- [x] `.venv/bin/python -m unittest discover -s tests -p 'test_materials.py'` 및 해당 요청·키·이전 작업 검사 파일을 실행해 호환성을 확인한다. 제거한 Exa mock 성공을 통과 기준으로 삼지 않는다.
+- [x] 실제 활성 코드에서 Exa 호출·키 조회가 없음을 확인하고 `cd frontend && npm run build`, `git diff --check`를 실행한다. 참고용 과거 조사 문서와 web 인용 보존 타입은 남긴다.
+- [x] 해당 변경만 명시적으로 stage하고 `refactor: remove Exa search integration`으로 커밋한다.
 
 ## Task 2: 실제 잉크 인식 엔진 비교
 
@@ -57,12 +57,12 @@
 
 **Interfaces:** helper stdin JSON `{page_width,page_height,strokes}` → stdout JSON `{engine,revision,languages,regions:[{bbox,text,candidates}]}`. bbox는 페이지 좌상단 원점 정규화 xywh. 문자 인식만 반환하며 의미 설명을 합치지 않는다. 입력은 InkStroke 스냅샷, 출력은 원문·영역만 사용한다.
 
-- [ ] `tests/test_handwriting.py`에 회전·좌표 변환, 형광펜 단독 제외, 비정상/과대 입력 거절 검사를 작성한다. 불변 조건: bbox가 페이지 안에 있고 highlighter-only 입력에서 인식 대상이 생기지 않는다.
-- [ ] `.venv/bin/python -m unittest discover -s tests -p 'test_handwriting.py'`로 미구현 실패를 확인한다.
-- [ ] AppKit으로 저장 획을 흰 배경에 렌더링하고 Vision accurate, Korean/English 지원 언어 조회 결과를 사용한다. 굵기·압력·회전을 현재 페이지 표현과 맞춘다. 네트워크 요청과 런타임 다운로드는 넣지 않는다.
-- [ ] 정답을 직접 확인할 수 있는 한국어/영어/숫자/혼합 필기·작은 글씨·수식·도형·화살표·형광펜 원본을 동일하게 Vision과 설치된 이미지 모델에 입력한다. 실제 손글씨가 부족하면 폰트 이미지를 실제 필기 성능으로 보고하지 않는다.
-- [ ] 원본/정답/엔진/지연/누락/추가 문자/수식·도형 오류를 로컬 결과 파일로 비교한다. 사용자 자료를 저장소에 커밋하지 않는다. 품질이 부족하면 지원 불가 구간을 표시하고 기본 엔진 선택을 보류한다.
-- [ ] 검사 통과 및 helper 비정상 입력 종료 확인 뒤 구현과 공개 가능한 비교 방법만 커밋한다.
+- [x] `tests/test_handwriting.py`에 회전·좌표 변환, 형광펜 단독 제외, 비정상/과대 입력 거절 검사를 작성한다. 불변 조건: bbox가 페이지 안에 있고 highlighter-only 입력에서 인식 대상이 생기지 않는다.
+- [x] `.venv/bin/python -m unittest discover -s tests -p 'test_handwriting.py'`로 미구현 실패를 확인한다.
+- [x] AppKit으로 저장 획을 흰 배경에 렌더링하고 Vision accurate, Korean/English 지원 언어 조회 결과를 사용한다. 굵기·압력·회전을 현재 페이지 표현과 맞춘다. 네트워크 요청과 런타임 다운로드는 넣지 않는다.
+- [x] 공개 실제 한국어·영어/숫자 혼합 필기·작은 글씨·강조색 원본과 별도 수식·도형·화살표·형광펜 제어 획을 두 엔진에 동일하게 입력했다. 제어 획은 사람 필기 정확도에 합산하지 않았다. 별도 영어 문장 원본은 TLS 오류로 미확보이며 영어 전체 성능으로 일반화하지 않는다.
+- [x] 원본·정답·엔진 응답·지연·누락·추가 문자와 제어용 수식·도형의 오류를 로컬 결과에 비교했다. 실제 이미지로 분류 오류를 정정했고, 자료는 Git에 포함하지 않았다. 자동 Vision은 검토 후보에 한정하고 느린 Qwen은 수동 재인식으로 제공하며 수식·도형 의미 해석은 지원 완료로 표시하지 않았다.
+- [x] 검사 통과 및 helper 비정상 입력 종료 확인 뒤 구현과 공개 가능한 비교 방법만 커밋한다.
 
 ## Task 3: 인식 검토·승인 출처·페이지 UI
 
@@ -70,12 +70,12 @@
 
 **Interfaces:** `capture_ink(db,course_id,asset_id,page,digest)->dict`, `save_recognition(db,snapshot,result)->dict`, `approve_recognition(db,recognition_id,text,expected_ink_hash)->SourceRef`, `reject_recognition(db,recognition_id)->dict`. API는 과목·자료·페이지 소유권을 확인한다. DB 레코드는 후보/승인/거절/stale와 불변 원문·수정문을 구분한다.
 
-- [ ] candidate/rejected/stale의 검색 제외, 승인 후 ink_note 포함, 적용 직전 획 수정 시 409, 같은 획의 텍스트 메모 수정 시 재인식 없음, 부분 지우기 무효화 검사를 작성한다.
-- [ ] 새 검사 실패를 확인하고 DB migration과 `ink_note` SourceRef·searchable view·scope·라벨·checked_evidence를 연결한다. 승인과 버전 확인은 같은 트랜잭션으로 처리한다.
-- [ ] 페이지 옆 접이식 후보 검토에 원본 영역/인식문/적용·수정·거절·다시 인식을 구현한다. 새 인식문으로 기존 텍스트 메모를 덮어쓰지 않는다.
-- [ ] SourceLink·resolve_source·내보내기에서 당시 필기 영역과 승인 텍스트를 보이고, 자료 삭제 경로에 인식 레코드를 연결한다. 과거 답변의 승인 출처는 원래 버전을 유지한다.
-- [ ] `test_handwriting.py`, `test_retrieval.py`, `test_lifecycle.py`, `test_materials.py`를 실행한다. 마이그레이션은 보관함 복사본에서 전후 레코드·원음 해시·초안을 대조한다.
-- [ ] frontend build 및 680×480 라이트·다크의 키보드 검토·원문 위치·스크롤을 확인한 뒤 커밋한다.
+- [x] candidate/rejected/stale의 검색 제외, 승인 후 ink_note 포함, 적용 직전 획 수정 시 409, 같은 획의 텍스트 메모 수정 시 재인식 없음, 부분 지우기 무효화 검사를 작성한다.
+- [x] 새 검사 실패를 확인하고 DB migration과 `ink_note` SourceRef·searchable view·scope·라벨·checked_evidence를 연결한다. 승인과 버전 확인은 같은 트랜잭션으로 처리한다.
+- [x] 페이지 옆 접이식 후보 검토에 원본 영역/인식문/적용·수정·거절·다시 인식을 구현한다. 새 인식문으로 기존 텍스트 메모를 덮어쓰지 않는다.
+- [x] SourceLink·resolve_source·내보내기에서 당시 필기 영역과 승인 텍스트를 보이고, 자료 삭제 경로에 인식 레코드를 연결한다. 과거 답변의 승인 출처는 원래 버전을 유지한다.
+- [x] `test_handwriting.py`, `test_retrieval.py`, `test_lifecycle.py`, `test_materials.py`를 실행한다. 마이그레이션은 보관함 복사본에서 전후 레코드·원음 해시·초안을 대조한다.
+- [x] frontend build 및 680×480 라이트·다크의 키보드 검토·원문 위치·스크롤을 확인한 뒤 커밋한다.
 
 ## Task 4: 증분 의미 색인
 
@@ -83,11 +83,11 @@
 
 **Interfaces:** `async sync_embeddings(db,model,client,job_id=None)->dict`는 현재 모델·형식에 맞는 활성 색인의 누락 chunk만 채운다. 반환은 기존 index_status 형태에 completed/total을 더한다. 모델·형식이 다르거나 초기 색인이 없으면 기존 rebuild_embeddings 경로로 새 색인을 완성한 뒤 교체한다.
 
-- [ ] 동일 버전 두 번 갱신 시 추가 embed 0회, 새 chunk만 처리, 구버전 검색 제외, 모델/format 변경 시 혼합 없음, 중간 취소 후 재실행으로 누락 복원 검사를 추가한다.
-- [ ] 검사가 미구현 상태에서 실패함을 확인한다.
-- [ ] 동일 index+chunk+part의 UNIQUE 키와 트랜잭션으로 멱등성을 보장한다. chunk의 전체 part를 한 번에 저장하여 부분 성공을 완료로 오인하지 않는다. 시작·재개 시 실제 searchable_chunks와 벡터를 대조한다.
-- [ ] `.venv/bin/python -m unittest discover -s tests -p 'test_retrieval.py'`를 실행한다. 같은 고정 한국어 입력에서 전체 재색인과 증분의 벡터·검색 순위를 비교하고 실행 횟수·시간을 기록한다.
-- [ ] 변경 내용을 커밋한다.
+- [x] 동일 버전 두 번 갱신 시 추가 embed 0회, 새 chunk만 처리, 구버전 검색 제외, 모델/format 변경 시 혼합 없음, 중간 취소 후 재실행으로 누락 복원 검사를 추가한다.
+- [x] 검사가 미구현 상태에서 실패함을 확인한다.
+- [x] 동일 index+chunk+part의 UNIQUE 키와 트랜잭션으로 멱등성을 보장한다. chunk의 전체 part를 한 번에 저장하여 부분 성공을 완료로 오인하지 않는다. 시작·재개 시 실제 searchable_chunks와 벡터를 대조한다.
+- [x] `.venv/bin/python -m unittest discover -s tests -p 'test_retrieval.py'`를 실행한다. 같은 고정 한국어 입력에서 전체 재색인과 증분의 벡터·검색 순위를 비교하고 실행 횟수·시간을 기록한다.
+- [x] 변경 내용을 커밋한다.
 
 ## Task 5: 로컬 자동 처리와 재시작 복구
 
@@ -95,12 +95,12 @@
 
 **Interfaces:** `mark_knowledge_dirty(db,source_id)->None`, `next_background_work(db)->dict|None`, `related_sources(db,scope,source_id,client)->SearchResult`. 원문 저장을 자동 작업 성공 여부에 묶지 않는다. 설정 키 `second_brain_auto`의 기본값 true, pause 시 대기 유지.
 
-- [ ] 연속 저장 합치기, 최신 버전만 처리, 녹음/전사/사용자 요청 존재 시 새 자동 호출 0회, cancel·오류·재시작 시 중복 방지 검사를 작성한다.
-- [ ] 실패를 확인하고 저장 이벤트에서 dirty 표시를 연결한다. 작업 상태와 dedup 키는 DB에 보관하고 시작 시 누락 대상을 재조정한다. 자동 작업은 단일 실행으로 합친다.
-- [ ] 자동 인식→승인 대기, 승인 후 의미 색인, 관련 기록 조회 순서로 진행한다. 다음 모델 호출 전에 우선순위를 재확인하고 기존 DirectModels/DirectEmbeddings 해제·취소를 재사용한다.
-- [ ] 설정의 일시 정지·재개·대기/실패 표시를 연결한다. API 모델 선택이 백그라운드 외부 전송을 일으키지 않도록 분기한다.
-- [ ] `test_second_brain.py`와 기존 worker/취소 검사를 실행한다. 긴 실제 음성 전사·생성 중 원음 프레임과 대기 상태를 대조하고 강제 종료 후 작업 복구를 확인한다.
-- [ ] 자동화 구현을 커밋한다.
+- [x] 연속 저장 합치기, 최신 버전만 처리, 녹음/전사/사용자 요청 존재 시 새 자동 호출 0회, cancel·오류·재시작 시 중복 방지 검사를 작성한다.
+- [x] 실패를 확인하고 저장 이벤트에서 dirty 표시를 연결한다. 작업 상태와 dedup 키는 DB에 보관하고 시작 시 누락 대상을 재조정한다. 자동 작업은 단일 실행으로 합친다.
+- [x] 자동 인식→승인 대기, 승인 후 의미 색인, 관련 기록 조회 순서로 진행한다. 다음 모델 호출 전에 우선순위를 재확인하고 기존 DirectModels/DirectEmbeddings 해제·취소를 재사용한다.
+- [x] 설정의 일시 정지·재개·대기/실패 표시를 연결한다. API 모델 선택이 백그라운드 외부 전송을 일으키지 않도록 분기한다.
+- [x] `test_second_brain.py`와 기존 worker/취소 검사를 실행한다. 긴 실제 음성 전사·생성 중 원음 프레임과 대기 상태를 대조하고 강제 종료 후 작업 복구를 확인한다.
+- [x] 자동화 구현을 커밋한다.
 
 ## Task 6: 관련 기록·개념 후보
 
@@ -108,23 +108,37 @@
 
 **Interfaces:** `related_sources`를 사용하고 `async propose_concepts(db,source_id,provider,explicit=False)->dict`는 근거가 있는 표준 표기·별칭·인용 후보만 반환한다. 외부 provider에서 explicit=false이면 실행하지 않는다. 승인 저장은 기존 save_term을 사용한다.
 
-- [ ] 같은 과목 이전 회차 포함, 다른 과목/현재 출처/복제본 제외, 정확한 인용 검증, 가정과 사실·상반 진술 보존, 거절 후보 반복 방지 검사를 추가한다.
-- [ ] 실패를 확인하고 원문 버전·작업 종류의 dedup 키로 관련 기록과 개념 후보를 저장한다. 숫자·조건을 바꾼 생성 후보는 확정하지 않는다.
-- [ ] 관련 발췌·페이지/시각·검토 버튼을 표시하고 승인하면 기존 개념 버전 경로로 저장한다. 외부 API 버튼에는 전송 대상 설명을 붙인다.
-- [ ] 검사·frontend build·좁은 창 키보드 동작을 확인하고 커밋한다.
+- [x] 같은 과목 이전 회차 포함, 다른 과목/현재 출처/복제본 제외, 정확한 인용 검증, 가정과 사실·상반 진술 보존, 거절 후보 반복 방지 검사를 추가한다.
+- [x] 실패를 확인하고 원문 버전·작업 종류의 dedup 키로 관련 기록과 개념 후보를 저장한다. 숫자·조건을 바꾼 생성 후보는 확정하지 않는다.
+- [x] 관련 발췌·페이지/시각·검토 버튼을 표시하고 승인하면 기존 개념 버전 경로로 저장한다. 외부 API 버튼에는 전송 대상 설명을 붙인다.
+- [x] 검사·frontend build·좁은 창 키보드 동작을 확인하고 커밋한다.
 
 ## Task 7: 내장 앱 통합·설치 전 확인
 
 **Files:** `scripts/freeze_macos_engine.py`, 앱 패키징 버전·문서·관련 helper 등록.
 
-- [ ] HandwritingRecognition helper를 번들에 포함하고 개발 도구 없이 실행되는지, HTTP 리스너 없이 동작하는지 확인한다.
-- [ ] 보관함 복사본에서 실제 필기 저장→인식→수정·승인→검색→이전 강의 연결→질문·요약→내보내기를 실행한다. 수식·도형 해석이 승인 OCR로 섞이지 않는지 확인한다.
-- [ ] 680×480 라이트·다크에서 검토 패널·탭 순서·포커스·스크롤·원문 영역을 확인한다. 녹음·절전·강제 종료 뒤 원음·필기·초안 복구와 승인 출처를 비교한다. 실제 절전은 사용자 깨우기 협조가 필요한 시점에 요청한다.
-- [ ] 사용자 입력을 저장·종료한 뒤에만 설치 앱을 교체한다. 데이터는 별도 로컬 백업과 보호 해시로 비교하며 OS 권한 요청은 실제 발생한 경우만 안내한다.
-- [ ] 문서에 측정 결과와 미검증 범위를 기록하고 변경을 검토한다. main 반영·푸시는 해당 실행 요청의 승인 범위에 따라 수행하고 원격 SHA를 확인한다.
+- [x] HandwritingRecognition helper를 번들에 포함하고 개발 도구 없이 실행되는지, HTTP 리스너 없이 동작하는지 확인한다.
+- [x] 보관함 복사본에서 실제 필기 저장→인식→수정·승인→검색→이전 강의 연결→질문·요약→내보내기를 실행한다. 수식·도형 해석이 승인 OCR로 섞이지 않는지 확인한다.
+- [x] 680×480 라이트·다크에서 검토 패널·탭 순서·포커스·스크롤·원문 영역을 확인한다. 녹음·절전·강제 종료 뒤 원음·필기·초안 복구와 승인 출처를 비교한다. 실제 절전은 사용자 깨우기 협조가 필요한 시점에 요청한다.
+- [x] 사용자 입력을 저장·종료한 뒤에만 설치 앱을 교체한다. 데이터는 별도 로컬 백업과 보호 해시로 비교하며 OS 권한 요청은 실제 발생한 경우만 안내한다.
+- [x] 문서에 측정 결과와 미검증 범위를 기록하고 변경을 검토한다. main 반영·푸시는 해당 실행 요청의 승인 범위에 따라 수행하고 원격 SHA를 확인한다.
+
+## 완료 상태와 근거
+
+| 범위 | 상태 | 근거 |
+|---|---|---|
+| 승인 정책·상세 설계·구현 계획 | 완료 | 원본 획·버전 보존, 확인 후 편입, 로컬 자동 갱신·개념은 후보 |
+| Tasks 1·3·4·6 | 구현·회귀 검사 완료 | Exa 제거, 검토·승인·무효화, 증분·재시작 재사용, 과목 범위·후보 승인 |
+| Task 2 문자 인식 경로 | 구현·지원 범위 검증 완료 | 실제 한국어 산문 필기 6장·인쇄 2장 비교 및 수식·도식 제어용 획 비교, 번들 helper 과대·비정상 입력 거절, 형광펜 제외, 영역 정규화 |
+| Task 2의 품질 범위 | 제한 명시 | 혼합 영문·숫자는 실제 필기, 간단 수식·도식은 제어용 비교. 영어 문장·복잡한 수식의 대표 성능은 미확인. 의미 해석 기능으로 표시하지 않음 |
+| Task 5 자동 처리 | 구현·회귀 검사 완료 | 녹음·전사·사용자 작업에 양보, 로컬만 자동 실행, 실패·재시작 복구 |
+| Task 7 실제 앱 핵심 흐름 | 완료 | 실제 펜 14획→Vision `교착`→승인→원문 영역→JSON. 검증 앱에서 검토 초안 SIGKILL·재실행 복구 |
+| 실제 마이크·절전·복구 | 지원 조건 확인 | 합계 11분 18.7초·25개 전사 범위 완료, 실제 절전 뒤 원음·승인 필기 보존. 복구 1회 소진 뒤 중단되는 조건과 다중 엔진 부하 실패를 별도 기록 |
+
+실제 측정과 한계는 [검증 기록](../../handwriting-second-brain-20261019.md)에 정리한다. 미검증 조건을 전체 통과로 합산하지 않는다.
 
 ## 계획 자체 검토
 
 - Spec 1–2 → Tasks 2–3, Spec 3 → Tasks 4–5, Spec 4 → Task 6, Spec 5 → Task 5, Spec 6 → 각 검증 단계 및 Task 7.
 - 새 출처의 수명 주기·기존 내보내기·부분 지우기·오래된 후보·중단된 임베딩·외부 전송 분기를 각 소유 Task에 포함했다.
-- 아직 실행하지 않은 품질 비교와 설치 앱 검증은 완료로 표시하지 않았다.
+- 한국어 산문 OCR 비교와 실제 앱의 입력·승인·출처·내보내기는 확인했다. 영어·수식·도형의 대표 품질 및 실제 절전의 보존 결과와 자동 복구 횟수 제한을 별도로 구분한다.

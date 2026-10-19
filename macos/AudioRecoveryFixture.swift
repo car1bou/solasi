@@ -13,10 +13,15 @@ final class WorkerBridge {
     private var pending: [String: Receive] = [:]
     private var cancelled: Receive?
     private(set) var cancellations = 0
+    private(set) var stops: [(String,String?)] = []
 
     @discardableResult
     func request(_ fields: [String: Any], body: Data = Data(), receive: @escaping Receive) -> String {
         let id = UUID().uuidString
+        if let path=fields["path"] as? String,path.hasSuffix("/stop"),
+           let value=(try? JSONSerialization.jsonObject(with:body)) as? [String:Any] {
+            stops.append((path,value["reason"] as? String))
+        }
         if fields["op"] as? String == "audio_packet" {
             pending[id] = receive
             return id
@@ -75,7 +80,14 @@ extension AudioCapture {
             }
             capture.packetID = nil
             capture.activePacketFrames = 0
+            capture.recordingID=String(repeating:"c",count:32)
+            capture.error="후속 녹음 구간 오류"
             capture.stop {
+                let original="/api/recordings/"+String(repeating:"b",count:32)+"/stop"
+                guard worker.stops.last(where:{$0.0==original})?.1 == "절전으로 녹음이 중단되었습니다" else {
+                    print("Deferred release replaced the earlier recording error:",worker.stops)
+                    exit(1)
+                }
                 print("Native pending ACK cancellation preserves recovery; stale ACK ignored; explicit stop completes")
                 exit(0)
             }

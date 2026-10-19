@@ -31,7 +31,8 @@ async def main():
             else:
                 response=subprocess.run([str(args.helper),'--recognize-image',str(image.resolve())],capture_output=True,timeout=120,check=True)
                 vision=json.loads(response.stdout);vision['elapsed_seconds']=time.monotonic()-started;vision_path.write_text(json.dumps(vision,ensure_ascii=False,indent=2))
-            text='\n'.join(r['text'] for r in vision['regions']);case={'image':image.name,'type':'printed_control' if image.stem.startswith('05_') else 'real_handwritten','vision':score(reference,text)|{'seconds':vision['elapsed_seconds']}}
+            # The upstream handwritten label for 03 is wrong: the image is a printed book page.
+            text='\n'.join(r['text'] for r in vision['regions']);case={'image':image.name,'type':'printed_control' if image.stem.startswith(('03_','05_')) else 'real_handwritten','vision':score(reference,text)|{'seconds':vision['elapsed_seconds']}}
             if manager:
                 output=args.output/(image.stem+'-'+args.model.replace(':','-')+'.json');started=time.monotonic()
                 if output.exists():result=json.loads(output.read_text())

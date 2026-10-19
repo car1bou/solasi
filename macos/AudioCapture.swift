@@ -51,6 +51,7 @@ final class AudioCapture {
     private var segmentRate = 0
     private var recordingID: String?, streamID: String?, packetID: String?
     private var deferredID:String?, deferredEnd:UInt64=0
+    private var deferredReason=""
     private var packets: [(data:Data,sequence:UInt64,frames:Int)] = []
     private var pendingFrames = 0, activePacketFrames = 0
     private var phase = "starting", error = ""
@@ -274,9 +275,10 @@ final class AudioCapture {
             self.packets.removeAll(); self.pendingFrames=0; self.activePacketFrames=0
             guard let rid=self.recordingID else { self.closing=false; completion(); return }
             let keepDeferred=deferred && !self.guardState.finished
-            if keepDeferred { self.deferredID=rid;self.deferredEnd=self.timeline.end }
+            if keepDeferred { self.deferredID=rid;self.deferredEnd=self.timeline.end;self.deferredReason=self.error }
+            let stopReason=self.deferredID == rid ? self.deferredReason : self.error
             var body: [String:Any] = ["end_frame":self.timeline.end,"interrupted":interrupted || incomplete,"defer_transcription":keepDeferred]
-            if interrupted || incomplete { body["reason"]=String((self.error.isEmpty ? "원음 저장 확인 중단" : self.error).prefix(300)) }
+            if interrupted || incomplete { body["reason"]=String((stopReason.isEmpty ? "원음 저장 확인 중단" : stopReason).prefix(300)) }
             self.json("/api/recordings/"+rid+"/stop",body:body) { result in
                 if case .failure(let error)=result { self.error=error.localizedDescription+" · 수신된 원음의 저장 상태를 확인하세요" }
                 else if !keepDeferred && self.deferredID == rid { self.deferredID=nil }
@@ -306,8 +308,9 @@ final class AudioCapture {
         guard guardState.finished, !opening, !closing else { return }
         // Releasing a deferred recovery segment on explicit stop also releases its ASR work.
         if let rid=deferredID {
+            let reason=deferredReason
             deferredID=nil;awaitingRecovery=false
-            json("/api/recordings/"+rid+"/stop",body:["interrupted":true,"defer_transcription":false,"end_frame":deferredEnd,"reason":String(error.prefix(300))]) { result in
+            json("/api/recordings/"+rid+"/stop",body:["interrupted":true,"defer_transcription":false,"end_frame":deferredEnd,"reason":String(reason.prefix(300))]) { result in
                 if case .failure(let error)=result { self.error=error.localizedDescription+" · 저장한 원음의 전사를 재시도하세요" }
                 self.finishStop()
             }; return

@@ -56,3 +56,10 @@ test('confirmed ink without an OCR box still displays its saved strokes',async()
     assert.match(renderToStaticMarkup(React.createElement(SourceImage,{source})),/<rect/);
   }finally{await server.close();}
 });
+
+test('source image and ink overlay keep the same box in short windows',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const css=await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
+ assert.match(css,/\.source-dialog \.ink-region-preview img\s*\{[^}]*max-height:\s*none/);
+ assert.match(css,/\.source-dialog \.ink-region-preview img\s*\{[^}]*height:\s*auto/);
+});

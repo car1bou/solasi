@@ -1,5 +1,5 @@
 """Exercise the bundled no-port engine in an isolated vault with real audio replay."""
-import argparse,asyncio,json,os,sqlite3,struct,time,wave,hashlib
+import argparse,asyncio,json,os,sqlite3,struct,time,wave,hashlib,shutil
 from pathlib import Path
 
 class Pipe:
@@ -34,6 +34,7 @@ class Pipe:
 async def main(a):
  a.output.mkdir(parents=True,exist_ok=True);fixture=json.loads(a.fixture.read_text());vault=a.output/'vault';vault.mkdir()
  source=sqlite3.connect(Path(fixture['vault'])/'app.sqlite3');dest=sqlite3.connect(vault/'app.sqlite3');source.backup(dest);source.close();dest.close()
+ if (Path(fixture['vault'])/'assets').exists():shutil.copytree(Path(fixture['vault'])/'assets',vault/'assets')
  log=(a.output/'engine.log').open('wb');client=Pipe(a.engine.resolve(),vault.resolve(),a.runtime.resolve(),log);report={};started=time.monotonic()
  try:
   await client.start();cid,sid,aid,digest=fixture['course'],fixture['current'],fixture['asset'],fixture['digest']

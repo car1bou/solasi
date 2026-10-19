@@ -18,6 +18,14 @@ async def admit_background(db):
     if not background_idle(db):raise BackgroundDeferred('사용자 작업 후 자동 처리')
 
 
+def embedding_progress(db):
+    row=db.execute("SELECT id,model FROM embedding_sets WHERE status='building' ORDER BY created_at DESC LIMIT 1").fetchone()
+    if row is None:return None
+    total=db.execute('SELECT count(*) FROM searchable_chunks').fetchone()[0]
+    completed=db.execute('SELECT count(DISTINCT c.id) FROM searchable_chunks c JOIN embeddings e ON e.chunk_id=c.id WHERE e.index_id=?',(row['id'],)).fetchone()[0]
+    return {'model':row['model'],'completed_chunks':completed,'total_chunks':total}
+
+
 def mark_knowledge_dirty(db,source_id):
     for scope in source_scopes(db,source_id):
         key='source:'+source_id+':'+scope_key(db,scope)

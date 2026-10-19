@@ -117,7 +117,7 @@ def create_app(config: AppConfig) -> FastAPI:
     app.state.embedding_lock = asyncio.Semaphore(1)
     app.state.active_embedding_clients=0
     with db:
-        db.execute("UPDATE embedding_sets SET status='failed' WHERE status='building'")
+        # Complete chunks commit atomically; sync_embeddings rechecks model/format before resuming.
         db.execute("UPDATE attempts SET status='interrupted',error='앱 실행이 중단되었습니다' WHERE status='grading'")
         db.execute("UPDATE ai_attempts SET status='interrupted',error='앱 실행이 중단되었습니다' WHERE status='running'")
         db.execute("UPDATE jobs SET status='interrupted',error='앱 실행이 중단되었습니다' WHERE status IN ('queued','running')")
@@ -948,7 +948,7 @@ def create_app(config: AppConfig) -> FastAPI:
         path=playable_path(db,ident)
         return FileResponse(path,media_type=mimetypes.guess_type(path.name)[0] or "audio/wav")
 
-    from .second_brain import reconcile,next_background_work,background_idle,source_scope,related_sources,save_related,propose_concepts,admit_background,BackgroundDeferred,course_scope
+    from .second_brain import reconcile,next_background_work,background_idle,source_scope,related_sources,save_related,propose_concepts,admit_background,BackgroundDeferred,course_scope,embedding_progress
     from .retrieval import sync_embeddings,ref_in_scope,scope_key,scope_ids,eligible_chunks
 
     async def knowledge_loop():
@@ -1004,7 +1004,7 @@ def create_app(config: AppConfig) -> FastAPI:
     @app.get('/api/knowledge/status')
     async def knowledge_status():
         enabled=db.execute("SELECT value FROM settings WHERE key='second_brain_auto'").fetchone()
-        return {'enabled':json.loads(enabled[0]) if enabled else True,'idle':background_idle(db),'counts':{r[0]:r[1] for r in db.execute('SELECT state,count(*) FROM brain_work GROUP BY state')},'errors':[dict(r) for r in db.execute("SELECT key,error FROM brain_work WHERE state='failed' ORDER BY updated_at DESC LIMIT 5")],'index':index_status(db)}
+        return {'enabled':json.loads(enabled[0]) if enabled else True,'idle':background_idle(db),'counts':{r[0]:r[1] for r in db.execute('SELECT state,count(*) FROM brain_work GROUP BY state')},'errors':[dict(r) for r in db.execute("SELECT key,error FROM brain_work WHERE state='failed' ORDER BY updated_at DESC LIMIT 5")],'index':index_status(db),'building':embedding_progress(db)}
 
     class KnowledgeOptions(Input):
         enabled:bool
