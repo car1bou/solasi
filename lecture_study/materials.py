@@ -233,10 +233,10 @@ async def render_page(db, asset_id, page, runtime_dir,document_sha256=None):
         raise HTTPException(409,'원본 문서가 변경되었습니다. 이전 필기를 새 문서에 표시하지 않습니다')
     if page<1 or page>metadata['total_pages']:
         raise KeyError("페이지를 찾을 수 없습니다")
-    source = checked_document_path(db,asset_id,metadata['sha256'])
     path = folder/f"document-{metadata['sha256']}-page-{page}.png"
-    if not path.is_file():
-        await worker(["render",source,path,runtime_dir,asset_id,asset["version"],asset["kind"],page])
+    if path.is_file():return path
+    source = checked_document_path(db,asset_id,metadata['sha256'])
+    await worker(["render",source,path,runtime_dir,asset_id,asset["version"],asset["kind"],page])
     checked_document_path(db,asset_id,metadata['sha256'])
     if not path.is_file():
         raise ValueError("페이지 렌더링 실패")

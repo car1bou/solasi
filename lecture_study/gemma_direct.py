@@ -1,6 +1,7 @@
 """Direct execution of the two installed Gemma checkpoints, without weight conversion."""
 import importlib.metadata
 import json
+import time
 import struct
 from pathlib import Path
 
@@ -131,7 +132,9 @@ def generate(view: Path, messages: list, images: list[Path], schema: dict | None
     from mlx_vlm import generate as mlx_generate
     from mlx_vlm.structured import build_json_schema_logits_processor
     from mlx_vlm.utils import prepare_inputs
+    started=time.perf_counter()
     model, processor = load(view)
+    loaded=time.perf_counter()
     prompt = render_prompt(messages, len(images))
     inputs = prepare_inputs(processor, images=[str(path) for path in images] or None,
                             prompts=prompt, add_special_tokens=False)
@@ -142,6 +145,9 @@ def generate(view: Path, messages: list, images: list[Path], schema: dict | None
     if schema is not None:
         tokenizer = processor.tokenizer if hasattr(processor, 'tokenizer') else processor
         options['logits_processors'] = [build_json_schema_logits_processor(tokenizer, schema)]
+    prepared=time.perf_counter()
     result = mlx_generate(model, processor, prompt=prompt, **options)
+    completed=time.perf_counter()
     return {'text': parse_response(result.text), 'finish_reason': result.finish_reason,
-            'usage': {'prompt_eval_count': result.prompt_tokens, 'eval_count': result.generation_tokens}}
+            'usage': {'prompt_eval_count': result.prompt_tokens, 'eval_count': result.generation_tokens,
+                      'timings_ms':{'model_load_ms':(loaded-started)*1000,'input_prepare_ms':(prepared-loaded)*1000,'inference_ms':(completed-prepared)*1000}}}

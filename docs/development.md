@@ -144,6 +144,8 @@ npm run build
 
 ### 전사·요약 품질
 
+- [단계별 시간·중복 변환 제거와 동일 음성 비교](local-stage-performance-20261019.md)
+
 - [한국어 210조건·추가 55원음·Qwen 후보](korean-asr-validation-20261017.md)
 - [긴 요약 문맥·후반 누락과 내장 엔진](summary-context-validation-20261017.md)
 - [사람 음성 ASR 비교](asr-model-comparison.md)

@@ -1,6 +1,7 @@
 """Direct, offline MLX execution for the installed checkpoint tested on this Mac."""
 import importlib.metadata
 import json
+import time
 from pathlib import Path
 from .gemma_direct import PROFILES as GEMMA_PROFILES, ENGINE_ID as GEMMA_ENGINE
 
@@ -70,7 +71,9 @@ def generate(view: Path, messages: list, images: list[Path], schema: dict | None
     from mlx_vlm.prompt_utils import apply_chat_template
     from mlx_vlm.structured import build_json_schema_logits_processor
     from mlx_vlm.utils import prepare_inputs, should_add_special_tokens
+    started=time.perf_counter()
     model, processor = load(view)
+    loaded=time.perf_counter()
     prompt = apply_chat_template(processor, model.config, messages, num_images=len(images), enable_thinking=False)
     inputs = prepare_inputs(processor, images=[str(path) for path in images] or None, prompts=prompt,
                             image_token_index=getattr(model.config, 'image_token_index', None),
@@ -81,6 +84,9 @@ def generate(view: Path, messages: list, images: list[Path], schema: dict | None
     if schema is not None:
         tokenizer = processor.tokenizer if hasattr(processor, 'tokenizer') else processor
         options['logits_processors'] = [build_json_schema_logits_processor(tokenizer, schema)]
+    prepared=time.perf_counter()
     result = mlx_generate(model, processor, prompt=prompt, **options)
+    completed=time.perf_counter()
     return {'text': result.text, 'finish_reason': result.finish_reason,
-            'usage': {'prompt_eval_count': result.prompt_tokens, 'eval_count': result.generation_tokens}}
+            'usage': {'prompt_eval_count': result.prompt_tokens, 'eval_count': result.generation_tokens,
+                      'timings_ms':{'model_load_ms':(loaded-started)*1000,'input_prepare_ms':(prepared-loaded)*1000,'inference_ms':(completed-prepared)*1000}}}

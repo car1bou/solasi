@@ -94,6 +94,10 @@ sys.stdout.buffer.write(struct.pack('>I',len(reply))+reply);sys.stdout.buffer.fl
         before = AsyncMock()
         result = await self.manager.generate(self.config, [{'role':'user','content':'질문'}], [], None, output_limit=123, before_local=before)
         self.assertEqual(result['text'], '완료')
+        timings=result['usage']['timings_ms']
+        self.assertEqual(set(timings),{'lock_wait_ms','transcription_wait_ms','asset_prepare_ms','worker_roundtrip_ms','total_ms'})
+        self.assertTrue(all(value>=0 for value in timings.values()))
+        self.assertGreaterEqual(timings['total_ms'],timings['worker_roundtrip_ms'])
         before.assert_awaited_once()
         self.assertEqual(self.manager.processes, set())
 

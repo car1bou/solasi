@@ -6,6 +6,7 @@ import re
 import logging
 import sys
 import tempfile
+import time
 import wave
 from array import array
 from contextlib import nullcontext
@@ -177,11 +178,14 @@ async def stop_process(process):
     if cancelled:raise asyncio.CancelledError
 
 
-async def command(argv,timeout=120):
+async def command(argv,timeout=120,*,timings=None):
     process=await asyncio.create_subprocess_exec(*map(str,argv),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     try:
         stdout,stderr=await asyncio.wait_for(process.communicate(),timeout)
         if process.returncode: raise ValueError("음성 처리 실패: 엔진 또는 입력 형식을 확인하세요")
+        if timings is not None:
+            for name,value in re.findall(rb'whisper_print_timings:\s+([a-z ]+?)\s*=\s*(\d+(?:\.\d+)?)\s*ms',stderr):
+                timings[name.decode().strip().replace(' ','_')+'_ms']=float(value)
         return stdout
     finally:
         await stop_process(process)
@@ -210,25 +214,49 @@ def verify_model(path,expected):
         _verified.add(stamp)
 
 
-async def transcribe_range(input_wav,start_ms,prompt,runtime_dir,*,preview=False,padding_ms=30,vad_enabled=True,min_speech_ms=250):
+def pcm16_duration(path):
+    try:
+        with wave.open(str(path)) as wav:
+            if (wav.getnchannels(),wav.getsampwidth(),wav.getframerate(),wav.getcomptype())!=(1,2,16000,'NONE'):return None
+            frames=wav.getnframes()
+            if frames:
+                wav.setpos(frames-1)
+                if len(wav.readframes(1))!=2:return None
+            return round(frames*1000/16000)
+    except (OSError,wave.Error,EOFError):return None
+
+
+async def transcribe_range(input_wav,start_ms,prompt,runtime_dir,*,preview=False,padding_ms=30,vad_enabled=True,min_speech_ms=250,timings=None):
+    started=time.perf_counter()
     check_prompt(prompt)
     ffmpeg,whisper,model=await asyncio.to_thread(engine_paths,runtime_dir)
     vad=Path(runtime_dir)/"models/ggml-silero-v6.2.0.bin"
     if vad_enabled:await asyncio.to_thread(verify_model,vad,VAD_SHA)
+    prepared=time.perf_counter()
     with tempfile.TemporaryDirectory(prefix="lecture-asr-") as temp:
         clip=Path(temp)/"clip.wav";prefix=Path(temp)/"result"
-        await command([ffmpeg,"-nostdin","-v","error","-y","-i",input_wav,"-ac","1","-ar","16000","-c:a","pcm_s16le",clip])
-        with wave.open(str(clip)) as wav: duration=round(wav.getnframes()*1000/wav.getframerate())
+        duration=pcm16_duration(input_wav)
+        reused=duration is not None
+        if reused:clip=Path(input_wav)
+        else:
+            await command([ffmpeg,"-nostdin","-v","error","-y","-i",input_wav,"-ac","1","-ar","16000","-c:a","pcm_s16le",clip])
+            with wave.open(str(clip)) as wav: duration=round(wav.getnframes()*1000/wav.getframerate())
+        normalized=time.perf_counter()
         if not duration: return []
         argv=[whisper,"-m",model,"-f",clip,"-l","ko","-oj","-of",prefix,"-np"]
         if vad_enabled:argv += ["--vad","-vm",vad,"--vad-speech-pad-ms",str(padding_ms),"--vad-min-speech-duration-ms",str(min_speech_ms)]
         if preview:argv += ["-bs","1","-bo","1","-nf"]
         if prompt.strip(): argv+=["--prompt",prompt]
-        await command(argv)
+        engine={}
+        await command(argv,**({'timings':engine} if timings is not None else {}))
+        decoded=time.perf_counter()
         try: body=json.loads(prefix.with_suffix(".json").read_text(encoding="utf-8"))
         except UnicodeDecodeError: raise ValueError(ASR_RESULT_UTF8_ERROR) from None
         except (OSError,json.JSONDecodeError): raise ValueError("전사 결과를 읽을 수 없습니다") from None
-        return parse_segments(body,duration,start_ms)
+        result=parse_segments(body,duration,start_ms)
+        if timings is not None:
+            timings.update(asset_check_ms=(prepared-started)*1000,audio_prepare_ms=(normalized-prepared)*1000,decode_process_ms=(decoded-normalized)*1000,result_parse_ms=(time.perf_counter()-decoded)*1000,total_ms=(time.perf_counter()-started)*1000,whisper=engine,pcm_reused=reused)
+        return result
 
 
 

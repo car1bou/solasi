@@ -5,6 +5,7 @@ import json
 import os
 import re
 import tempfile
+import time
 import httpx
 from pathlib import Path
 import struct
@@ -169,26 +170,37 @@ class DirectModels:
         return {'accessible':True,'vision':SUPPORTED_MODELS[model]['vision'],'completion':True,'embedding':False,'digest':model_identity(model,asset['digest']),'context_limit':SUPPORTED_MODELS[model]['context_tokens']}
 
     async def generate(self, config, messages, images, schema, *, output_limit, before_local=None, expected_digest=None):
+        started=time.perf_counter()
         async with self.lock:
+            acquired=time.perf_counter()
             if before_local: await before_local()
+            admitted=time.perf_counter()
             status = await self.status(config.model)
             if expected_digest is not None and status['digest'] != expected_digest: raise ValueError('직접 실행 모델이 변경되었습니다. 새 작업을 요청하세요')
             view = await self.view(config.model)
+            prepared=time.perf_counter()
             result = await self._call({'view':str(view),'messages':messages,'images':[str(path) for path in images],'schema':schema,'output_limit':output_limit,'context_limit':min(config.context_limit,status['context_limit'])})
+            completed=time.perf_counter()
             if (await self.status(config.model))['digest']!=status['digest']: raise ValueError('생성 중 직접 실행 모델이 변경되었습니다')
+            result.setdefault('usage',{}).setdefault('timings_ms',{}).update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_roundtrip_ms=(completed-prepared)*1000,total_ms=(time.perf_counter()-started)*1000)
             return result
 
-    async def embed(self, model, text, *, before_local=None):
+    async def embed(self, model, text, *, before_local=None,timings=None):
         if not isinstance(text,str) or not text or len(text.encode())>100000: raise EmbeddingInputTooLong('임베딩 입력 한도')
+        started=time.perf_counter()
         async with self.lock:
+            acquired=time.perf_counter()
             if before_local:await before_local()
+            admitted=time.perf_counter()
             await self.status(model)
             asset=await self.asset(model)
             path=next(entry['path'] for entry in asset['files'] if entry['kind']=='model')
+            prepared=time.perf_counter()
             process=await self._spawn([str(self.engine_dir/'EmbeddingWorker'),str(path),str(self.engine_dir/'lib')])
             try:
                 ready=await asyncio.wait_for(read_result(process.stdout),60)
                 if any(ready.get(key)!=value for key,value in {'ready':True,'dim':768,'pooling':'mean','context_tokens':2048,'engine':EMBEDDING_ENGINE}.items()): raise ValueError('직접 임베딩 엔진 정보가 다릅니다')
+                loaded=time.perf_counter()
                 data=text.encode();process.stdin.write(struct.pack('>I',len(data))+data);await process.stdin.drain()
                 reply=await asyncio.wait_for(read_result(process.stdout),60)
                 if reply.get('error'):
@@ -197,6 +209,8 @@ class DirectModels:
                 from .retrieval import vector
                 values=vector(reply.get('vector'))
                 if len(values)!=768: raise ValueError('직접 임베딩 차원이 다릅니다')
+                if timings is not None:
+                    timings.update(lock_wait_ms=(acquired-started)*1000,transcription_wait_ms=(admitted-acquired)*1000,asset_prepare_ms=(prepared-admitted)*1000,worker_start_load_ms=(loaded-prepared)*1000,inference_roundtrip_ms=(time.perf_counter()-loaded)*1000,total_before_cleanup_ms=(time.perf_counter()-started)*1000)
                 return list(values)
             except TimeoutError: raise ValueError('직접 임베딩 제한 시간 초과') from None
             finally: await self._close(process)
