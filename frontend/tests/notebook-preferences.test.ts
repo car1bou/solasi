@@ -137,3 +137,12 @@ test('page export identifies the original page and base revision while preservin
     assert.equal(new TextEncoder().encode(notebookExport('한'.repeat(300)+'.pdf',identity,content).filename).length<256,true);
   }finally{await server.close();}
 });
+
+test('explicit color apply accepts only complete RGB hex without corrupting settings',async()=>{
+  const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {notebookColor}=await server.ssrLoadModule('/src/notebook-preferences.ts');
+    for(const value of ['#2563EB','#e11d48','#000000','#FFFFFF'])assert.equal(notebookColor(value),value.toLowerCase());
+    for(const value of ['', '#12','#fff','#1234567','red',' #123456','#12345g',null,12])assert.equal(notebookColor(value),null);
+  }finally{await server.close();}
+});

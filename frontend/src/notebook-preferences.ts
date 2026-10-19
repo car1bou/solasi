@@ -9,9 +9,10 @@ export const defaultView:NotebookView={zoomMode:'fit',zoom:1,rotation:0,notesOpe
 const cache=new Map<string,unknown>(),writes=new Map<string,Promise<boolean>>();
 const toolNames:NotebookTool[]=['pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'];
 const inRange=(value:unknown,min:number,max:number)=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max;
+export function notebookColor(value:unknown){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value.toLowerCase():null;}
 function tools(value:unknown):NotebookTools{
   const row=value as NotebookTools|null;
-  return row&&toolNames.includes(row.tool)&&(row.eraserMode===undefined||['stroke-eraser','partial-eraser'].includes(row.eraserMode))&&[row.penColor,row.highlighterColor].every(color=>typeof color==='string'&&/^#[0-9a-f]{6}$/i.test(color))&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
+  return row&&toolNames.includes(row.tool)&&(row.eraserMode===undefined||['stroke-eraser','partial-eraser'].includes(row.eraserMode))&&[row.penColor,row.highlighterColor].every(color=>notebookColor(color)!==null)&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
 }
 function view(value:unknown):NotebookView{
   const row=value as NotebookView|null;

@@ -5,7 +5,7 @@ import {downloadJSON} from './api';
 import Icon from './Icon';
 import {clamp,eraseInk,inkBounds,inkPath,inside} from './ink';
 import type {Bounds,Point} from './ink';
-import {defaultTools,defaultView,loadNotebookPreferences,saveNotebookTools,saveNotebookView,notebookZoom,notebookExport} from './notebook-preferences';
+import {defaultTools,defaultView,loadNotebookPreferences,saveNotebookTools,saveNotebookView,notebookZoom,notebookExport,notebookColor} from './notebook-preferences';
 import type {NotebookTool,NotebookTools,NotebookView} from './notebook-preferences';
 
 type Tool=NotebookTool;
@@ -17,7 +17,7 @@ const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장
 export default function PageNotebook({courseId,document:metadata,page,filename}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string}){
   const noteId=useId(),settingsId=useId();
   const settings=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLButtonElement|null>(null);
-  const [settingsOpen,setSettingsOpen]=useState(false);
+  const [settingsOpen,setSettingsOpen]=useState(false),[colorDraft,setColorDraft]=useState(''),[colorError,setColorError]=useState('');
   const store=useMemo(()=>pageDraft(courseId,metadata.asset_id,metadata.sha256,page.page),[courseId,metadata.asset_id,metadata.sha256,page.page]);
   const state=useSyncExternalStore(store.subscribe,store.snapshot),latest=useRef(state),lastOwnInk=useRef<InkStroke[]|null>(null);latest.current=state;
   const [tools,setTools]=useState<NotebookTools>({...defaultTools}),[view,setView]=useState<NotebookView>({...defaultView}),[preferencesReady,setPreferencesReady]=useState(false),[preferenceWarning,setPreferenceWarning]=useState(''),[preferenceSaveWarnings,setPreferenceSaveWarnings]=useState({tools:'',view:''}),[availableWidth,setAvailableWidth]=useState(0);
@@ -30,6 +30,8 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   function exportCurrent(){finishGesture();const result=notebookExport(filename,{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page},store.snapshot());void download(result.filename,result.value);}
   function savedPreference(kind:'tools'|'view',saved:boolean){setPreferenceSaveWarnings(current=>({...current,[kind]:saved?'':(kind==='tools'?'필기 도구':'자료 보기')+' 설정을 저장하지 못했습니다. 이번 실행 동안 적용하며 메모·필기는 별도로 저장합니다.'}));}
   function changeTools(next:Partial<NotebookTools>){const value={...tools,eraserMode,...next,...(next.tool==='stroke-eraser'||next.tool==='partial-eraser'?{eraserMode:next.tool}:{})};setTools(value);void saveNotebookTools(value).then(saved=>savedPreference('tools',saved));}
+  function applyColor(){const value=notebookColor(colorDraft);if(!value){setColorError('#RRGGBB 형식의 색상 코드를 입력하세요. 예: #2563EB');return;}setColorError('');changeTools(tool==='highlighter'?{highlighterColor:value}:{penColor:value});}
+  useEffect(()=>{setColorDraft(color);setColorError('');},[color,tool,settingsOpen]);
   function changeView(next:Partial<NotebookView>){const value={...view,...next};setView(value);void saveNotebookView(metadata.asset_id,metadata.sha256,value).then(saved=>savedPreference('view',saved));}
   function setZoom(value:number){changeView({zoomMode:'manual',zoom:value});}
   useEffect(()=>{let live=true;void loadNotebookPreferences(metadata.asset_id,metadata.sha256).then(result=>{if(live){setTools(result.tools);setView(result.view);setPreferenceWarning(result.warning);}}).catch(()=>{if(live)setPreferenceWarning('보기·필기 설정을 불러오지 못했습니다. 기본 설정으로 시작하며 메모·필기는 별도로 보존됩니다.');}).finally(()=>{if(live)setPreferencesReady(true);});return()=>{live=false;};},[metadata.asset_id,metadata.sha256]);
@@ -109,9 +111,11 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
     settings.current?.scrollIntoView({block:'nearest'});
     const outside=(event:PointerEvent)=>{if(!settings.current?.contains(event.target as Node)&&!settingsTrigger.current?.contains(event.target as Node)){setSettingsOpen(false);if(event.target instanceof Element&&event.target.closest('.page-viewport')){event.preventDefault();event.stopPropagation();}}};
     const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();setSettingsOpen(false);settingsTrigger.current?.focus();}};
-    document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape,true);
-    return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape,true);};
+    const tab=(event:KeyboardEvent)=>{if(event.key==='Tab'){const panel=settings.current;requestAnimationFrame(()=>{if(panel&&settings.current===panel&&!panel.contains(document.activeElement))setSettingsOpen(false);});}};
+    document.addEventListener('pointerdown',outside,true);document.addEventListener('keydown',escape,true);document.addEventListener('keydown',tab);
+    return()=>{document.removeEventListener('pointerdown',outside,true);document.removeEventListener('keydown',escape,true);document.removeEventListener('keydown',tab);};
   },[settingsOpen]);
+  useEffect(()=>{if(settingsOpen&&colorError)settings.current?.scrollIntoView({block:'nearest'});},[settingsOpen,colorError]);
   useEffect(()=>setSettingsOpen(false),[metadata.asset_id,page.page]);
   const baseWidth=680*zoom,baseHeight=baseWidth*page.height/page.width,swapped=rotation%180!==0;
   return <section className="page-notebook" aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
@@ -130,6 +134,8 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
             <label>지우개 크기<input type="range" min="0.003" max="0.06" step="0.001" value={eraserSize} onChange={e=>changeTools({eraserSize:Number(e.target.value)})}/></label>
           </>:<>
             <label>색<input type="color" value={color} onChange={e=>changeTools(tool==='highlighter'?{highlighterColor:e.target.value}:{penColor:e.target.value})}/></label>
+            <div className="ink-color-code"><label>색상 코드<input type="text" value={colorDraft} maxLength={7} spellCheck={false} autoCapitalize="characters" aria-invalid={!!colorError} aria-describedby={colorError?settingsId+'-color-error':undefined} onChange={e=>{setColorDraft(e.target.value);setColorError('');}} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();applyColor();}}}/></label><button type="button" onClick={applyColor}>색 적용</button></div>
+            {colorError&&<p id={settingsId+'-color-error'} role="alert" className="ink-color-error">{colorError}</p>}
             <label>굵기<input type="range" min="0.0005" max="0.04" step="0.0005" value={width} onChange={e=>changeTools(tool==='highlighter'?{highlighterWidth:Number(e.target.value)}:{penWidth:Number(e.target.value)})}/></label>
             <label>불투명도<input type="range" min="0.05" max="1" step="0.05" value={opacity} onChange={e=>changeTools(tool==='highlighter'?{highlighterOpacity:Number(e.target.value)}:{penOpacity:Number(e.target.value)})}/></label>
           </>}

@@ -56,3 +56,12 @@ test('tool settings reveal their full bounds and can scroll in short windows',()
   assert.match(settings,/overflow:auto/);
   assert.ok(notebook.includes("settings.current?.scrollIntoView({block:'nearest'})"));
 });
+
+
+test('short-window tool settings contain scrolling and close when Tab leaves',()=>{
+  const notebook=readFileSync(new URL('../src/PageNotebook.tsx',import.meta.url),'utf8');
+  assert.match(css,/@media\(max-height:600px\)\{\.ink-tool-settings\{max-height:60dvh\}\}/);
+  assert.match(css,/overflow:auto;overscroll-behavior:contain/);
+  assert.ok(notebook.includes("event.key==='Tab'"));
+  assert.ok(notebook.includes('!panel.contains(document.activeElement)'));
+});
