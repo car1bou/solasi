@@ -63,6 +63,11 @@ CREATE TABLE IF NOT EXISTS transcript_ranges (
  stored_start INTEGER NOT NULL,stored_end INTEGER NOT NULL,final INTEGER NOT NULL,revision INTEGER NOT NULL,status TEXT NOT NULL,
  quiet INTEGER NOT NULL DEFAULT 0,error TEXT,prompt TEXT NOT NULL DEFAULT '',model TEXT
 );
+CREATE TABLE IF NOT EXISTS transcription_hint_snapshots (
+ id INTEGER PRIMARY KEY,chunk_id TEXT NOT NULL REFERENCES transcript_ranges(id) ON DELETE CASCADE,
+ chunk_revision INTEGER NOT NULL,snapshot TEXT NOT NULL,created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS transcription_hints_chunk ON transcription_hint_snapshots(chunk_id);
 CREATE TABLE IF NOT EXISTS recording_scan (
  recording_id TEXT PRIMARY KEY REFERENCES recordings(id),state TEXT NOT NULL,remainder BLOB NOT NULL
 );

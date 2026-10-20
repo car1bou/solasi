@@ -36,7 +36,7 @@ from .answers import freeze_request,run_ai_request,get_artifact,capture_request,
 from .outputs import cached_summary_parts,public_artifact,submit_attempt,save_attempt,grade_attempt,quiz_question,override_attempt,review_attempts,related_quizzes,list_participants,save_participants,edit_artifact,export_markdown
 from .models import AIRequest
 from .retrieval import backfill_sources,retrieve,list_terms,save_term,concept_detail,rebuild_embeddings,index_status,capture_search
-from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,edit_segments,export_transcript,TranscriptConflict,get_asr_terms,save_asr_terms,asr_prompt,engine_paths,verify_model,MODEL_NAME,VAD_SHA
+from .transcription import plan_chunks,process_chunk,list_transcripts,transcription_status,register_audio,edit_segment,edit_segments,export_transcript,TranscriptConflict,get_asr_terms,save_asr_terms,engine_paths,verify_model,MODEL_NAME,VAD_SHA
 from .asr_review import queue_review,process_review,apply_review,public_reviews,empty_ranges,unchanged,result_utf8_failure,finish_recording_job
 from .audio import start_recording, append_pcm, stop_recording, get_recording, interrupt_recording, recover_recordings
 from .native_drafts import attach_native_drafts
@@ -1260,12 +1260,16 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.get("/api/sessions/{ident}/transcription-terms")
     async def transcription_terms(ident: str):
-        return {"terms":get_asr_terms(db,ident),"effective_prompt":asr_prompt(db,ident)}
+        from .asr_hints import hint_snapshot
+        hints=await asyncio.to_thread(hint_snapshot,db,ident)
+        return {"terms":get_asr_terms(db,ident),"effective_prompt":hints["prompt"],"excluded_terms":hints["excluded"]}
 
     @app.put("/api/sessions/{ident}/transcription-terms")
     async def update_transcription_terms(ident: str,body: TranscriptionTerms):
         terms=save_asr_terms(db,ident,body.terms)
-        return {"terms":terms,"effective_prompt":asr_prompt(db,ident)}
+        from .asr_hints import hint_snapshot
+        hints=await asyncio.to_thread(hint_snapshot,db,ident)
+        return {"terms":terms,"effective_prompt":hints["prompt"],"excluded_terms":hints["excluded"]}
 
     class TranscriptEdit(Input):
         text: str = Field(min_length=1,max_length=10000)

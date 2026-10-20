@@ -33,16 +33,8 @@ def get_asr_terms(db,sid):
 
 
 def asr_prompt(db,sid):
-    from .retrieval import list_terms
-    names=get_asr_terms(db,sid)
-    names += [t['canonical'] for t in list_terms(db,sid)]
-    names += [r[0] for r in db.execute('SELECT name FROM participants WHERE session_id=? AND active=1 ORDER BY name',(sid,))]
-    selected=[]
-    for name in names:
-        name=' '.join(name.split())
-        if any(ord(c)<32 or ord(c)==127 for c in name):continue
-        if name and name not in selected and len(', '.join([*selected,name]).encode('utf-8'))<=200:selected.append(name)
-    return ', '.join(selected)
+    from .asr_hints import hint_snapshot
+    return hint_snapshot(db,sid)['prompt']
 
 
 def quiet_cut(samples,rate):
@@ -59,10 +51,8 @@ def quiet_cut(samples,rate):
 def save_asr_terms(db,sid,terms):
     from .db import session
     session(db,sid)
-    if not isinstance(terms,list) or any(not isinstance(t,str) or any(ord(c)<32 for c in t) for t in terms):
-        raise ValueError("명칭을 쉼표로 구분해 입력하세요")
-    terms=list(dict.fromkeys(t.strip() for t in terms if t.strip()))
-    check_prompt(", ".join(terms))
+    from .asr_hints import validate_hotwords
+    terms=validate_hotwords(terms)
     with db:
         db.execute("INSERT OR REPLACE INTO settings VALUES (?,?)",("asr_terms:"+sid,json.dumps(terms,ensure_ascii=False)))
     return terms
@@ -415,8 +405,7 @@ async def process_pending(db,rid,runtime_dir,retry=False):
 
 async def process_chunk(db,chunk,runtime_dir):
     record=get_recording(db,chunk["recording_id"])
-    prompt=asr_prompt(db,record["session_id"])
-    with db: db.execute("UPDATE transcript_ranges SET status='running',prompt=?,model=NULL WHERE id=? AND revision=?",(prompt,chunk["id"],chunk["revision"]))
+    with db: db.execute("UPDATE transcript_ranges SET status='running',model=NULL WHERE id=? AND revision=?",(chunk["id"],chunk["revision"]))
     try:
         with tempfile.TemporaryDirectory(prefix="lecture-range-") as temp:
             clip=Path(temp)/"input.wav"
@@ -425,7 +414,12 @@ async def process_chunk(db,chunk,runtime_dir):
                 samples=array("h");samples.frombytes(source.readframes(source.getnframes()))
             if sys.byteorder!="little": samples.byteswap()
             quiet=not any(samples)
-            with db: db.execute("UPDATE transcript_ranges SET model=? WHERE id=? AND revision=?",(None if quiet else MODEL_NAME,chunk["id"],chunk["revision"]))
+            from .asr_hints import hint_snapshot
+            hints=await asyncio.to_thread(hint_snapshot,db,record['session_id'])if not quiet else None
+            prompt=hints['prompt']if hints else ''
+            with db: db.execute("UPDATE transcript_ranges SET model=?,prompt=? WHERE id=? AND revision=?",(None if quiet else MODEL_NAME,prompt,chunk["id"],chunk["revision"]))
+            if not quiet:
+                with db:db.execute('INSERT INTO transcription_hint_snapshots(chunk_id,chunk_revision,snapshot,created_at)VALUES(?,?,?,?)',(chunk['id'],chunk['revision'],json.dumps(hints,ensure_ascii=False),hints['prepared_at']))
             options={}
             if not chunk['final']:options['preview']=True
             if chunk['final'] or record['source_frames']>=record['sample_rate']*CHUNK_SECONDS:options['padding_ms']=1000 if chunk['final']and(record['transcription_mode']=='after_stop'or record['kind']=='file')else 200
