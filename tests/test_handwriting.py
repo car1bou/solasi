@@ -41,6 +41,24 @@ class HandwritingTests(unittest.TestCase):
     def test_rejection_and_same_input_are_idempotent(self):
         c=self.candidate();reject_recognition(self.db,c['id'])
         self.assertEqual(self.candidate()['id'],c['id']);self.assertFalse(self.ids())
+
+    def test_committed_review_draft_reopens_without_approving_recognition(self):
+        import base64
+        from lecture_study.native_drafts import NativeDrafts
+        from lecture_study.handwriting import get_recognition
+        candidate=self.candidate();store=NativeDrafts(self.db)
+        key='handwriting-review:'+candidate['id']
+        draft={'key':key,'text':'미승인 수정\n65° + ∠x = 180°','ink':[],
+               'revision':candidate['page_revision'],'token':'writer-token','dirty':True}
+        raw=json.dumps(draft,ensure_ascii=False).encode()
+        upload=store.begin(len(raw),kind='write',journal_key=key+'::writer')['id']
+        store.append(upload,0,base64.b64encode(raw).decode());store.commit(upload)
+        reopened=open_db(Path(self.temp.name)/'vault')
+        try:
+            self.assertEqual(NativeDrafts(reopened).read(key),[draft,{**draft,'key':key+'::writer'}])
+            self.assertEqual(get_recognition(reopened,candidate['id']),candidate)
+            self.assertFalse(eligible_chunks(reopened,[],None,None,Scope(course_id=self.cid)))
+        finally:reopened.close()
     def test_invalid_region_and_highlighter_only(self):
         with self.assertRaises(ValueError):save_recognition(self.db,self.snapshot(),{'engine':'fixture','regions':[{'bbox':[-1,0,1,1],'text':'x'}]})
         self.save([dict(self.ink[0],tool='highlighter')],1)
