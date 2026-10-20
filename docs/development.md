@@ -145,6 +145,7 @@ npm run build
 ### 전사·요약 품질
 
 - [같은 한국어 음성의 Qwen VAD 비교·자동 후보 보류](qwen-vad-20261020.md)
+- [Mac 설치 앱의 자동 보류·원음·수동 재인식 검증](mac-qwen-vad-validation-20261021.md)
 
 - [실제 강연 슬라이드·긴 발화·생활 소음의 힌트 비교](lecture-material-hints-20261020.md)
 
