@@ -18,7 +18,7 @@ def open_db(data_dir: Path) -> sqlite3.Connection:
     db.execute("PRAGMA journal_mode=WAL")
     db.execute("PRAGMA synchronous=FULL")
     version = db.execute("PRAGMA user_version").fetchone()[0]
-    if version>18:
+    if version>19:
         db.close()
         raise ValueError("더 최신 앱의 데이터입니다")
     migration=""
@@ -64,6 +64,7 @@ ALTER TABLE artifacts_v17 RENAME TO artifacts;
 """
         migration+="DROP VIEW IF EXISTS searchable_chunks;\n"
     if version<18:migration+="DROP VIEW IF EXISTS searchable_chunks;\n"
+    if version<19:migration+="DROP VIEW IF EXISTS searchable_chunks;\n"
     try:
         backfill="INSERT OR IGNORE INTO course_assets SELECT s.course_id,sa.asset_id FROM session_assets sa JOIN sessions s ON s.id=sa.session_id WHERE s.course_id IS NOT NULL AND s.kind='lecture';" if version<17 else ""
         db.executescript("BEGIN IMMEDIATE;\n"+migration+Path(__file__).with_name("schema.sql").read_text()+backfill)

@@ -716,25 +716,28 @@ def create_app(config: AppConfig) -> FastAPI:
             return [Path(path) for path in selected]
         return await select_files(config.runtime_dir,kind)
 
+    class FileOptions(Input):
+        handwritten:bool=False
+
     @app.post("/api/sessions/{ident}/files/select",status_code=201)
-    async def connect_files(ident: str,request:Request):
+    async def connect_files(ident: str,request:Request,body:FileOptions|None=None):
         session(db,ident)
-        return await connect_owner_files(session_id=ident,selected=request.scope.get('native_selected_files'))
+        return await connect_owner_files(session_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False)
 
     @app.post('/api/courses/{ident}/files/select',status_code=201)
-    async def connect_course_files(ident:str,request:Request):
+    async def connect_course_files(ident:str,request:Request,body:FileOptions|None=None):
         course(db,ident)
-        return await connect_owner_files(course_id=ident,selected=request.scope.get('native_selected_files'))
+        return await connect_owner_files(course_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False)
 
-    async def connect_owner_files(session_id=None,course_id=None,selected=None):
+    async def connect_owner_files(session_id=None,course_id=None,selected=None,handwritten=False):
         async with app.state.file_selection:
             paths = await chosen_files(selected)
         result = []
         for path in paths:
             inspected = await asyncio.to_thread(inspect_file,path)
-            asset = register_file(db,session_id,inspected,course_id)
+            asset = register_file(db,session_id,inspected,course_id,handwritten=handwritten)
             job = None
-            if asset["status"] not in ("ready","partial") or public_asset(db,asset)["source_status"]!="current":
+            if not public_asset(db,asset)['handwritten'] and (asset["status"] not in ("ready","partial") or public_asset(db,asset)["source_status"]!="current"):
                 job = submit_job(db,session_id,"parse",{"asset_id":asset["id"]},course_id=course_id)
                 launch_job(app,job,lambda ident=asset["id"]:parse_asset(ident))
             result.append({"asset":public_asset(db,asset),"job":job})
@@ -787,7 +790,11 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.get('/api/courses/{ident}/assets/{asset_id}/pages/{page}/document')
     async def get_page_document(ident:str,asset_id:str,page:int,document_sha256:str,revision:int|None=None):
-        return page_document(db,ident,asset_id,page,document_sha256,revision)
+        from .materials import is_handwritten
+        result=page_document(db,ident,asset_id,page,document_sha256,revision)
+        if revision is None and not result['id'] and is_handwritten(db,asset_id):
+            result=save_page_document(db,ident,asset_id,page,PageDocumentInput(document_sha256=document_sha256,expected_revision=0,text='',ink=[]))
+        return result
 
     @app.put('/api/courses/{ident}/assets/{asset_id}/pages/{page}/document')
     async def put_page_document(ident:str,asset_id:str,page:int,body:PageDocumentInput):
@@ -1030,7 +1037,8 @@ def create_app(config: AppConfig) -> FastAPI:
             if course_id:
                 related_session=db.execute("SELECT id FROM sessions WHERE course_id=? AND kind='lecture' AND deleted=0 ORDER BY lecture_no LIMIT 1",(course_id,)).fetchone()
                 related_scope=Scope(session_id=related_session[0]) if related_session else Scope(course_id=course_id)
-            related=json.loads(row['result']);related['evidence']=[e for e in related['evidence'] if ref_in_scope(db,SourceRef.model_validate(e['ref']),related_scope) and db.execute('SELECT 1 FROM searchable_chunks WHERE source_id=?',(e['ref']['id'],)).fetchone()]
+            related_allowed={r['source_id'] for r in eligible_chunks(db,scope_ids(db,related_scope),None,related_scope.session_id,related_scope)}
+            related=json.loads(row['result']);related['evidence']=[e for e in related['evidence'] if e['ref']['id'] in related_allowed]
             concepts=[dict(c) for c in db.execute("SELECT * FROM concept_proposals WHERE source_id=? AND scope_key=? AND status='candidate'",(row['source_id'],scope_key(db,scope)))]
             result.append({'source_id':row['source_id'],'related':related,'concepts':concepts})
             if len(result)>=10:break

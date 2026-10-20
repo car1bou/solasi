@@ -89,9 +89,11 @@ def inspect_file(path):
     return {"path":str(path),"filename":path.name,"kind":kind,"sha256":digest.hexdigest(),"size":info.st_size,"mtime_ns":info.st_mtime_ns}
 
 
-def register_file(db,session_id,inspected,course_id=None):
+def register_file(db,session_id,inspected,course_id=None,*,handwritten=False):
     owner=session(db,session_id) if session_id else course(db,course_id)
     course_id=owner.get('course_id') if session_id else course_id
+    if handwritten and (not course_id or inspected['kind'] not in ('pdf','png','jpg')):
+        raise ValueError('손글씨 노트는 과목에 PDF·PNG·JPEG로 연결하세요')
     if Path(inspected["path"]).is_relative_to(data_dir(db).resolve()):
         raise ValueError("앱 관리 폴더 밖의 원본 파일을 선택하세요")
     existing = db.execute("SELECT id FROM assets WHERE external_path=?",(inspected["path"],)).fetchone()
@@ -104,6 +106,9 @@ def register_file(db,session_id,inspected,course_id=None):
                        (ident,inspected["filename"],inspected["kind"],inspected["sha256"],inspected["size"],now(),inspected["path"],inspected["mtime_ns"]))
         if session_id:db.execute("INSERT OR IGNORE INTO session_assets VALUES (?,?)",(session_id,ident))
         if course_id:db.execute('INSERT OR IGNORE INTO course_assets VALUES (?,?)',(course_id,ident))
+        if handwritten:
+            db.execute('INSERT OR IGNORE INTO handwritten_assets VALUES (?)',(ident,))
+            db.execute("UPDATE assets SET status='ready',error=NULL WHERE id=? AND status!='running'",(ident,))
     return asset_dir(db,ident)[1]
 
 
@@ -138,9 +143,23 @@ def checked_material_path(db,asset,ref=None):
     return checked_document_path(db,asset['id'],digest)
 
 
+def is_handwritten(db,asset_id):
+    return bool(db.execute('SELECT 1 FROM handwritten_assets WHERE asset_id=?',(asset_id,)).fetchone())
+
+
+def require_reviewed_material(db,ref):
+    if ref.kind not in ('material','ink_note') or not ref.asset_id or not is_handwritten(db,ref.asset_id):return
+    if ref.kind=='material':
+        raise ValueError('손글씨 노트는 페이지 인식문을 확인·승인한 뒤 질문·요약에 사용하세요')
+    _,asset=asset_dir(db,ref.asset_id)
+    if asset['sha256']!=ref.document_sha256 or source_status(db,asset)!='current' or not db.execute("SELECT 1 FROM ink_recognitions WHERE source_id=? AND status='approved'",(ref.id,)).fetchone():
+        raise ValueError('손글씨 노트의 원본·승인문이 변경되었습니다. 최신 페이지를 다시 검토하세요')
+
+
 def public_asset(db,asset):
     value = {key:item for key,item in asset.items() if key not in ("external_path","mtime_ns")}
     value["source_status"] = source_status(db,asset)
+    value['handwritten']=is_handwritten(db,asset['id'])
     value["extraction"] = json.loads(value["extraction"]) if value["extraction"] else None
     return value
 

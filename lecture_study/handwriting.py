@@ -14,11 +14,12 @@ def ink_hash(ink):
 
 def capture_ink(db,course_id,asset_id,page,digest):
     doc=page_document(db,course_id,asset_id,page,digest)
-    checked_document_path(db,asset_id,digest)
+    source=checked_document_path(db,asset_id,digest)
     if not doc['id']:raise ValueError('필기를 먼저 저장하세요')
     meta=json.loads(db.execute('SELECT metadata FROM asset_documents WHERE asset_id=? AND sha256=?',(asset_id,digest)).fetchone()[0])
     size=next(p for p in meta['pages'] if p['page']==page)
-    return doc|{'ink_hash':ink_hash(doc['ink']),'page_width':size['width'],'page_height':size['height']}
+    from .materials import is_handwritten
+    return doc|{'ink_hash':ink_hash(doc['ink']),'page_width':size['width'],'page_height':size['height'],'page_source':str(source) if is_handwritten(db,asset_id) else None}
 
 
 def ink_payload(snapshot):
@@ -90,11 +91,12 @@ def reject_recognition(db,ident):
 
 async def recognize_ink(snapshot,image_path=None):
     payload=ink_payload(snapshot)
-    if not payload['strokes']:return {'engine':'apple-vision-accurate-v3','regions':[]}
+    if not payload['strokes'] and not snapshot.get('page_source'):return {'engine':'apple-vision-accurate-v3','regions':[]}
     if sys.platform!='darwin':raise ValueError('손글씨 인식은 현재 Mac에서 지원합니다')
     binary=Path(sys.executable).parent/'HandwritingRecognition'
     command=[str(binary)] if getattr(sys,'frozen',False) else ['/usr/bin/swift','-module-cache-path',str((Path(tempfile.gettempdir())/'solasi-handwriting-swift-cache').resolve()),str(Path(__file__).parent.parent/'macos/HandwritingRecognition.swift')]
     if image_path is not None:command+=['--image',str(image_path)]
+    if snapshot.get('page_source'):command+=['--page-source',snapshot['page_source'],str(snapshot['page'])]
     process=await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     try:
         output,error=await asyncio.wait_for(process.communicate(json.dumps(payload).encode()),90)
@@ -108,12 +110,14 @@ async def recognize_ink(snapshot,image_path=None):
 async def recognize_local_ink(snapshot,manager,before_local=None):
     from .models import ProviderConfig
     strokes=ink_payload(snapshot)['strokes']
-    if not strokes:return {'engine':'qwen3.5:4b','regions':[]}
+    if not strokes and not snapshot.get('page_source'):return {'engine':'qwen3.5:4b','regions':[]}
     with tempfile.TemporaryDirectory(prefix='solasi-ink-') as folder:
         image=Path(folder)/'ink.png'
         await recognize_ink(snapshot,image_path=image)
         identity=await manager.status('qwen3.5:4b')
         result=await manager.generate(ProviderConfig(provider='local',model='qwen3.5:4b',vision=True,context_limit=8192),[{'role':'system','content':'보이는 손글씨를 그대로 읽으세요. 원문에 없는 말을 보완하거나 설명·정정하지 마세요. 판독할 수 없는 부분은 [판독 불가]로 남기세요.'},{'role':'user','content':'손글씨를 읽는 순서대로 전사하세요.'}],[image],None,output_limit=2048,before_local=before_local)
+    if snapshot.get('page_source'):
+        return {'engine':'qwen3.5:4b/'+identity['digest']+'/page','regions':[{'bbox':[0,0,1,1],'text':result['text'],'candidates':[]}],'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{})}
     points=[p for s in strokes for p in s['points']];padding=max(s['width'] for s in strokes)
     x=max(0,min(p['x'] for p in points)-padding);y=max(0,min(p['y'] for p in points)-padding)
     right=min(1,max(p['x'] for p in points)+padding);bottom=min(1,max(p['y'] for p in points)+padding)

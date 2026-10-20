@@ -161,9 +161,11 @@ async def freeze_request(db,request,embedding_client=None,snapshot=None,runtime_
 
 
 def checked_evidence(db,frozen):
+    from .materials import require_reviewed_material
     request=AIRequest.model_validate(frozen['request']);request_owner(db,request)
     evidence=[Evidence.model_validate(e) for e in frozen['evidence']]
     for item in evidence:
+        require_reviewed_material(db,item.ref)
         row=db.execute('SELECT ref,text_snapshot,deleted FROM sources WHERE id=?',(item.ref.id,)).fetchone()
         if row is None or row['deleted']: raise ValueError('고정한 근거가 삭제되었습니다. 새 질문을 요청하세요')
         if SourceRef.model_validate_json(row['ref'])!=item.ref or not all(part in row['text_snapshot'] for part in item.text.split('\n\n')): raise ValueError('고정한 근거가 원문과 일치하지 않습니다')

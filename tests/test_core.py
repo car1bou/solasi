@@ -95,7 +95,7 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
         try: db=open_db(root)
         except Exception as exc: self.fail("기존 자료 마이그레이션 실패: "+str(exc))
         self.assertEqual(db.execute("SELECT external_path,version FROM assets WHERE id='kept'").fetchone()["external_path"],"/tmp/old.txt")
-        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0],18)
+        self.assertEqual(db.execute("PRAGMA user_version").fetchone()[0],19)
         db.close()
 
     async def test_v13_note_versions_migrate_with_unknown_anchor(self):
@@ -109,7 +109,7 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
         db.close();db=open_db(root)
         try:
             note=list_materials(db,sid)['note'];self.assertEqual(note['source_id'],second.id);self.assertEqual(note['text'],'두 번째 메모');self.assertIsNone(note['anchor_ms'])
-            self.assertEqual(db.execute('SELECT count(*) FROM notes').fetchone()[0],2);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],18)
+            self.assertEqual(db.execute('SELECT count(*) FROM notes').fetchone()[0],2);self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],19)
             self.assertFalse(db.execute('PRAGMA foreign_key_check').fetchall())
         finally:db.close()
 
@@ -143,7 +143,7 @@ class CoreTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(after['extraction_sha256'],'a'*64)
             self.assertEqual([tuple(row) for row in db.execute('SELECT * FROM course_assets')],[('legacy-course','legacy-asset')])
             self.assertEqual([tuple(row) for row in db.execute('SELECT * FROM session_assets')],[(sid,'legacy-asset')])
-            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],18)
+            self.assertEqual(db.execute('PRAGMA user_version').fetchone()[0],19)
             self.assertFalse(db.execute('PRAGMA foreign_key_check').fetchall())
         finally:db.close()
 

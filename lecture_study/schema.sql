@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS session_assets (
 CREATE TABLE IF NOT EXISTS course_assets (
  course_id TEXT NOT NULL REFERENCES courses(id),asset_id TEXT NOT NULL REFERENCES assets(id),PRIMARY KEY(course_id,asset_id)
 );
+CREATE TABLE IF NOT EXISTS handwritten_assets(asset_id TEXT PRIMARY KEY REFERENCES assets(id) ON DELETE CASCADE);
 CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY,ref TEXT NOT NULL,text_snapshot TEXT NOT NULL,deleted INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS asset_documents (
  asset_id TEXT NOT NULL REFERENCES assets(id),sha256 TEXT NOT NULL,metadata TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(asset_id,sha256)
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS concept_proposals(id TEXT PRIMARY KEY,source_id TEXT 
 CREATE VIEW IF NOT EXISTS searchable_chunks AS
  SELECT c.*,s.ref FROM chunks c JOIN sources s ON s.id=c.source_id
  WHERE s.deleted=0 AND (
- (json_extract(s.ref,'$.kind')='material' AND json_extract(s.ref,'$.document_sha256') IS NULL AND EXISTS(SELECT 1 FROM assets a WHERE a.id=json_extract(s.ref,'$.asset_id') AND a.version=json_extract(s.ref,'$.version') AND a.extraction_sha256=a.sha256 AND a.status IN ('ready','partial')))
+ (json_extract(s.ref,'$.kind')='material' AND json_extract(s.ref,'$.document_sha256') IS NULL AND NOT EXISTS(SELECT 1 FROM handwritten_assets h WHERE h.asset_id=json_extract(s.ref,'$.asset_id')) AND EXISTS(SELECT 1 FROM assets a WHERE a.id=json_extract(s.ref,'$.asset_id') AND a.version=json_extract(s.ref,'$.version') AND a.extraction_sha256=a.sha256 AND a.status IN ('ready','partial')))
  OR (json_extract(s.ref,'$.kind')='page_note' AND EXISTS(SELECT 1 FROM page_documents d JOIN page_document_revisions r ON r.document_id=d.id AND r.revision=d.revision JOIN assets a ON a.id=d.asset_id WHERE r.source_id=s.id AND d.document_sha256=a.sha256))
  OR (json_extract(s.ref,'$.kind')='ink_note' AND EXISTS(SELECT 1 FROM ink_recognitions i JOIN assets a ON a.id=i.asset_id WHERE i.source_id=s.id AND i.status='approved' AND i.document_sha256=a.sha256))
  OR (json_extract(s.ref,'$.kind')='note' AND EXISTS(SELECT 1 FROM notes n WHERE n.source_id=s.id AND n.version=(SELECT max(version) FROM notes WHERE session_id=n.session_id)))
@@ -110,4 +111,4 @@ CREATE TABLE IF NOT EXISTS attempt_revisions(attempt_id TEXT NOT NULL REFERENCES
 CREATE TABLE IF NOT EXISTS participants(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,name TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,UNIQUE(session_id,name));
 CREATE TABLE IF NOT EXISTS artifact_revisions(artifact_id TEXT NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,revision INTEGER NOT NULL,body TEXT NOT NULL,confirmed INTEGER NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(artifact_id,revision));
 CREATE TABLE IF NOT EXISTS question_card_preferences(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,card_id TEXT NOT NULL,state TEXT NOT NULL,PRIMARY KEY(session_id,card_id));
-PRAGMA user_version=18;
+PRAGMA user_version=19;

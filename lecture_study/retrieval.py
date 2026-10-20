@@ -131,6 +131,7 @@ def save_term(db,sid,canonical,aliases,explanation,evidence,term_id=None):
 
 
 def eligible_chunks(db,ids,cutoff,cutoff_session_id=None,scope=None):
+    from .materials import require_reviewed_material
     if scope is None:
         if not ids:return []
         scope=Scope(session_id=ids[0])
@@ -140,6 +141,8 @@ def eligible_chunks(db,ids,cutoff,cutoff_session_id=None,scope=None):
     for row in rows:
         ref=SourceRef.model_validate_json(row['ref'])
         if not ref_in_scope(db,ref,scope,ids,assets):continue
+        try:require_reviewed_material(db,ref)
+        except ValueError:continue
         if cutoff is not None and ref.kind=='transcript' and (cutoff_session_id is None or ref.session_id==cutoff_session_id) and ref.end_ms>cutoff:continue
         result.append(dict(row))
     return result
@@ -339,10 +342,12 @@ def capture_search(db,scope,cutoff_ms):
 
 
 def snapshot_rows(db,snapshot):
+    from .materials import require_reviewed_material
     for sid in snapshot['session_ids']:session(db,sid)
     if snapshot.get('course_id'):course(db,snapshot['course_id'])
     rows=[dict(r) for r in db.execute("SELECT c.*,s.ref FROM chunks c JOIN sources s ON s.id=c.source_id WHERE s.deleted=0 AND c.id IN (SELECT value FROM json_each(?))",(json.dumps(snapshot['chunk_ids']),))]
     if len(rows)!=len(snapshot['chunk_ids']):raise ValueError('고정한 근거가 삭제되었습니다. 새 요청을 실행하세요')
+    for row in rows:require_reviewed_material(db,SourceRef.model_validate_json(row['ref']))
     return rows
 
 

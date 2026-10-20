@@ -2,12 +2,18 @@ import Foundation
 import AppKit
 import Vision
 import ImageIO
+import PDFKit
 
 struct Point: Decodable { let x: Double; let y: Double; let pressure: Double }
 struct Stroke: Decodable { let tool: String; let width: Double; let points: [Point] }
 struct Input: Decodable { let page_width: Double; let page_height: Double; let strokes: [Stroke] }
 func fail(_ message: String) -> Never { FileHandle.standardError.write(Data(message.utf8)); exit(2) }
 do {
+    let arguments = Array(CommandLine.arguments.dropFirst())
+    func argument(_ flag: String) -> String? {
+        guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
     let image: CGImage
     if CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--recognize-image" {
         let url = URL(fileURLWithPath: CommandLine.arguments[2])
@@ -28,6 +34,20 @@ do {
     guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
                                   space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { fail("이미지를 만들 수 없습니다") }
     context.setFillColor(NSColor.white.cgColor); context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    if let source = argument("--page-source"), let index = arguments.firstIndex(of: "--page-source") {
+        guard index + 2 < arguments.count, let number = Int(arguments[index + 2]), number > 0 else { fail("원본 페이지를 확인하세요") }
+        let url = URL(fileURLWithPath: source)
+        let background: CGImage?
+        if let document = PDFDocument(url: url) {
+            guard let page = document.page(at: number - 1) else { fail("원본 페이지를 열 수 없습니다") }
+            background = page.thumbnail(of: NSSize(width: width, height: height), for: .cropBox).cgImage(forProposedRect: nil, context: nil, hints: nil)
+        } else {
+            guard number == 1, let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { fail("원본 이미지를 열 수 없습니다") }
+            background = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        }
+        guard let background else { fail("원본 페이지를 그릴 수 없습니다") }
+        context.draw(background, in: CGRect(x: 0, y: 0, width: width, height: height))
+    }
     context.setStrokeColor(NSColor.black.cgColor); context.setFillColor(NSColor.black.cgColor)
     context.setLineCap(.round); context.setLineJoin(.round)
     for stroke in input.strokes where stroke.tool == "pen" {
@@ -47,10 +67,10 @@ do {
     guard let rendered = context.makeImage() else { fail("필기 이미지를 만들 수 없습니다") }
     image = rendered
     }
-    if CommandLine.arguments.count == 3 && CommandLine.arguments[1] == "--image" {
+    if let output = argument("--image") {
         let rep = NSBitmapImageRep(cgImage: image)
         guard let png = rep.representation(using: .png, properties: [:]) else { fail("이미지 저장 실패") }
-        try png.write(to: URL(fileURLWithPath: CommandLine.arguments[2]), options: .atomic)
+        try png.write(to: URL(fileURLWithPath: output), options: .atomic)
     }
     let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate; request.usesLanguageCorrection = false
     let languages = try request.supportedRecognitionLanguages()
@@ -64,7 +84,8 @@ do {
         return ["bbox": [b.minX, 1-b.maxY, b.width, b.height], "text": top.string,
                 "candidates": candidates.map { ["text": $0.string, "score": $0.confidence] as [String: Any] }]
     }
-    let result: [String: Any] = ["engine": "apple-vision-accurate-v\(request.revision)", "revision": request.revision,
+    let suffix = argument("--page-source") == nil ? "" : "/page"
+    let result: [String: Any] = ["engine": "apple-vision-accurate-v\(request.revision)\(suffix)", "revision": request.revision,
                                "languages": request.recognitionLanguages, "regions": regions]
     FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: result))
 } catch { fail(error.localizedDescription) }

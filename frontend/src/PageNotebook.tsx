@@ -16,7 +16,7 @@ const InkMark=React.memo(function InkMark({stroke,width,height}:{stroke:InkStrok
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동'};
 const toolIcons={pen:'pen',highlighter:'highlighter','stroke-eraser':'stroke-eraser','partial-eraser':'partial-eraser',lasso:'lasso',pan:'hand'} as const;
 const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장 대기',saving:'저장 중',failed:'저장 실패 · 초안 보존',conflict:'충돌 · 초안 보존'};
-export default function PageNotebook({courseId,document:metadata,page,filename}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string}){
+export default function PageNotebook({courseId,document:metadata,page,filename,handwritten=false}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string;handwritten?:boolean}){
   const noteId=useId(),settingsId=useId();
   const settings=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLButtonElement|null>(null);
   const [settingsOpen,setSettingsOpen]=useState(false),[colorDraft,setColorDraft]=useState(''),[colorError,setColorError]=useState('');
@@ -122,7 +122,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename}:
   const baseWidth=680*zoom,baseHeight=baseWidth*page.height/page.width,swapped=rotation%180!==0;
   return <section className="page-notebook" aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
     <div className="notebook-heading"><strong>{page.page}쪽</strong><span role="status" className={'save-status '+state.status}>{statusLabels[state.status]}{state.revision>0?' · v'+state.revision:''}</span><button className="icon-button" aria-label="지금 저장" title="지금 저장" disabled={!state.loaded||state.status==='saved'||state.status==='conflict'} onClick={()=>void store.save()}><Icon name="save"/></button><button className="icon-label-button" aria-label="메모·필기 JSON 내보내기" title="메모·필기 JSON 내보내기" aria-busy={exporting} disabled={!state.loaded||exporting} onClick={exportCurrent}><Icon name="download"/><span>JSON</span></button><button className="icon-button" aria-label={notesOpen?'메모 접기':'메모 열기'} title={notesOpen?'메모 접기':'메모 열기'} disabled={!preferencesReady} aria-expanded={notesOpen} onClick={()=>changeView({notesOpen:!notesOpen})}><Icon name={notesOpen?'panel-close':'panel-open'}/></button></div>
-    {state.loaded&&<HandwritingReview key={metadata.asset_id+metadata.sha256+page.page} courseId={courseId} assetId={metadata.asset_id} page={page.page} digest={metadata.sha256} revision={state.revision} saved={state.status==='saved'} width={page.width} height={page.height}/>}
+    {state.loaded&&<HandwritingReview key={metadata.asset_id+metadata.sha256+page.page} courseId={courseId} assetId={metadata.asset_id} page={page.page} digest={metadata.sha256} revision={state.revision} saved={state.status==='saved'} imported={handwritten} width={page.width} height={page.height}/>}
     <RelatedKnowledge courseId={courseId} assetId={metadata.asset_id} page={page.page}/>
     {exportStatus&&<p role="status">{exportStatus}</p>}{[preferenceWarning,preferenceSaveWarnings.tools,preferenceSaveWarnings.view].filter(Boolean).map((warning,index)=><p key={index} role="status">{warning}</p>)}{!preferencesReady&&<p role="status">보기·필기 설정을 불러오는 중…</p>}
     <div className="ink-toolbar" role="toolbar" aria-label="필기 도구" inert={!preferencesReady}>

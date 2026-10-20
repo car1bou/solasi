@@ -566,11 +566,12 @@ class Vision(Input):
 
 def image_evidence(db,request):
     from .retrieval import ref_in_scope,scope_course
-    from .materials import asset_dir
+    from .materials import asset_dir,require_reviewed_material
     from .course_materials import current_document
     row=db.execute('SELECT ref FROM sources WHERE id=? AND deleted=0',(request.image_id,)).fetchone()
     if not row: raise KeyError('그림 출처를 찾을 수 없습니다')
     ref=SourceRef.model_validate_json(row[0])
+    require_reviewed_material(db,ref)
     if ref.kind!='material' or not ref.asset_id or not ref_in_scope(db,ref,request.scope):raise ValueError('범위 밖의 그림입니다')
     _,asset=asset_dir(db,ref.asset_id)
     _,_,inspected=current_document(db,ref.asset_id)

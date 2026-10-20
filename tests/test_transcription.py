@@ -242,7 +242,7 @@ class ModelTests(unittest.TestCase):
                 self.assertEqual(row['model'],'base')
                 self.assertEqual(row['prompt'],'이전 명칭')
                 self.assertEqual(row['status'],'done')
-                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],18)
+                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],19)
             finally: upgraded.close()
 
 class TimestampGapTests(unittest.TestCase):

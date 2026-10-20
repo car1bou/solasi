@@ -7,6 +7,38 @@ from lecture_study.models import PageDocumentInput
 from lecture_study.handwriting import capture_ink,save_recognition
 
 class KnowledgeApiTests(MaterialsTests):
+    async def test_imported_handwriting_file_option_and_empty_page_review(self):
+        from pathlib import Path
+        from unittest.mock import patch
+        cid=new_id()
+        with self.db:self.db.execute('INSERT INTO courses VALUES (?,?,?,?)',(cid,'혼합 필기','',now()))
+        self.sources.mkdir(exist_ok=True);path=self.sources/'handwritten.png';path.write_bytes(png_fixture())
+        with patch('lecture_study.server.select_files',return_value=[path]):
+            response=await self.client.post(f'/api/courses/{cid}/files/select',headers=self.headers,json={'handwritten':True})
+        self.assertEqual(response.status_code,201,response.text)
+        asset=response.json()[0]['asset'];self.assertTrue(asset['handwritten']);aid=asset['id'];digest=asset['sha256']
+        with self.db:self.db.execute('INSERT INTO asset_documents VALUES (?,?,?,?)',(aid,digest,json.dumps({'total_pages':1,'pages':[{'page':1,'width':80,'height':40}]}),now()))
+        url=f'/api/courses/{cid}/assets/{aid}/pages/1/document?document_sha256={digest}'
+        document=await self.client.get(url,headers=self.headers)
+        self.assertEqual(document.status_code,200,document.text);self.assertEqual(document.json()['revision'],1);self.assertEqual(document.json()['ink'],[])
+        again=await self.client.get(url,headers=self.headers);self.assertEqual(again.json(),document.json())
+        self.assertTrue(capture_ink(self.db,cid,aid,1,digest)['page_source'])
+        from lecture_study.handwriting import approve_recognition
+        from lecture_study.db import create_session
+        from lecture_study.materials import save_note
+        c=save_recognition(self.db,capture_ink(self.db,cid,aid,1,digest),{'engine':'fixture/page','regions':[{'bbox':[0,0,1,1],'text':'누적분포함수 CDF'}]})
+        ref=approve_recognition(self.db,c['id'],'누적분포함수 CDF',c['ink_hash'])
+        sid=create_session(self.db,'lecture','이전 강의',cid,1).id;note=save_note(self.db,sid,'누적분포함수 CDF의 성질')
+        with self.db:
+            self.db.execute("INSERT INTO brain_work(key,kind,source_id,state,request,result,updated_at) VALUES (?,'source',?,'done',?,?,?)",('cached',note.id,json.dumps({'scope':{'session_id':sid}}),json.dumps({'evidence':[{'ref':ref.model_dump(),'text':'누적분포함수 CDF','label':'확인한 손글씨'}]}),now()))
+        url='/api/knowledge/suggestions?session_id='+sid
+        cached=await self.client.get(url,headers=self.headers)
+        self.assertEqual(cached.json()[0]['related']['evidence'][0]['ref']['id'],ref.id)
+        path.write_bytes(path.read_bytes()+b'changed')
+        changed=await self.client.get(url,headers=self.headers)
+        self.assertEqual(changed.json()[0]['related']['evidence'],[])
+        self.assertEqual(self.db.execute('SELECT text_snapshot FROM sources WHERE id=?',(ref.id,)).fetchone()[0],'누적분포함수 CDF')
+
     async def test_suggestions_load_for_session_and_course_page(self):
         response=await self.client.get('/api/knowledge/suggestions',params={'session_id':self.session_id},headers=self.headers)
         self.assertEqual(response.status_code,200,response.text)

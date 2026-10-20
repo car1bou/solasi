@@ -34,6 +34,7 @@ def mark_knowledge_dirty(db,source_id):
 
 def reconcile(db):
     from .handwriting import ink_hash
+    from .materials import is_handwritten
     corpora={}
     with db:
         db.execute("UPDATE brain_work SET state='obsolete' WHERE kind IN ('source','concept') AND state!='obsolete' AND source_id NOT IN (SELECT source_id FROM searchable_chunks)")
@@ -48,9 +49,9 @@ def reconcile(db):
                 db.execute("UPDATE brain_work SET state='pending',error=NULL,request=?,updated_at=? WHERE key=?",(json.dumps(request),now(),work['key']))
         for row in db.execute('SELECT d.*,r.ink FROM page_documents d JOIN page_document_revisions r ON r.document_id=d.id AND r.revision=d.revision JOIN assets a ON a.id=d.asset_id AND a.sha256=d.document_sha256').fetchall():
             ink=json.loads(row['ink'])
-            if not any(s['tool']=='pen' for s in ink):continue
+            if not any(s['tool']=='pen' for s in ink) and not is_handwritten(db,row['asset_id']):continue
             digest=ink_hash(ink);key='ink:'+row['id']+':'+digest
-            if db.execute("SELECT 1 FROM ink_recognitions WHERE document_id=? AND ink_hash=? AND status!='stale'",(row['id'],digest)).fetchone():continue
+            if db.execute("SELECT 1 FROM ink_recognitions WHERE document_id=? AND ink_hash=? AND status!='stale' AND (?=0 OR engine LIKE '%/page')",(row['id'],digest,is_handwritten(db,row['asset_id']))).fetchone():continue
             request={'course_id':row['course_id'],'asset_id':row['asset_id'],'page':row['page'],'digest':row['document_sha256'],'ink_hash':digest}
             db.execute("INSERT OR IGNORE INTO brain_work(key,kind,state,request,updated_at) VALUES (?,'ink','pending',?,?)",(key,json.dumps(request),now()))
             db.execute("UPDATE brain_work SET state='pending',request=? WHERE key=? AND state IN ('done','obsolete')",(json.dumps(request),key))
@@ -69,8 +70,10 @@ def next_background_work(db):
 
 
 async def related_sources(db,scope,source_id,client):
+    from .materials import require_reviewed_material
     row=db.execute('SELECT text_snapshot FROM sources WHERE id=? AND deleted=0',(source_id,)).fetchone()
     if not row:raise KeyError('원문을 찾을 수 없습니다')
+    require_reviewed_material(db,SourceRef.model_validate_json(db.execute('SELECT ref FROM sources WHERE id=?',(source_id,)).fetchone()[0]))
     ids=scope_ids(db,scope);rows=eligible_chunks(db,ids,None,scope.session_id,scope)
     own=normalize(row[0])
     candidates=[r['id'] for r in rows if r['source_id']!=source_id and normalize(r['text'])!=own]
@@ -112,6 +115,8 @@ async def propose_concepts(db,source_id,provider,explicit=False,*,direct_models=
     if not row or not db.execute('SELECT 1 FROM searchable_chunks WHERE source_id=?',(source_id,)).fetchone():raise ValueError('현재 검색 가능한 원문만 사용하세요')
     scope=scope or source_scope(db,source_id)
     ref=SourceRef.model_validate_json(db.execute('SELECT ref FROM sources WHERE id=?',(source_id,)).fetchone()[0])
+    from .materials import require_reviewed_material
+    require_reviewed_material(db,ref)
     if not ref_in_scope(db,ref,scope):raise ValueError('과목 범위 밖의 원문입니다')
     key_scope=scope_key(db,scope)
     text=row[0][:3000]
