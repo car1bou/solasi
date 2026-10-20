@@ -488,6 +488,7 @@ small,.muted{color:var(--muted)}
   .brand small{font-size:9px}
 }
 @media(max-width:700px){
+  .session-utilities>.card{min-width:100%}
   .home,.session-workspace,.settings-view,.course-workspace{padding:24px 18px}
   .welcome-grid{grid-template-columns:1fr;gap:12px}
   .home-heading{min-height:40px}
@@ -513,7 +514,6 @@ small,.muted{color:var(--muted)}
   .sidebar .settings-button{padding:9px 12px}
   .home-heading h1,h1{font-size:26px}
   .session-tabs button{min-height:42px}
-  .session-utilities>.card{min-width:100%}
   .transcript-script{padding:18px;font-size:15px}
   .transcript-heading{align-items:flex-start}
   .course-list{grid-template-columns:1fr}
