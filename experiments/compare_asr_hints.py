@@ -10,8 +10,11 @@ def condition_terms(clip,condition):
     return validate_hotwords([]if condition=='none'else clip['hint_terms'if condition=='relevant'else'distractor_terms'])
 
 
-def condition_sequence(reverse):
-    return ('distractor','relevant','none')if reverse else('none','relevant','distractor')
+def condition_sequence(reverse,selected=None):
+    order=('distractor','relevant','none')if reverse else('none','relevant','distractor')
+    if selected is None:return order
+    if not selected or len(set(selected))!=len(selected)or not set(selected)<=set(order):raise ValueError('Invalid vocabulary conditions')
+    return tuple(c for c in order if c in selected)
 
 
 def normalize(text):
@@ -81,11 +84,13 @@ def qwen_vad_parts(parts,activities,mode,folder):
 async def main(args):
     if args.output.exists():raise ValueError('Use a fresh output file')
     data=json.loads(args.manifest.read_text());clips=data['clips']
+    if data.get('completed')is False:raise ValueError('Incomplete input manifest')
+    conditions=condition_sequence(args.reverse_order,getattr(args,'conditions',None))
     if not clips or len({c['sha256']for c in clips})!=len(clips):raise ValueError('Empty or duplicate clips')
     digest=lambda path:hashlib.sha256(Path(path).read_bytes()).hexdigest()
     for clip in clips:
         if digest(clip['path'])!=clip['sha256']:raise ValueError('Changed audio')
-        for condition in condition_sequence(args.reverse_order):condition_terms(clip,condition)
+        for condition in conditions:condition_terms(clip,condition)
     vad_mode=getattr(args,'qwen_vad','off');vad_path=getattr(args,'vad_activity',None);vad=None
     if vad_mode!='off':
         if args.engine!='qwen'or vad_path is None:raise ValueError('Qwen VAD requires frozen activity')
@@ -96,7 +101,7 @@ async def main(args):
     metric_tree=ast.parse((Path(__file__).resolve().parents[1]/'tests/evaluate_human_audio.py').read_text())
     metrics={n.name:n for n in metric_tree.body if isinstance(n,ast.FunctionDef)}
     shared={'unicodedata':unicodedata};exec(compile(ast.Module(body=[metrics[n]for n in('normalize','edit_distance','score','character_errors')],type_ignores=[]),'shared_metrics','exec'),shared)
-    report={'completed':False,'engine':args.engine,'manifest_sha256':digest(args.manifest),'script_sha256':digest(__file__),'validator_sha256':digest(Path(__file__).resolve().parents[1]/'lecture_study/asr_hints.py'),'condition_order':condition_sequence(args.reverse_order),'rows':[],'timing_scope':'inference per call; Qwen one shared model load, Whisper per-call normalization/model load; compare within each engine','versions':{n:importlib.metadata.version(n)for n in('mlx','mlx-audio','transformers')}}
+    report={'completed':False,'engine':args.engine,'manifest_sha256':digest(args.manifest),'script_sha256':digest(__file__),'validator_sha256':digest(Path(__file__).resolve().parents[1]/'lecture_study/asr_hints.py'),'condition_order':conditions,'rows':[],'timing_scope':'inference per call; Qwen one shared model load, Whisper per-call normalization/model load; compare within each engine','versions':{n:importlib.metadata.version(n)for n in('mlx','mlx-audio','transformers')}}
     report['qwen_vad']={'mode':vad_mode,'activity_sha256':digest(vad_path)if vad else None,'detector':vad['detector']if vad else None,'margin_ms':1000 if vad_mode=='trim'else 0,'timing_scope':'VAD precomputed once per input, not included in inference seconds'}
     os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_HUB_DISABLE_TELEMETRY='1')
     if args.engine=='qwen':
@@ -116,14 +121,17 @@ async def main(args):
       with tempfile.TemporaryDirectory(prefix='solasi-hint-eval-')as folder:
         parts=split_pcm(Path(clip['path']),Path(folder));evaluation_terms=list(dict.fromkeys(clip['hint_terms']+clip['distractor_terms']))
         if vad:parts=qwen_vad_parts(parts,vad['clips'][clip['id']],vad_mode,Path(folder)/'vad')
-        for condition in condition_sequence(args.reverse_order):
+        for condition in conditions:
             terms=condition_terms(clip,condition);row={'id':clip['id'],'sha256':clip['sha256'],'group':clip['group'],'category':clip['category'],'condition':condition,'terms':terms,'reference':clip['reference'],'hint_provenance':clip['hint_provenance'],'chunks':[]};started=time.perf_counter()
             try:
                 for part in parts:
                     chunk={k:v for k,v in part.items()if k!='path'};stamp=time.perf_counter()
                     if digest(part['path'])!=part['sha256']:raise ValueError('Changed chunk')
+                    with wave.open(part['path'])as audio:digital_silence=not any(audio.readframes(audio.getnframes()))
                     if part.get('skipped_no_speech'):
                         chunk.update(text='',generation_tokens=0)
+                    elif digital_silence:
+                        chunk.update(text='',generation_tokens=0,skipped_digital_silence=True)
                     elif args.engine=='qwen':
                         mx.reset_peak_memory();result=model.generate(part['path'],language='Korean',temperature=0.0,batch_size=1,max_tokens=1024,verbose=False,hotwords=terms)
                         mx.synchronize();chunk.update(text=result.text,prompt_tokens=result.prompt_tokens,generation_tokens=result.generation_tokens,mlx_peak_bytes=mx.get_peak_memory(),system_prompt=merge_hotwords(None,terms))
@@ -148,4 +156,5 @@ async def main(args):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--engine',choices=['whisper','qwen'],required=True);parser.add_argument('--manifest',type=Path,required=True);parser.add_argument('--runtime',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--reverse-order',action='store_true')
     parser.add_argument('--qwen-vad',choices=['off','gate','trim'],default='off');parser.add_argument('--vad-activity',type=Path)
+    parser.add_argument('--conditions',nargs='+',choices=['none','relevant','distractor'],help='Run a fixed subset; default compares all three')
     asyncio.run(main(parser.parse_args()))

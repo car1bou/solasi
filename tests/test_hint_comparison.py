@@ -17,6 +17,12 @@ class HintComparisonTests(unittest.TestCase):
         self.assertEqual(condition_sequence(False),('none','relevant','distractor'))
         self.assertEqual(condition_sequence(True),('distractor','relevant','none'))
 
+    def test_preprocessing_can_run_only_no_hint_condition(self):
+        self.assertEqual(condition_sequence(False,['none']),('none',))
+        self.assertEqual(condition_sequence(True,['none','distractor']),('distractor','none'))
+        for invalid in ([],['none','none'],['unknown']):
+            with self.assertRaises(ValueError):condition_sequence(False,invalid)
+
     def test_fixed_vocabulary_counts_occurrences_in_every_condition(self):
         from experiments.compare_asr_hints import occurrence_counts
         expected=occurrence_counts('WSL WSL 이야기','WSL 이야기 다익스트라',['WSL','다익스트라'])
@@ -55,10 +61,20 @@ class HintRunnerTests(unittest.TestCase):
         self.folder=tempfile.TemporaryDirectory();self.addCleanup(self.folder.cleanup);root=Path(self.folder.name)
         source=root/'silence.wav'
         with wave.open(str(source),'wb')as handle:
-            handle.setparams((1,2,16000,0,'NONE','not compressed'));handle.writeframes(b'\x00\x00'*1600)
+            handle.setparams((1,2,16000,0,'NONE','not compressed'));handle.writeframes(b'\x01\x00'*1600)
         manifest=root/'manifest.json';manifest.write_text(json.dumps({'clips':[{'id':'fixture','sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'path':str(source),'group':'fixture','category':'negative','reference':'','hint_terms':['이란'],'distractor_terms':['다익스트라'],'hint_provenance':'synthetic unit fixture, not human quality evidence'}]}))
         self.args=SimpleNamespace(engine='whisper',manifest=manifest,runtime=root,output=root/'result.json',reverse_order=False)
         self.enterContext(patch.dict(os.environ));self.enterContext(patch('experiments.compare_asr_hints.importlib.metadata.version',return_value='fixture'))
+
+    def test_explicitly_incomplete_manifest_is_rejected_before_inference(self):
+        import asyncio,json
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        data=json.loads(self.args.manifest.read_text());data['completed']=False
+        self.args.manifest.write_text(json.dumps(data))
+        with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(return_value=[]))as model:
+            with self.assertRaisesRegex(ValueError,'Incomplete'):asyncio.run(main(self.args))
+        model.assert_not_called();self.assertFalse(self.args.output.exists())
 
     def test_empty_reference_and_fixed_vocabulary_are_scored_in_all_conditions(self):
         import asyncio,json
@@ -80,6 +96,27 @@ class HintRunnerTests(unittest.TestCase):
         with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(side_effect=ValueError('fixture failure'))),self.assertRaises(RuntimeError):asyncio.run(main(self.args))
         report=json.loads(self.args.output.read_text());self.assertFalse(report['completed']);self.assertEqual(len(report['rows']),3)
         self.assertTrue(all(r['status']=='failed'and r['error']=='fixture failure'for r in report['rows']))
+
+    def test_selected_no_hint_condition_is_not_inferred_three_times(self):
+        import asyncio,json
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        self.args.conditions=['none']
+        with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(return_value=[]))as model:asyncio.run(main(self.args))
+        self.assertEqual(model.await_count,1)
+        self.assertEqual(json.loads(self.args.output.read_text())['condition_order'],['none'])
+
+    def test_denoising_to_digital_silence_uses_product_silence_guard(self):
+        import asyncio,hashlib,json,wave
+        from pathlib import Path
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        manifest=json.loads(self.args.manifest.read_text());source=Path(manifest['clips'][0]['path'])
+        with wave.open(str(source),'wb')as w:w.setparams((1,2,16000,0,'NONE','not compressed'));w.writeframes(b'\0\0'*1600)
+        manifest['clips'][0]['sha256']=hashlib.sha256(source.read_bytes()).hexdigest();self.args.manifest.write_text(json.dumps(manifest))
+        with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(side_effect=AssertionError('digital silence must not infer')))as model:asyncio.run(main(self.args))
+        model.assert_not_called()
+        rows=json.loads(self.args.output.read_text())['rows'];self.assertTrue(all(r['recognized']==''and r['chunks'][0]['skipped_digital_silence']for r in rows))
 
     def test_qwen_vad_gate_skips_inference_only_for_validated_empty_activity(self):
         import asyncio,hashlib,json,sys
