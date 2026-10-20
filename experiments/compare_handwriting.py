@@ -25,6 +25,11 @@ def record_run(path,config):
 def file_hash(path):
     with path.open('rb')as handle:return hashlib.file_digest(handle,'sha256').hexdigest()
 
+def dataset_images(folder):
+    images=sorted(p for p in folder.iterdir()if p.is_file()and p.suffix.lower()in('.jpg','.png'))
+    if len({p.stem for p in images})!=len(images):raise ValueError('Duplicate image IDs')
+    return images
+
 def prepare_images(image,variant):
     image=ImageOps.exif_transpose(image).convert('RGB')
     if variant=='original':return [image]
@@ -55,10 +60,12 @@ def score(reference,hypothesis):
     return {'reference_chars':len(ref),'output_chars':len(hyp),'cer_no_whitespace':distance(ref,hyp)/max(1,len(ref))}
 
 async def main():
-    p=argparse.ArgumentParser();p.add_argument('--dataset',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--helper',type=Path,required=True);p.add_argument('--runtime',type=Path);p.add_argument('--model',default='qwen3.5:4b');p.add_argument('--model-path',type=Path);p.add_argument('--variant',choices=['original','upscale','padding','contrast','binary','tiles'],default='original');p.add_argument('--literal',action='store_true');p.add_argument('--task',choices=['ocr','formula'],default='ocr');p.add_argument('--cases',nargs='+');args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--dataset',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--helper',type=Path);p.add_argument('--runtime',type=Path);p.add_argument('--model',default='qwen3.5:4b');p.add_argument('--model-path',type=Path);p.add_argument('--variant',choices=['original','upscale','padding','contrast','binary','tiles'],default='original');p.add_argument('--literal',action='store_true');p.add_argument('--task',choices=['ocr','formula'],default='ocr');p.add_argument('--cases',nargs='+');args=p.parse_args()
+    if not(args.helper or args.runtime or args.model_path):p.error('Select an OCR engine: --helper, --runtime or --model-path')
     args.output.mkdir(parents=True,exist_ok=True);cases=[];manager=None
-    config={'model':args.model,'model_path':str(args.model_path.resolve())if args.model_path else None,'variant':args.variant,'literal':args.literal,'literal_prompt':LITERAL if args.literal else None,'task':args.task,'cases':args.cases,'inputs':{p.name:hashlib.sha256(p.read_bytes()).hexdigest()for p in sorted((args.dataset/'images').glob('*.jpg'))if not args.cases or p.stem in args.cases}}
-    config['helper_sha256']=file_hash(args.helper)
+    images=dataset_images(args.dataset/'images')
+    config={'model':args.model,'model_path':str(args.model_path.resolve())if args.model_path else None,'variant':args.variant,'literal':args.literal,'literal_prompt':LITERAL if args.literal else None,'task':args.task,'cases':args.cases,'inputs':{p.name:hashlib.sha256(p.read_bytes()).hexdigest()for p in images if not args.cases or p.stem in args.cases}}
+    config['helper_sha256']=file_hash(args.helper)if args.helper else None
     config['script_sha256']=file_hash(Path(__file__))
     config['versions']={name:importlib.metadata.version(name)for name in('mlx','mlx-vlm','transformers','pillow')}
     if args.variant=='binary':config['versions']['opencv-python']=importlib.metadata.version('opencv-python')
@@ -81,7 +88,7 @@ async def main():
         manager=DirectModels(args.runtime,args.output/'model-cache')
         provider=ProviderConfig(provider='local',model=args.model,vision=True,context_limit=8192)
     try:
-        for image in sorted((args.dataset/'images').glob('*.jpg')):
+        for image in images:
             if args.cases and image.stem not in args.cases:continue
             paths=[image.resolve()]
             if args.variant!='original':
@@ -90,15 +97,17 @@ async def main():
                 for n,part in enumerate(prepared):
                     target=args.output/(image.stem+'-input-'+str(n)+'.png');part.save(target);paths.append(target.resolve())
             reference=(args.dataset/'ground_truth'/(image.stem+'.txt')).read_text()
-            vision_path=args.output/(image.stem+'-vision.json');started=time.monotonic()
-            if vision_path.exists():vision=json.loads(vision_path.read_text())
-            else:
-                regions=[]
-                for path in paths:
-                    response=subprocess.run([str(args.helper),'--recognize-image',str(path)],capture_output=True,timeout=120,check=True);regions+=json.loads(response.stdout)['regions']
-                vision={'regions':regions,'elapsed_seconds':time.monotonic()-started};vision_path.write_text(json.dumps(vision,ensure_ascii=False,indent=2))
             # The upstream handwritten label for 03 is wrong: the image is a printed book page.
-            text='\n'.join(r['text'] for r in vision['regions']);case={'image':image.name,'type':'printed_control' if image.stem.startswith(('03_','05_')) else 'real_handwritten','vision':score(reference,text)|{'seconds':vision['elapsed_seconds']}}
+            case={'image':image.name,'type':'printed_control'if image.stem.startswith(('03_','05_'))else'real_handwritten'}
+            if args.helper:
+                vision_path=args.output/(image.stem+'-vision.json');started=time.monotonic()
+                if vision_path.exists():vision=json.loads(vision_path.read_text())
+                else:
+                    regions=[]
+                    for path in paths:
+                        response=subprocess.run([str(args.helper),'--recognize-image',str(path)],capture_output=True,timeout=120,check=True);regions+=json.loads(response.stdout)['regions']
+                    vision={'regions':regions,'elapsed_seconds':time.monotonic()-started};vision_path.write_text(json.dumps(vision,ensure_ascii=False,indent=2))
+                text='\n'.join(r['text'] for r in vision['regions']);case['vision']=score(reference,text)|{'seconds':vision['elapsed_seconds']}
             if manager or args.model_path:
                 output=args.output/(image.stem+'-'+args.model.replace(':','-')+'.json');started=time.monotonic()
                 if output.exists():result=json.loads(output.read_text())
