@@ -6,6 +6,17 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 
 LITERAL='보이는 문자와 수식만 그대로 전사하세요. 설명하거나 문장을 완성하지 마세요. 이미지 가장자리에서 잘렸거나 판독할 수 없는 부분은 [판독 불가]로 남기세요. 수학 지식으로 기호·단어를 정정하거나 추가하지 마세요. 부호·첨자·분수·극한의 방향을 원본 그대로 보존하고, 도형의 관계는 추측하지 마세요.'
 
+def native_prompt(config,task):
+    if not isinstance(config,dict):raise ValueError('Invalid native OCR config')
+    if 'model_file'in config:raise ValueError('Native OCR cannot execute checkpoint Python')
+    model_type=config.get('model_type')
+    if task=='formula'and model_type in('glm_ocr','paddleocr_vl'):return 'Formula Recognition:'
+    prompts={'glm_ocr':'Text Recognition:','paddleocr_vl':'OCR:',
+             'deepseekocr_2':'Free OCR.','dots_ocr':'Extract the text content from this image.',
+             'lighton_ocr':'','qwen3_5':''}  # LightOnOCR-3 uses the qwen3_5 architecture.
+    if task!='ocr'or not isinstance(model_type,str)or model_type not in prompts:raise ValueError('Unsupported native OCR model/task')
+    return prompts[model_type]
+
 def record_run(path,config):
     if not path.exists()and any(path.parent.glob('*.json')):raise ValueError('Unidentified cached responses require a fresh output directory')
     if path.exists()and json.loads(path.read_text())!=config:raise ValueError('Use a fresh output directory for different conditions')
@@ -58,12 +69,12 @@ async def main():
         config['engine_files']={p.name:file_hash(p)for p in(Path(__file__).resolve().parents[1]/'lecture_study').glob('*.py')}
     config_path=args.output/'run-config.json';record_run(config_path,config)
     if args.model_path:
+        prompt=native_prompt(json.loads((args.model_path/'config.json').read_text()),args.task)
         from mlx_vlm import load,generate as vlm_generate,apply_chat_template
         started=time.monotonic();model,processor=load(str(args.model_path.resolve()),trust_remote_code=False,local_files_only=True);load_seconds=time.monotonic()-started
         if model.config.model_type=='paddleocr_vl':
             from mlx_vlm.models.paddleocr_vl.processing_paddleocr_vl import ImageProcessor
             processor.image_processor=ImageProcessor(**json.loads((args.model_path/'preprocessor_config.json').read_text()))
-        prompt=('Formula Recognition:'if args.task=='formula'else'OCR:')if model.config.model_type=='paddleocr_vl'else''
     elif args.runtime:
         from lecture_study.direct_models import DirectModels
         from lecture_study.models import ProviderConfig
