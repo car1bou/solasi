@@ -80,3 +80,84 @@ class HintRunnerTests(unittest.TestCase):
         with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(side_effect=ValueError('fixture failure'))),self.assertRaises(RuntimeError):asyncio.run(main(self.args))
         report=json.loads(self.args.output.read_text());self.assertFalse(report['completed']);self.assertEqual(len(report['rows']),3)
         self.assertTrue(all(r['status']=='failed'and r['error']=='fixture failure'for r in report['rows']))
+
+    def test_qwen_vad_gate_skips_inference_only_for_validated_empty_activity(self):
+        import asyncio,hashlib,json,sys
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import Mock,patch
+        from experiments.compare_asr_hints import main,split_pcm
+        root=Path(self.folder.name);clip=json.loads(self.args.manifest.read_text())['clips'][0]
+        part=split_pcm(Path(clip['path']),root/'parts')[0]
+        activity=root/'vad.json';body={'manifest_sha256':hashlib.sha256(self.args.manifest.read_bytes()).hexdigest(),'detector':{'test_fixture':True},'clips':{'fixture':[{k:v for k,v in part.items()if k!='path'}|{'activity':[],'seconds':0.1}]}}
+        activity.write_text(json.dumps(body));self.args.engine='qwen';self.args.qwen_vad='gate';self.args.vad_activity=activity
+        mx=SimpleNamespace(synchronize=Mock(),reset_peak_memory=Mock(),get_peak_memory=Mock(return_value=0))
+        model=SimpleNamespace(generate=Mock(side_effect=AssertionError('no speech must not generate')))
+        utils=SimpleNamespace(load_model=Mock(return_value=model),merge_hotwords=Mock(return_value=''))
+        modules={'mlx':SimpleNamespace(core=mx),'mlx.core':mx,'mlx_audio':SimpleNamespace(),'mlx_audio.stt':SimpleNamespace(),'mlx_audio.stt.utils':utils}
+        with patch.dict(sys.modules,modules),patch('lecture_study.qwen_asr.verify_files'):
+            asyncio.run(main(self.args))
+        result=json.loads(self.args.output.read_text());self.assertTrue(result['completed']);model.generate.assert_not_called()
+        self.assertTrue(all(r['recognized']==''and r['chunks'][0]['skipped_no_speech']for r in result['rows']))
+        self.args.output=root/'unavailable.json';body['clips']['fixture'][0]['activity']=None;activity.write_text(json.dumps(body))
+        with patch.dict(sys.modules,modules),patch('lecture_study.qwen_asr.verify_files'),self.assertRaisesRegex(ValueError,'unavailable'):
+            asyncio.run(main(self.args))
+        self.assertFalse(json.loads(self.args.output.read_text())['completed'])
+        self.args.output=root/'speech.json';body['clips']['fixture'][0]['activity']=[{'start_ms':0,'end_ms':100}];activity.write_text(json.dumps(body))
+        model.generate.side_effect=None;model.generate.return_value=SimpleNamespace(text='실제 발화',prompt_tokens=1,generation_tokens=5)
+        with patch.dict(sys.modules,modules),patch('lecture_study.qwen_asr.verify_files'):
+            asyncio.run(main(self.args))
+        result=json.loads(self.args.output.read_text());self.assertTrue(result['completed']);self.assertEqual(model.generate.call_count,3)
+        self.assertTrue(all(r['recognized']=='실제 발화'and not r['chunks'][0]['skipped_no_speech']for r in result['rows']))
+        self.args.output=root/'capped.json';model.generate.return_value.generation_tokens=1024
+        with patch.dict(sys.modules,modules),patch('lecture_study.qwen_asr.verify_files'),self.assertRaisesRegex(RuntimeError,'Incomplete'):
+            asyncio.run(main(self.args))
+        result=json.loads(self.args.output.read_text());self.assertFalse(result['completed'])
+        self.assertTrue(all(r['status']=='failed'and r['chunks'][0]['generation_tokens']==1024 for r in result['rows']))
+
+class QwenVadPartsTests(unittest.TestCase):
+    def test_gate_keeps_speech_pcm_and_marks_only_explicit_empty_activity(self):
+        import tempfile
+        from pathlib import Path
+        from experiments.compare_asr_hints import qwen_vad_parts
+        part={'path':'/not-read-for-gate.wav','start_frame':480000,'end_frame':960000,'sha256':'a'}
+        speech={'sha256':'a','start_frame':480000,'end_frame':960000,'activity':[{'start_ms':500,'end_ms':1000}],'seconds':0.2}
+        with tempfile.TemporaryDirectory()as folder:
+            result=qwen_vad_parts([part],[speech],'gate',Path(folder))
+            self.assertEqual(result[0]['path'],part['path']);self.assertEqual(result[0]['sha256'],'a');self.assertFalse(result[0]['skipped_no_speech'])
+            silent=qwen_vad_parts([part],[dict(speech,activity=[])],'gate',Path(folder))
+            self.assertTrue(silent[0]['skipped_no_speech'])
+            for bad in [None,[{'start_ms':1000,'end_ms':500}],[{'start_ms':0,'end_ms':30001}]]:
+                with self.assertRaises(ValueError):qwen_vad_parts([part],[dict(speech,activity=bad)],'gate',Path(folder))
+            with self.assertRaises(ValueError):qwen_vad_parts([part],[dict(speech,sha256='changed')],'gate',Path(folder))
+            with self.assertRaises(ValueError):qwen_vad_parts([part],[],'gate',Path(folder))
+
+    def test_trim_preserves_internal_pauses_margin_and_original_frame_offsets(self):
+        import tempfile,wave
+        from pathlib import Path
+        from experiments.compare_asr_hints import qwen_vad_parts,split_pcm
+        with tempfile.TemporaryDirectory()as folder:
+            root=Path(folder);source=root/'source.wav';payload=b'\x01\x00'*480000
+            with wave.open(str(source),'wb')as w:w.setparams((1,2,16000,0,'NONE','not compressed'));w.writeframes(payload)
+            part=split_pcm(source,root/'split')[0];part.update(start_frame=480000,end_frame=960000)
+            activity={'sha256':part['sha256'],'start_frame':480000,'end_frame':960000,'activity':[{'start_ms':2000,'end_ms':3000},{'start_ms':24000,'end_ms':25000}],'seconds':0.1}
+            result=qwen_vad_parts([part],[activity],'trim',root/'trim')[0]
+            self.assertEqual((result['start_frame'],result['end_frame']),(496000,896000))
+            self.assertEqual((result['original_start_frame'],result['original_end_frame']),(480000,960000))
+            with wave.open(result['path'])as w:self.assertEqual(w.readframes(w.getnframes()),payload[32000:832000])
+            activity['activity']=[{'start_ms':100,'end_ms':29999}]
+            result=qwen_vad_parts([part],[activity],'trim',root/'edge')[0]
+            self.assertEqual((result['start_frame'],result['end_frame']),(480000,960000))
+
+    def test_rounded_vad_duration_clamps_to_exact_final_pcm_frame(self):
+        import hashlib,tempfile,wave
+        from pathlib import Path
+        from experiments.compare_asr_hints import qwen_vad_parts
+        with tempfile.TemporaryDirectory()as folder:
+            root=Path(folder);source=root/'short.wav';payload=b'\x01\x00'*16010
+            with wave.open(str(source),'wb')as w:w.setparams((1,2,16000,0,'NONE','not compressed'));w.writeframes(payload)
+            part={'path':str(source),'sha256':hashlib.sha256(source.read_bytes()).hexdigest(),'start_frame':0,'end_frame':16010}
+            activity=dict(part,activity=[{'start_ms':100,'end_ms':1001}],seconds=0.1)
+            result=qwen_vad_parts([part],[activity],'trim',root/'trim')[0]
+            self.assertEqual(result['end_frame'],16010)
+            with wave.open(result['path'])as w:self.assertEqual(w.readframes(w.getnframes()),payload)

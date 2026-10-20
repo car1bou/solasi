@@ -100,9 +100,13 @@ async def process_review(db,job,runtime):
         clip=Path(temp)/'input.wav';await tr.range_clip(db,record,chunk,clip,runtime)
         from . import qwen_asr
         if request['alternative']==qwen_asr.ALTERNATIVE:
-            candidate=await qwen_asr.transcribe(clip,runtime);text=candidate['text'].strip()
-            segments=[{'start_ms':0,'end_ms':duration,'text':text}]if text else [];metrics={k:v for k,v in candidate.items()if k!='text'}
-            warning='Qwen3-ASR 재인식 후보입니다. 구간 전체 시각이며 단어 정렬이 아닙니다. 용어 힌트 없이 인식하며 소음·누락·잘못된 문장이 남을 수 있으므로 원음을 확인하세요.'
+            if request['automatic'] and request.get('voice_activity_ranges')==[]:
+                text='';segments=[];metrics={'skipped_no_speech':True}
+                warning='발화 미검출 · 원음 확인 필요. VAD가 작은 목소리를 놓쳤을 수 있어 자동 Qwen 추론을 보류했습니다. 원음은 보존되어 있습니다. 직접 인식하려면 ‘원음 다시 인식’을 누르세요.'
+            else:
+                candidate=await qwen_asr.transcribe(clip,runtime);text=candidate['text'].strip()
+                segments=[{'start_ms':0,'end_ms':duration,'text':text}]if text else [];metrics={k:v for k,v in candidate.items()if k!='text'}
+                warning='Qwen3-ASR 재인식 후보입니다. 구간 전체 시각이며 단어 정렬이 아닙니다. 용어 힌트 없이 인식하며 소음·누락·잘못된 문장이 남을 수 있으므로 원음을 확인하세요.'
         else:
             segments=await tr.transcribe_range(clip,0,request['prompt'],runtime,padding_ms=200,vad_enabled=False)
             warning='음성 감지 없이 재인식한 후보입니다. 소음에서 잘못된 문장이 생길 수 있으므로 원음을 확인하세요.'

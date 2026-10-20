@@ -1,0 +1,4584 @@
+{
+  "scope": "Matched 13 PCM conditions from lecture-material-hints-20261020; not new independent speech sources. Off vs native Silero empty-only gate vs single first/last speech envelope with1000ms margin; no internal silence removal. Same3 vocabulary conditions. Reverse-selected3 SIL consistency repeat, not held-out validation.",
+  "metrics": "NFKC lowercase letters/numbers character edit alignment, not semantic hallucination/omission counts. Literal global term counts are not occurrence-aligned accuracy. Empty lexical references report output chars, no CER.",
+  "source_report": "../lecture-material-hints-20261020.md",
+  "inputs": [
+    {
+      "id": "lamp-clean",
+      "group": "lecture-clean",
+      "sha256": "9d805e6387306cf4319b394d24e4df8b64cc5fdb57f366100b79777b812a90eb",
+      "frames": 1890672,
+      "duration_seconds": 118.167,
+      "reference_chars": 653
+    },
+    {
+      "id": "lamp-office",
+      "group": "lecture-office",
+      "sha256": "5c82c57aacda0f0a7c9801f847e645d818d4fe332733479ce5ab94b346578411",
+      "frames": 1890672,
+      "duration_seconds": 118.167,
+      "reference_chars": 653
+    },
+    {
+      "id": "lamp-cafeteria",
+      "group": "lecture-cafeteria",
+      "sha256": "51f25f5263a16d7d2adefe3675e03a2ecda6c9cada4f81994b1f759472b59a38",
+      "frames": 1890672,
+      "duration_seconds": 118.167,
+      "reference_chars": 653
+    },
+    {
+      "id": "wsl-clean",
+      "group": "lecture-clean",
+      "sha256": "6da18ee11fa7ab8749c31d106145c9eab6731d8357042de4b913c4c0e5af8a50",
+      "frames": 1804320,
+      "duration_seconds": 112.77,
+      "reference_chars": 569
+    },
+    {
+      "id": "wsl-office",
+      "group": "lecture-office",
+      "sha256": "ef34aa8ee8841cf8828396e771703d506f77f5b349789d5ce35f4551355beae1",
+      "frames": 1804320,
+      "duration_seconds": 112.77,
+      "reference_chars": 569
+    },
+    {
+      "id": "wsl-cafeteria",
+      "group": "lecture-cafeteria",
+      "sha256": "67f642eca880a22ad81d6b8174fa7f1976647ccb14664e5fb3a65a272e87616a",
+      "frames": 1804320,
+      "duration_seconds": 112.77,
+      "reference_chars": 569
+    },
+    {
+      "id": "s12m23f1-clean",
+      "group": "interview-clean",
+      "sha256": "4a1c21020cf3844ec51c3ddc6e57e547668327c079c2e7bfd71bef81d4a16cef",
+      "frames": 908622,
+      "duration_seconds": 56.788875,
+      "reference_chars": 287
+    },
+    {
+      "id": "s12m23f1-cafeteria",
+      "group": "interview-cafeteria",
+      "sha256": "fe6992f19a94cfb7bea25dd8fd48a305c39bbe5c7e29d5233feb6f377ec581ec",
+      "frames": 908622,
+      "duration_seconds": 56.788875,
+      "reference_chars": 287
+    },
+    {
+      "id": "s11m25f1-clean",
+      "group": "interview-clean",
+      "sha256": "5899f6a0d64d1dd283254224584b014570da44191c17c35903b1418a1fd9671c",
+      "frames": 498624,
+      "duration_seconds": 31.164,
+      "reference_chars": 172
+    },
+    {
+      "id": "s16f22m1-clean",
+      "group": "interview-clean",
+      "sha256": "705c8ae50deea10156114dbb8123ff3b30f724b0c51098d502579d97b37892bc",
+      "frames": 437387,
+      "duration_seconds": 27.3366875,
+      "reference_chars": 96
+    },
+    {
+      "id": "s11m25f1-sil",
+      "group": "annotated-silence",
+      "sha256": "c1e2a77c665c5a19fc94c7c5136fba0d42ef2d675faffe26251ef0158271384f",
+      "frames": 46604,
+      "duration_seconds": 2.91275,
+      "reference_chars": 0
+    },
+    {
+      "id": "s12m23f1-sil",
+      "group": "annotated-silence",
+      "sha256": "9415c158d34bff1d5601884dcf30916cd5420fbc22d1a7f65689a125c8a4f038",
+      "frames": 21776,
+      "duration_seconds": 1.361,
+      "reference_chars": 0
+    },
+    {
+      "id": "s16f22m1-sil",
+      "group": "annotated-silence",
+      "sha256": "e748dfec74213c3455e16bc434b97608d07d6a391ee3ef3c06a6a0294c27ce49",
+      "frames": 24740,
+      "duration_seconds": 1.54625,
+      "reference_chars": 0
+    }
+  ],
+  "preservation": {
+    "source_files": 15,
+    "input_files": 13,
+    "all_sha256_match": true,
+    "scope": "Only fixed source/input hashes checked; app vault not opened by benchmark, installed app not rebuilt/restarted by benchmark."
+  },
+  "vad": {
+    "detector": {
+      "name": "Silero v6.2.0 native whisper.cpp1.9.5",
+      "model_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+      "utility_sha256": "6a6a607299bbda4b6fee869151d503936ac885d603988da67a25b47f77bb845f",
+      "threshold": 0.5,
+      "min_speech_ms": 250,
+      "min_silence_ms": 100,
+      "native_padding_ms": 0,
+      "threads": 1
+    },
+    "source_activity_sha256": "cda16a7d191efc7245fa5009b2c77746e4e7ff33ecb08950af5228b658649067",
+    "seconds_once_per_input": 3.1113694170489907,
+    "original_speech_chunks": 31,
+    "original_speech_chunks_with_empty_activity": 0,
+    "annotated_silence_chunks": 3,
+    "lowgain_sensitivity_only": {
+      "gain": 0.1,
+      "speech_chunks": 31,
+      "empty_activity": 0,
+      "no_qwen_inference_or_cer": true
+    },
+    "selected_ranges": [
+      {
+        "id": "lamp-clean",
+        "original_frames": 1890672,
+        "selected_frames": 1890672,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "8a37680afa7ccdc8390db867ee3fe2068a26acf47d484034fbcef84f3385ac0c",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "8a37680afa7ccdc8390db867ee3fe2068a26acf47d484034fbcef84f3385ac0c",
+            "vad_activity": [
+              {
+                "start_ms": 450,
+                "end_ms": 1890
+              },
+              {
+                "start_ms": 2300,
+                "end_ms": 7330
+              },
+              {
+                "start_ms": 7810,
+                "end_ms": 9890
+              },
+              {
+                "start_ms": 10340,
+                "end_ms": 11360
+              },
+              {
+                "start_ms": 11780,
+                "end_ms": 13020
+              },
+              {
+                "start_ms": 13950,
+                "end_ms": 14780
+              },
+              {
+                "start_ms": 15260,
+                "end_ms": 17730
+              },
+              {
+                "start_ms": 17950,
+                "end_ms": 20450
+              },
+              {
+                "start_ms": 20900,
+                "end_ms": 21600
+              },
+              {
+                "start_ms": 21920,
+                "end_ms": 24350
+              },
+              {
+                "start_ms": 24800,
+                "end_ms": 27010
+              },
+              {
+                "start_ms": 27460,
+                "end_ms": 29540
+              }
+            ],
+            "vad_seconds": 1.4180886250687763,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "ce33af9c8d12fb8aded8a2edae600d455cc55f119158e710a6f1891988b8aa9c",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "ce33af9c8d12fb8aded8a2edae600d455cc55f119158e710a6f1891988b8aa9c",
+            "vad_activity": [
+              {
+                "start_ms": 100,
+                "end_ms": 4060
+              },
+              {
+                "start_ms": 4290,
+                "end_ms": 7620
+              },
+              {
+                "start_ms": 7970,
+                "end_ms": 9280
+              },
+              {
+                "start_ms": 9570,
+                "end_ms": 12990
+              },
+              {
+                "start_ms": 13570,
+                "end_ms": 18750
+              },
+              {
+                "start_ms": 18980,
+                "end_ms": 21630
+              },
+              {
+                "start_ms": 24860,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05793520901352167,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "66e904b2e29049c7a0b52dcc9c745369cbe2fc714dd16b5282f5042262e7074b",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "66e904b2e29049c7a0b52dcc9c745369cbe2fc714dd16b5282f5042262e7074b",
+            "vad_activity": [
+              {
+                "start_ms": 220,
+                "end_ms": 1950
+              },
+              {
+                "start_ms": 2240,
+                "end_ms": 4580
+              },
+              {
+                "start_ms": 4860,
+                "end_ms": 6590
+              },
+              {
+                "start_ms": 7070,
+                "end_ms": 9950
+              },
+              {
+                "start_ms": 10720,
+                "end_ms": 11200
+              },
+              {
+                "start_ms": 11420,
+                "end_ms": 12700
+              },
+              {
+                "start_ms": 12990,
+                "end_ms": 16480
+              },
+              {
+                "start_ms": 17020,
+                "end_ms": 19780
+              },
+              {
+                "start_ms": 20130,
+                "end_ms": 20640
+              },
+              {
+                "start_ms": 20960,
+                "end_ms": 23200
+              },
+              {
+                "start_ms": 23460,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05788429209496826,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1890672,
+            "sha256": "b3bf6fec2ef775ad2dadd7d35ad1761249d987df0ffab524f7100a59069ad29b",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1890672,
+            "original_sha256": "b3bf6fec2ef775ad2dadd7d35ad1761249d987df0ffab524f7100a59069ad29b",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 1020
+              },
+              {
+                "start_ms": 1470,
+                "end_ms": 2300
+              },
+              {
+                "start_ms": 2560,
+                "end_ms": 5980
+              },
+              {
+                "start_ms": 6300,
+                "end_ms": 7200
+              },
+              {
+                "start_ms": 7620,
+                "end_ms": 10720
+              },
+              {
+                "start_ms": 14140,
+                "end_ms": 16290
+              },
+              {
+                "start_ms": 16580,
+                "end_ms": 18180
+              },
+              {
+                "start_ms": 18560,
+                "end_ms": 25500
+              },
+              {
+                "start_ms": 25950,
+                "end_ms": 26660
+              },
+              {
+                "start_ms": 27140,
+                "end_ms": 28167
+              }
+            ],
+            "vad_seconds": 0.055985957966186106,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "lamp-office",
+        "original_frames": 1890672,
+        "selected_frames": 1890672,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "9f0fbee7c5d6c8b924872a8fd47c12e2eca87a0c4726e5235ec55cda4a72b065",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "9f0fbee7c5d6c8b924872a8fd47c12e2eca87a0c4726e5235ec55cda4a72b065",
+            "vad_activity": [
+              {
+                "start_ms": 450,
+                "end_ms": 1890
+              },
+              {
+                "start_ms": 2300,
+                "end_ms": 7360
+              },
+              {
+                "start_ms": 7810,
+                "end_ms": 9890
+              },
+              {
+                "start_ms": 10340,
+                "end_ms": 11360
+              },
+              {
+                "start_ms": 11810,
+                "end_ms": 13090
+              },
+              {
+                "start_ms": 13950,
+                "end_ms": 14820
+              },
+              {
+                "start_ms": 15260,
+                "end_ms": 20450
+              },
+              {
+                "start_ms": 20900,
+                "end_ms": 21700
+              },
+              {
+                "start_ms": 21920,
+                "end_ms": 24350
+              },
+              {
+                "start_ms": 24800,
+                "end_ms": 27010
+              },
+              {
+                "start_ms": 27460,
+                "end_ms": 29570
+              }
+            ],
+            "vad_seconds": 0.05869691609404981,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "0d5de609ea4cbf03b3188510ea5c8700173cfc9eab4b00f4a238511e4eda0b41",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "0d5de609ea4cbf03b3188510ea5c8700173cfc9eab4b00f4a238511e4eda0b41",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 4060
+              },
+              {
+                "start_ms": 4290,
+                "end_ms": 7550
+              },
+              {
+                "start_ms": 8000,
+                "end_ms": 9250
+              },
+              {
+                "start_ms": 9570,
+                "end_ms": 12990
+              },
+              {
+                "start_ms": 13570,
+                "end_ms": 18750
+              },
+              {
+                "start_ms": 18980,
+                "end_ms": 21630
+              },
+              {
+                "start_ms": 24860,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05821179097983986,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "a4de422f2284106a6031d3fe67e6fe31c6dbb259993e00653e2046aff0abe406",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "a4de422f2284106a6031d3fe67e6fe31c6dbb259993e00653e2046aff0abe406",
+            "vad_activity": [
+              {
+                "start_ms": 220,
+                "end_ms": 1950
+              },
+              {
+                "start_ms": 2240,
+                "end_ms": 4580
+              },
+              {
+                "start_ms": 4860,
+                "end_ms": 6590
+              },
+              {
+                "start_ms": 7070,
+                "end_ms": 9980
+              },
+              {
+                "start_ms": 10720,
+                "end_ms": 12700
+              },
+              {
+                "start_ms": 12990,
+                "end_ms": 16480
+              },
+              {
+                "start_ms": 17020,
+                "end_ms": 19780
+              },
+              {
+                "start_ms": 20130,
+                "end_ms": 20640
+              },
+              {
+                "start_ms": 20960,
+                "end_ms": 23200
+              },
+              {
+                "start_ms": 23460,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05824095802381635,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1890672,
+            "sha256": "9dc3186d4c5ce6c108c02644aa316f3fdf9cf26062c6166dfdafbc04f0d6ca7c",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1890672,
+            "original_sha256": "9dc3186d4c5ce6c108c02644aa316f3fdf9cf26062c6166dfdafbc04f0d6ca7c",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 1020
+              },
+              {
+                "start_ms": 1470,
+                "end_ms": 2300
+              },
+              {
+                "start_ms": 2560,
+                "end_ms": 6020
+              },
+              {
+                "start_ms": 6300,
+                "end_ms": 7200
+              },
+              {
+                "start_ms": 7620,
+                "end_ms": 10720
+              },
+              {
+                "start_ms": 14140,
+                "end_ms": 16290
+              },
+              {
+                "start_ms": 16580,
+                "end_ms": 18180
+              },
+              {
+                "start_ms": 18560,
+                "end_ms": 23420
+              },
+              {
+                "start_ms": 23650,
+                "end_ms": 25470
+              },
+              {
+                "start_ms": 25950,
+                "end_ms": 26620
+              },
+              {
+                "start_ms": 27140,
+                "end_ms": 28167
+              }
+            ],
+            "vad_seconds": 0.055739583913236856,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "lamp-cafeteria",
+        "original_frames": 1890672,
+        "selected_frames": 1890672,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "2675ffa527639242bf9c63d8521980bf7f83911c38db0993e10c6e84bcec405e",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "2675ffa527639242bf9c63d8521980bf7f83911c38db0993e10c6e84bcec405e",
+            "vad_activity": [
+              {
+                "start_ms": 480,
+                "end_ms": 1950
+              },
+              {
+                "start_ms": 2300,
+                "end_ms": 11390
+              },
+              {
+                "start_ms": 11840,
+                "end_ms": 13060
+              },
+              {
+                "start_ms": 13980,
+                "end_ms": 14780
+              },
+              {
+                "start_ms": 15260,
+                "end_ms": 21700
+              },
+              {
+                "start_ms": 21920,
+                "end_ms": 24450
+              },
+              {
+                "start_ms": 24800,
+                "end_ms": 26980
+              },
+              {
+                "start_ms": 27460,
+                "end_ms": 29820
+              }
+            ],
+            "vad_seconds": 0.05659074999857694,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "b755a0516f04d1495f08927453825c8e31903ae82356999e0b7ab40db5c5510f",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "b755a0516f04d1495f08927453825c8e31903ae82356999e0b7ab40db5c5510f",
+            "vad_activity": [
+              {
+                "start_ms": 130,
+                "end_ms": 7740
+              },
+              {
+                "start_ms": 8000,
+                "end_ms": 13020
+              },
+              {
+                "start_ms": 13630,
+                "end_ms": 22210
+              },
+              {
+                "start_ms": 24860,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.0569769999710843,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "64c337ddb640db4e838c350b58696e07996921c3f753b01343b454048bc7445f",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "64c337ddb640db4e838c350b58696e07996921c3f753b01343b454048bc7445f",
+            "vad_activity": [
+              {
+                "start_ms": 220,
+                "end_ms": 10050
+              },
+              {
+                "start_ms": 10720,
+                "end_ms": 11200
+              },
+              {
+                "start_ms": 11420,
+                "end_ms": 13380
+              },
+              {
+                "start_ms": 13600,
+                "end_ms": 16580
+              },
+              {
+                "start_ms": 17020,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.056552625028416514,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1890672,
+            "sha256": "3b46235b350093f63b96ad6d43b9c7381765652116a16a4d2c498141942c1d57",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1890672,
+            "original_sha256": "3b46235b350093f63b96ad6d43b9c7381765652116a16a4d2c498141942c1d57",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 1060
+              },
+              {
+                "start_ms": 1470,
+                "end_ms": 6050
+              },
+              {
+                "start_ms": 6300,
+                "end_ms": 7230
+              },
+              {
+                "start_ms": 7620,
+                "end_ms": 10820
+              },
+              {
+                "start_ms": 14140,
+                "end_ms": 16320
+              },
+              {
+                "start_ms": 16580,
+                "end_ms": 25540
+              },
+              {
+                "start_ms": 25950,
+                "end_ms": 26750
+              },
+              {
+                "start_ms": 27170,
+                "end_ms": 28167
+              }
+            ],
+            "vad_seconds": 0.054858417017385364,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "wsl-clean",
+        "original_frames": 1804320,
+        "selected_frames": 1803200,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "617db46357d5f1f61c004d581aeef917a3f72cb248110b96f503e2313db7aad9",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "617db46357d5f1f61c004d581aeef917a3f72cb248110b96f503e2313db7aad9",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 12290
+              },
+              {
+                "start_ms": 13150,
+                "end_ms": 14400
+              },
+              {
+                "start_ms": 14980,
+                "end_ms": 16700
+              },
+              {
+                "start_ms": 19040,
+                "end_ms": 24540
+              },
+              {
+                "start_ms": 26880,
+                "end_ms": 29860
+              }
+            ],
+            "vad_seconds": 0.05982237495481968,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "8d53c91887f1f84e6ea4fb3cafea9a7298ba6c9203a7c4d8009e605467a05d5a",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "8d53c91887f1f84e6ea4fb3cafea9a7298ba6c9203a7c4d8009e605467a05d5a",
+            "vad_activity": [
+              {
+                "start_ms": 130,
+                "end_ms": 7300
+              },
+              {
+                "start_ms": 7550,
+                "end_ms": 10720
+              },
+              {
+                "start_ms": 10980,
+                "end_ms": 18370
+              },
+              {
+                "start_ms": 18620,
+                "end_ms": 18910
+              },
+              {
+                "start_ms": 19520,
+                "end_ms": 28610
+              },
+              {
+                "start_ms": 28960,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.059142082929611206,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "7e64b5bdf86a3d7d1ab49043f466ce026cfb61870ac8b9bd0528d3f53483d1ec",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "7e64b5bdf86a3d7d1ab49043f466ce026cfb61870ac8b9bd0528d3f53483d1ec",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 580
+              },
+              {
+                "start_ms": 1150,
+                "end_ms": 5890
+              },
+              {
+                "start_ms": 6270,
+                "end_ms": 9860
+              },
+              {
+                "start_ms": 10140,
+                "end_ms": 11780
+              },
+              {
+                "start_ms": 12320,
+                "end_ms": 14050
+              },
+              {
+                "start_ms": 14300,
+                "end_ms": 19300
+              },
+              {
+                "start_ms": 19650,
+                "end_ms": 22620
+              },
+              {
+                "start_ms": 22880,
+                "end_ms": 23260
+              },
+              {
+                "start_ms": 24100,
+                "end_ms": 28130
+              },
+              {
+                "start_ms": 28380,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05745404202025384,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1803200,
+            "sha256": "ad7207cf514465c7ac6e11cdcf0753f2a8a5d0252cf3200108f9fea58e0e28e3",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1804320,
+            "original_sha256": "fb27616e301cf07000b4b28de7d1421213fe2b9bb0c76d64765326b831f76074",
+            "vad_activity": [
+              {
+                "start_ms": 190,
+                "end_ms": 1600
+              },
+              {
+                "start_ms": 1860,
+                "end_ms": 7420
+              },
+              {
+                "start_ms": 7650,
+                "end_ms": 10980
+              },
+              {
+                "start_ms": 11460,
+                "end_ms": 19620
+              },
+              {
+                "start_ms": 19870,
+                "end_ms": 21700
+              }
+            ],
+            "vad_seconds": 0.047667209059000015,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "wsl-office",
+        "original_frames": 1804320,
+        "selected_frames": 1804160,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "a5fe08847fafaede4ffaa43ebbc0e155b42ee7aec23217f0ca2e48d4a4821126",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "a5fe08847fafaede4ffaa43ebbc0e155b42ee7aec23217f0ca2e48d4a4821126",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 2240
+              },
+              {
+                "start_ms": 2460,
+                "end_ms": 9950
+              },
+              {
+                "start_ms": 10180,
+                "end_ms": 12290
+              },
+              {
+                "start_ms": 13150,
+                "end_ms": 14430
+              },
+              {
+                "start_ms": 14980,
+                "end_ms": 16700
+              },
+              {
+                "start_ms": 19040,
+                "end_ms": 24610
+              },
+              {
+                "start_ms": 26880,
+                "end_ms": 29860
+              }
+            ],
+            "vad_seconds": 0.059523124946281314,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "e85ac23227155aac7c125f7530deb5b44fb50514862b4f74a3aa63cef5f1b7f6",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "e85ac23227155aac7c125f7530deb5b44fb50514862b4f74a3aa63cef5f1b7f6",
+            "vad_activity": [
+              {
+                "start_ms": 160,
+                "end_ms": 7300
+              },
+              {
+                "start_ms": 7550,
+                "end_ms": 10720
+              },
+              {
+                "start_ms": 10980,
+                "end_ms": 18370
+              },
+              {
+                "start_ms": 18620,
+                "end_ms": 18940
+              },
+              {
+                "start_ms": 19520,
+                "end_ms": 28610
+              },
+              {
+                "start_ms": 28960,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05756241700146347,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "b94853d7aaed37aee65dd9cdf9e14b8ea13e72a849123c7197fe49ba2aa06333",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "b94853d7aaed37aee65dd9cdf9e14b8ea13e72a849123c7197fe49ba2aa06333",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 580
+              },
+              {
+                "start_ms": 1150,
+                "end_ms": 5860
+              },
+              {
+                "start_ms": 6270,
+                "end_ms": 9890
+              },
+              {
+                "start_ms": 10140,
+                "end_ms": 11810
+              },
+              {
+                "start_ms": 12320,
+                "end_ms": 14050
+              },
+              {
+                "start_ms": 14300,
+                "end_ms": 19330
+              },
+              {
+                "start_ms": 19650,
+                "end_ms": 22620
+              },
+              {
+                "start_ms": 22880,
+                "end_ms": 23260
+              },
+              {
+                "start_ms": 24100,
+                "end_ms": 28160
+              },
+              {
+                "start_ms": 28380,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05770316696725786,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1804160,
+            "sha256": "0237b3b3831a50c95b5e42ee391007ca835a557740c8b3ea9d4e62542004d413",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1804320,
+            "original_sha256": "2cba9d28599c1ebdcb93fb8ff26c1adfd10758553635e8936da7a99fb1c97561",
+            "vad_activity": [
+              {
+                "start_ms": 190,
+                "end_ms": 1570
+              },
+              {
+                "start_ms": 1860,
+                "end_ms": 6370
+              },
+              {
+                "start_ms": 6590,
+                "end_ms": 7420
+              },
+              {
+                "start_ms": 7650,
+                "end_ms": 10980
+              },
+              {
+                "start_ms": 11460,
+                "end_ms": 19550
+              },
+              {
+                "start_ms": 19870,
+                "end_ms": 21760
+              }
+            ],
+            "vad_seconds": 0.04762408300302923,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "wsl-cafeteria",
+        "original_frames": 1804320,
+        "selected_frames": 1803680,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "96d20ac3e4d0f0470f24938aab0ab2e8332121bee136594c3147f88343284495",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "96d20ac3e4d0f0470f24938aab0ab2e8332121bee136594c3147f88343284495",
+            "vad_activity": [
+              {
+                "start_ms": 0,
+                "end_ms": 12350
+              },
+              {
+                "start_ms": 13150,
+                "end_ms": 14620
+              },
+              {
+                "start_ms": 15170,
+                "end_ms": 16770
+              },
+              {
+                "start_ms": 19040,
+                "end_ms": 24960
+              },
+              {
+                "start_ms": 26880,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05803233291953802,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 960000,
+            "sha256": "1764056a10458150343718a5faf75caaba000d7cf793bccf1a91ccf9474fe842",
+            "original_start_frame": 480000,
+            "original_end_frame": 960000,
+            "original_sha256": "1764056a10458150343718a5faf75caaba000d7cf793bccf1a91ccf9474fe842",
+            "vad_activity": [
+              {
+                "start_ms": 220,
+                "end_ms": 7330
+              },
+              {
+                "start_ms": 7550,
+                "end_ms": 18370
+              },
+              {
+                "start_ms": 18660,
+                "end_ms": 18980
+              },
+              {
+                "start_ms": 19550,
+                "end_ms": 28700
+              },
+              {
+                "start_ms": 28960,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05837641598191112,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 960000,
+            "end_frame": 1440000,
+            "sha256": "98ee873a563110d194488ca6eb2f8a3c5ff8af69d2fa00dbaecbf7d30d8837f1",
+            "original_start_frame": 960000,
+            "original_end_frame": 1440000,
+            "original_sha256": "98ee873a563110d194488ca6eb2f8a3c5ff8af69d2fa00dbaecbf7d30d8837f1",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 580
+              },
+              {
+                "start_ms": 830,
+                "end_ms": 11810
+              },
+              {
+                "start_ms": 12320,
+                "end_ms": 19420
+              },
+              {
+                "start_ms": 19650,
+                "end_ms": 22530
+              },
+              {
+                "start_ms": 22880,
+                "end_ms": 28160
+              },
+              {
+                "start_ms": 28380,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05884425004478544,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 1440000,
+            "end_frame": 1803680,
+            "sha256": "03e9fbbe54d73794843fc08e1b2fb2124a10b1e78b1e2fa5579b700cd8b014f7",
+            "original_start_frame": 1440000,
+            "original_end_frame": 1804320,
+            "original_sha256": "73162cc6b466b251fe631ee25f439aa6b4a232bab016e041db00f9efaad8c5de",
+            "vad_activity": [
+              {
+                "start_ms": 190,
+                "end_ms": 1630
+              },
+              {
+                "start_ms": 1980,
+                "end_ms": 6300
+              },
+              {
+                "start_ms": 6590,
+                "end_ms": 11040
+              },
+              {
+                "start_ms": 11490,
+                "end_ms": 21730
+              }
+            ],
+            "vad_seconds": 0.047478499938733876,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "s12m23f1-clean",
+        "original_frames": 908622,
+        "selected_frames": 908622,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "09cf198fdf86e4c7ca4512206320c42391143b74af65d60f644515de20edfbee",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "09cf198fdf86e4c7ca4512206320c42391143b74af65d60f644515de20edfbee",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 1220
+              },
+              {
+                "start_ms": 3490,
+                "end_ms": 7420
+              },
+              {
+                "start_ms": 8220,
+                "end_ms": 8990
+              },
+              {
+                "start_ms": 9340,
+                "end_ms": 13380
+              },
+              {
+                "start_ms": 14340,
+                "end_ms": 18820
+              },
+              {
+                "start_ms": 19200,
+                "end_ms": 20030
+              },
+              {
+                "start_ms": 20700,
+                "end_ms": 21730
+              },
+              {
+                "start_ms": 21980,
+                "end_ms": 24290
+              },
+              {
+                "start_ms": 24640,
+                "end_ms": 26880
+              },
+              {
+                "start_ms": 27300,
+                "end_ms": 28060
+              },
+              {
+                "start_ms": 28480,
+                "end_ms": 29280
+              },
+              {
+                "start_ms": 29540,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.05717337504029274,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 908622,
+            "sha256": "383dfe9049adf1bab9a253c73b52c1db4e85cc1e3254fc13d6ba88a944300a38",
+            "original_start_frame": 480000,
+            "original_end_frame": 908622,
+            "original_sha256": "383dfe9049adf1bab9a253c73b52c1db4e85cc1e3254fc13d6ba88a944300a38",
+            "vad_activity": [
+              {
+                "start_ms": 30,
+                "end_ms": 580
+              },
+              {
+                "start_ms": 1180,
+                "end_ms": 3680
+              },
+              {
+                "start_ms": 5310,
+                "end_ms": 5660
+              },
+              {
+                "start_ms": 6140,
+                "end_ms": 8130
+              },
+              {
+                "start_ms": 8670,
+                "end_ms": 10460
+              },
+              {
+                "start_ms": 10780,
+                "end_ms": 11710
+              },
+              {
+                "start_ms": 13120,
+                "end_ms": 15900
+              },
+              {
+                "start_ms": 16260,
+                "end_ms": 17310
+              },
+              {
+                "start_ms": 17980,
+                "end_ms": 19460
+              },
+              {
+                "start_ms": 20450,
+                "end_ms": 21980
+              },
+              {
+                "start_ms": 22300,
+                "end_ms": 24380
+              },
+              {
+                "start_ms": 25310,
+                "end_ms": 26789
+              }
+            ],
+            "vad_seconds": 0.05305587500333786,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "s12m23f1-cafeteria",
+        "original_frames": 908622,
+        "selected_frames": 908622,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "c38bd1250fe00efff2d9ea37ff0dc561705d2332ea39d0a1fd4675386c804492",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "c38bd1250fe00efff2d9ea37ff0dc561705d2332ea39d0a1fd4675386c804492",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 1250
+              },
+              {
+                "start_ms": 3580,
+                "end_ms": 7490
+              },
+              {
+                "start_ms": 8320,
+                "end_ms": 8990
+              },
+              {
+                "start_ms": 9440,
+                "end_ms": 12030
+              },
+              {
+                "start_ms": 12420,
+                "end_ms": 13380
+              },
+              {
+                "start_ms": 14340,
+                "end_ms": 17380
+              },
+              {
+                "start_ms": 17790,
+                "end_ms": 18880
+              },
+              {
+                "start_ms": 19170,
+                "end_ms": 20100
+              },
+              {
+                "start_ms": 20700,
+                "end_ms": 21790
+              },
+              {
+                "start_ms": 22020,
+                "end_ms": 24290
+              },
+              {
+                "start_ms": 24640,
+                "end_ms": 26910
+              },
+              {
+                "start_ms": 27300,
+                "end_ms": 28100
+              },
+              {
+                "start_ms": 28450,
+                "end_ms": 29280
+              },
+              {
+                "start_ms": 29540,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.059642957989126444,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 908622,
+            "sha256": "fb2e4772c5777c3655df823d916f5505fa9cf8fa8f204e81c69fbb03044a20c4",
+            "original_start_frame": 480000,
+            "original_end_frame": 908622,
+            "original_sha256": "fb2e4772c5777c3655df823d916f5505fa9cf8fa8f204e81c69fbb03044a20c4",
+            "vad_activity": [
+              {
+                "start_ms": 100,
+                "end_ms": 580
+              },
+              {
+                "start_ms": 1180,
+                "end_ms": 3680
+              },
+              {
+                "start_ms": 6140,
+                "end_ms": 8030
+              },
+              {
+                "start_ms": 8700,
+                "end_ms": 10500
+              },
+              {
+                "start_ms": 10780,
+                "end_ms": 11740
+              },
+              {
+                "start_ms": 13120,
+                "end_ms": 15900
+              },
+              {
+                "start_ms": 16260,
+                "end_ms": 17410
+              },
+              {
+                "start_ms": 18020,
+                "end_ms": 19490
+              },
+              {
+                "start_ms": 20450,
+                "end_ms": 22020
+              },
+              {
+                "start_ms": 22300,
+                "end_ms": 24480
+              },
+              {
+                "start_ms": 25570,
+                "end_ms": 26370
+              }
+            ],
+            "vad_seconds": 0.053374791983515024,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "s11m25f1-clean",
+        "original_frames": 498624,
+        "selected_frames": 498624,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 480000,
+            "sha256": "5001403e9b1a71f5a29013346913e44e69bc4b6e7d0bf813297d25f79ea39a88",
+            "original_start_frame": 0,
+            "original_end_frame": 480000,
+            "original_sha256": "5001403e9b1a71f5a29013346913e44e69bc4b6e7d0bf813297d25f79ea39a88",
+            "vad_activity": [
+              {
+                "start_ms": 320,
+                "end_ms": 2240
+              },
+              {
+                "start_ms": 2460,
+                "end_ms": 4580
+              },
+              {
+                "start_ms": 5090,
+                "end_ms": 7680
+              },
+              {
+                "start_ms": 8220,
+                "end_ms": 9820
+              },
+              {
+                "start_ms": 11360,
+                "end_ms": 14590
+              },
+              {
+                "start_ms": 15360,
+                "end_ms": 18560
+              },
+              {
+                "start_ms": 19100,
+                "end_ms": 21440
+              },
+              {
+                "start_ms": 21700,
+                "end_ms": 24000
+              },
+              {
+                "start_ms": 24510,
+                "end_ms": 26050
+              },
+              {
+                "start_ms": 26400,
+                "end_ms": 28190
+              },
+              {
+                "start_ms": 28770,
+                "end_ms": 30000
+              }
+            ],
+            "vad_seconds": 0.055818250053562224,
+            "skipped_no_speech": false
+          },
+          {
+            "start_frame": 480000,
+            "end_frame": 498624,
+            "sha256": "2361f385301062fd904f0e5a5934b1edab9a29dbbfbc50f00da3a3abe66ae5df",
+            "original_start_frame": 480000,
+            "original_end_frame": 498624,
+            "original_sha256": "2361f385301062fd904f0e5a5934b1edab9a29dbbfbc50f00da3a3abe66ae5df",
+            "vad_activity": [
+              {
+                "start_ms": 60,
+                "end_ms": 1164
+              }
+            ],
+            "vad_seconds": 0.01591166597791016,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "s16f22m1-clean",
+        "original_frames": 437387,
+        "selected_frames": 437387,
+        "skipped_chunks": 0,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 437387,
+            "sha256": "705c8ae50deea10156114dbb8123ff3b30f724b0c51098d502579d97b37892bc",
+            "original_start_frame": 0,
+            "original_end_frame": 437387,
+            "original_sha256": "705c8ae50deea10156114dbb8123ff3b30f724b0c51098d502579d97b37892bc",
+            "vad_activity": [
+              {
+                "start_ms": 130,
+                "end_ms": 1630
+              },
+              {
+                "start_ms": 1890,
+                "end_ms": 5820
+              },
+              {
+                "start_ms": 6110,
+                "end_ms": 6620
+              },
+              {
+                "start_ms": 7070,
+                "end_ms": 8480
+              },
+              {
+                "start_ms": 8830,
+                "end_ms": 12480
+              },
+              {
+                "start_ms": 12860,
+                "end_ms": 13340
+              },
+              {
+                "start_ms": 14980,
+                "end_ms": 15580
+              },
+              {
+                "start_ms": 16030,
+                "end_ms": 17310
+              },
+              {
+                "start_ms": 17790,
+                "end_ms": 19170
+              },
+              {
+                "start_ms": 19520,
+                "end_ms": 21280
+              },
+              {
+                "start_ms": 22500,
+                "end_ms": 27337
+              }
+            ],
+            "vad_seconds": 0.051881249994039536,
+            "skipped_no_speech": false
+          }
+        ]
+      },
+      {
+        "id": "s11m25f1-sil",
+        "original_frames": 46604,
+        "selected_frames": 0,
+        "skipped_chunks": 1,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 46604,
+            "sha256": "c1e2a77c665c5a19fc94c7c5136fba0d42ef2d675faffe26251ef0158271384f",
+            "original_start_frame": 0,
+            "original_end_frame": 46604,
+            "original_sha256": "c1e2a77c665c5a19fc94c7c5136fba0d42ef2d675faffe26251ef0158271384f",
+            "vad_activity": [],
+            "vad_seconds": 0.01814512489363551,
+            "skipped_no_speech": true
+          }
+        ]
+      },
+      {
+        "id": "s12m23f1-sil",
+        "original_frames": 21776,
+        "selected_frames": 0,
+        "skipped_chunks": 1,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 21776,
+            "sha256": "9415c158d34bff1d5601884dcf30916cd5420fbc22d1a7f65689a125c8a4f038",
+            "original_start_frame": 0,
+            "original_end_frame": 21776,
+            "original_sha256": "9415c158d34bff1d5601884dcf30916cd5420fbc22d1a7f65689a125c8a4f038",
+            "vad_activity": [],
+            "vad_seconds": 0.016019334085285664,
+            "skipped_no_speech": true
+          }
+        ]
+      },
+      {
+        "id": "s16f22m1-sil",
+        "original_frames": 24740,
+        "selected_frames": 0,
+        "skipped_chunks": 1,
+        "chunks": [
+          {
+            "start_frame": 0,
+            "end_frame": 24740,
+            "sha256": "e748dfec74213c3455e16bc434b97608d07d6a391ee3ef3c06a6a0294c27ce49",
+            "original_start_frame": 0,
+            "original_end_frame": 24740,
+            "original_sha256": "e748dfec74213c3455e16bc434b97608d07d6a391ee3ef3c06a6a0294c27ce49",
+            "vad_activity": [],
+            "vad_seconds": 0.015354667091742158,
+            "skipped_no_speech": true
+          }
+        ]
+      }
+    ]
+  },
+  "completed": true,
+  "input_manifest_sha256": "425815c62b86c5d87208c5d496813576d53b927518df617d654e300f083e4e20",
+  "activity_sha256": "cda16a7d191efc7245fa5009b2c77746e4e7ff33ecb08950af5228b658649067",
+  "runs": {
+    "off": {
+      "completed": true,
+      "report_sha256": "d8659efa22f746923ec3a320dd94d698ddbeee7082b4fea81e3467d455046d5c",
+      "script_sha256": "90fff8c829c1b1dfbd5653105c1e0d39e2f262c808fbe3a4f3844372faa86f40",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "off",
+        "activity_sha256": null,
+        "detector": null,
+        "margin_ms": 0,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 1.328036707942374,
+      "rows": [
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 109,
+          "reference_chars": 653,
+          "substitutions": 57,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 12.150736833922565
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 110,
+          "reference_chars": 653,
+          "substitutions": 58,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 12.46632266708184
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 112,
+          "reference_chars": 653,
+          "substitutions": 60,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 12.32395608292427
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 117,
+          "reference_chars": 653,
+          "substitutions": 63,
+          "deletions": 29,
+          "insertions": 25,
+          "seconds": 12.774758291081525
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 120,
+          "reference_chars": 653,
+          "substitutions": 64,
+          "deletions": 30,
+          "insertions": 26,
+          "seconds": 13.936074666911736
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 108,
+          "reference_chars": 653,
+          "substitutions": 56,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 12.65335979196243
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 128,
+          "reference_chars": 653,
+          "substitutions": 73,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 12.468426625011489
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 116,
+          "reference_chars": 653,
+          "substitutions": 66,
+          "deletions": 30,
+          "insertions": 20,
+          "seconds": 12.443403874989599
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 130,
+          "reference_chars": 653,
+          "substitutions": 75,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 12.556364667019807
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 6,
+          "insertions": 52,
+          "seconds": 11.161707625025883
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 37,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 12.085062417085283
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 99,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 12.397160124965012
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 56,
+          "seconds": 12.501379332970828
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 36,
+          "deletions": 3,
+          "insertions": 55,
+          "seconds": 13.220809999969788
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 98,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 57,
+          "seconds": 13.602222749963403
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 84,
+          "reference_chars": 569,
+          "substitutions": 34,
+          "deletions": 3,
+          "insertions": 47,
+          "seconds": 14.179452207987197
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 38,
+          "deletions": 2,
+          "insertions": 54,
+          "seconds": 14.458142124931328
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 83,
+          "reference_chars": 569,
+          "substitutions": 35,
+          "deletions": 4,
+          "insertions": 44,
+          "seconds": 14.787818417069502
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 7.666654082946479
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 9,
+          "deletions": 7,
+          "insertions": 9,
+          "seconds": 7.764391042059287
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 8.154476708034053
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "seconds": 7.566974750021473
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "seconds": 7.9021929170703515
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "seconds": 7.63804033305496
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 4.892377500073053
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 5.089954792056233
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 4.906432582996786
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 3.3173217501025647
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 2.9664470000425354
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 3.240011916961521
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 12,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 12,
+          "seconds": 0.3821256250375882
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 12,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 12,
+          "seconds": 0.5129875410348177
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 9,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 9,
+          "seconds": 0.4767118749441579
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 3,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 3,
+          "seconds": 0.3610004170332104
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 2,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 2,
+          "seconds": 0.3483735000481829
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 15,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 15,
+          "seconds": 0.5496408330509439
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 3,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 3,
+          "seconds": 0.34385795798152685
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 35,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 35,
+          "seconds": 0.7457390420604497
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 15,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 15,
+          "seconds": 0.55578312498983
+        }
+      ],
+      "row_count": 39,
+      "chunks": 102,
+      "actual_generate_calls": 102,
+      "skipped_chunks": 0,
+      "max_generation_tokens": 169,
+      "groups": [
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 96,
+          "deletions": 36,
+          "insertions": 74,
+          "group": "lecture-clean",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 23.31244445894845,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 207,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.16939443535188217,
+          "inference_seconds": 24.551385084167123,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 211,
+          "reference_chars": 1222,
+          "substitutions": 99,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17266775777414076,
+          "inference_seconds": 24.72111620788928,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 102,
+          "deletions": 31,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 25.276137624052353,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 100,
+          "deletions": 33,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 27.156884666881524,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 79,
+          "group": "lecture-office",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 26.255582541925833,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 212,
+          "reference_chars": 1222,
+          "substitutions": 107,
+          "deletions": 33,
+          "insertions": 72,
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1734860883797054,
+          "inference_seconds": 26.647878832998686,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 210,
+          "reference_chars": 1222,
+          "substitutions": 104,
+          "deletions": 32,
+          "insertions": 74,
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1718494271685761,
+          "inference_seconds": 26.901545999920927,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 213,
+          "reference_chars": 1222,
+          "substitutions": 110,
+          "deletions": 34,
+          "insertions": 69,
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17430441898527005,
+          "inference_seconds": 27.34418308408931,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "none",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 15.876353333122097,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 26,
+          "deletions": 17,
+          "insertions": 14,
+          "group": "interview-clean",
+          "condition": "relevant",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 15.820792834158055,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "distractor",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 16.30092120799236,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 7.566974750021473,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "files": 1,
+          "cer": 0.14634146341463414,
+          "inference_seconds": 7.9021929170703515,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 7.63804033305496,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 18,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 18,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 1.0869840000523254,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 49,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 49,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 1.6071000831434503,
+          "literal_absent_term_outputs": 6
+        },
+        {
+          "edits": 39,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 39,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 1.5821358329849318,
+          "literal_absent_term_outputs": 6
+        }
+      ]
+    },
+    "gate": {
+      "completed": true,
+      "report_sha256": "488df21b72f993dc7c729df072eb300c0a0334727eb87bed4461a9f05a5e596a",
+      "script_sha256": "278827bc1fb7d2b9aca0b19868200b729227a06d0ef8aa710611d6fb4fc06d8b",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "gate",
+        "activity_sha256": "cda16a7d191efc7245fa5009b2c77746e4e7ff33ecb08950af5228b658649067",
+        "detector": {
+          "name": "Silero v6.2.0 native whisper.cpp1.9.5",
+          "model_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+          "utility_sha256": "6a6a607299bbda4b6fee869151d503936ac885d603988da67a25b47f77bb845f",
+          "threshold": 0.5,
+          "min_speech_ms": 250,
+          "min_silence_ms": 100,
+          "native_padding_ms": 0,
+          "threads": 1
+        },
+        "margin_ms": 0,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 1.0921437920769677,
+      "rows": [
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 109,
+          "reference_chars": 653,
+          "substitutions": 57,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 18.529518957948312
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 110,
+          "reference_chars": 653,
+          "substitutions": 58,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 18.51797354198061
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 112,
+          "reference_chars": 653,
+          "substitutions": 60,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 20.161335291923024
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 117,
+          "reference_chars": 653,
+          "substitutions": 63,
+          "deletions": 29,
+          "insertions": 25,
+          "seconds": 18.953650083974935
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 120,
+          "reference_chars": 653,
+          "substitutions": 64,
+          "deletions": 30,
+          "insertions": 26,
+          "seconds": 20.030047209002078
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 108,
+          "reference_chars": 653,
+          "substitutions": 56,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 19.806147083058022
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 128,
+          "reference_chars": 653,
+          "substitutions": 73,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 20.2253568751039
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 116,
+          "reference_chars": 653,
+          "substitutions": 66,
+          "deletions": 30,
+          "insertions": 20,
+          "seconds": 20.05698295799084
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 130,
+          "reference_chars": 653,
+          "substitutions": 75,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 20.11069683392998
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 6,
+          "insertions": 52,
+          "seconds": 16.68730449990835
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 37,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 17.35279720800463
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 99,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 17.51701491593849
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 56,
+          "seconds": 16.709647999959998
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 36,
+          "deletions": 3,
+          "insertions": 55,
+          "seconds": 17.423146292101592
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 98,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 57,
+          "seconds": 17.58484091598075
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 84,
+          "reference_chars": 569,
+          "substitutions": 34,
+          "deletions": 3,
+          "insertions": 47,
+          "seconds": 17.114092499949038
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 38,
+          "deletions": 2,
+          "insertions": 54,
+          "seconds": 17.6966225419892
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 83,
+          "reference_chars": 569,
+          "substitutions": 35,
+          "deletions": 4,
+          "insertions": 44,
+          "seconds": 17.243696582969278
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 9.620876541011967
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 9,
+          "deletions": 7,
+          "insertions": 9,
+          "seconds": 9.660948959062807
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 9.382438458036631
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "seconds": 8.920068542007357
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "seconds": 9.161685250001028
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "seconds": 9.17995362507645
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 5.759489624993876
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 6.374154333025217
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 6.189472166937776
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 3.5423134160228074
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 3.845894582918845
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 3.915122124948539
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.254098404198885e-05
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.062502067536116e-05
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.479199070483446e-05
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 8.491694461554289e-05
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.69169195741415e-05
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.120895992964506e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 7.341697346419096e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010012497659772635
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 8.979206904768944e-05
+        }
+      ],
+      "row_count": 39,
+      "chunks": 102,
+      "actual_generate_calls": 93,
+      "skipped_chunks": 9,
+      "max_generation_tokens": 169,
+      "groups": [
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 96,
+          "deletions": 36,
+          "insertions": 74,
+          "group": "lecture-clean",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 35.21682345785666,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 207,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.16939443535188217,
+          "inference_seconds": 35.87077074998524,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 211,
+          "reference_chars": 1222,
+          "substitutions": 99,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17266775777414076,
+          "inference_seconds": 37.67835020786151,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 102,
+          "deletions": 31,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 35.66329808393493,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 100,
+          "deletions": 33,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 37.45319350110367,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 79,
+          "group": "lecture-office",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 37.39098799903877,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 212,
+          "reference_chars": 1222,
+          "substitutions": 107,
+          "deletions": 33,
+          "insertions": 72,
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1734860883797054,
+          "inference_seconds": 37.339449375052936,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 210,
+          "reference_chars": 1222,
+          "substitutions": 104,
+          "deletions": 32,
+          "insertions": 74,
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1718494271685761,
+          "inference_seconds": 37.75360549998004,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 213,
+          "reference_chars": 1222,
+          "substitutions": 110,
+          "deletions": 34,
+          "insertions": 69,
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17430441898527005,
+          "inference_seconds": 37.354393416899256,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "none",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 18.92267958202865,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 26,
+          "deletions": 17,
+          "insertions": 14,
+          "group": "interview-clean",
+          "condition": "relevant",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 19.88099787500687,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "distractor",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 19.487032749922946,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 8.920068542007357,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "files": 1,
+          "cer": 0.14634146341463414,
+          "inference_seconds": 9.161685250001028,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 9.17995362507645,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.0002508749021217227,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.000287666916847229,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00027579301968216896,
+          "literal_absent_term_outputs": 0
+        }
+      ]
+    },
+    "trim": {
+      "completed": true,
+      "report_sha256": "1dbef73f2685c71158142870565cb81733c446ac64b2730c7eb699853696cae8",
+      "script_sha256": "278827bc1fb7d2b9aca0b19868200b729227a06d0ef8aa710611d6fb4fc06d8b",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "trim",
+        "activity_sha256": "cda16a7d191efc7245fa5009b2c77746e4e7ff33ecb08950af5228b658649067",
+        "detector": {
+          "name": "Silero v6.2.0 native whisper.cpp1.9.5",
+          "model_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+          "utility_sha256": "6a6a607299bbda4b6fee869151d503936ac885d603988da67a25b47f77bb845f",
+          "threshold": 0.5,
+          "min_speech_ms": 250,
+          "min_silence_ms": 100,
+          "native_padding_ms": 0,
+          "threads": 1
+        },
+        "margin_ms": 1000,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 1.222345457994379,
+      "rows": [
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 109,
+          "reference_chars": 653,
+          "substitutions": 57,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 21.37636329093948
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 110,
+          "reference_chars": 653,
+          "substitutions": 58,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 22.577429624972865
+        },
+        {
+          "id": "lamp-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 112,
+          "reference_chars": 653,
+          "substitutions": 60,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 21.968882041983306
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 117,
+          "reference_chars": 653,
+          "substitutions": 63,
+          "deletions": 29,
+          "insertions": 25,
+          "seconds": 21.335359083954245
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 120,
+          "reference_chars": 653,
+          "substitutions": 64,
+          "deletions": 30,
+          "insertions": 26,
+          "seconds": 22.03104979195632
+        },
+        {
+          "id": "lamp-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 108,
+          "reference_chars": 653,
+          "substitutions": 56,
+          "deletions": 30,
+          "insertions": 22,
+          "seconds": 34.2729513340164
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 128,
+          "reference_chars": 653,
+          "substitutions": 73,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 27.321955500054173
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 116,
+          "reference_chars": 653,
+          "substitutions": 66,
+          "deletions": 30,
+          "insertions": 20,
+          "seconds": 28.24831374990754
+        },
+        {
+          "id": "lamp-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 130,
+          "reference_chars": 653,
+          "substitutions": 75,
+          "deletions": 30,
+          "insertions": 25,
+          "seconds": 28.545143082970753
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 6,
+          "insertions": 52,
+          "seconds": 22.339147750055417
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 37,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 23.879034375073388
+        },
+        {
+          "id": "wsl-clean",
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "edits": 99,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 58,
+          "seconds": 23.716146667022258
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "none",
+          "edits": 97,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 56,
+          "seconds": 24.341672291979194
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 36,
+          "deletions": 3,
+          "insertions": 55,
+          "seconds": 24.426217541098595
+        },
+        {
+          "id": "wsl-office",
+          "group": "lecture-office",
+          "condition": "distractor",
+          "edits": 98,
+          "reference_chars": 569,
+          "substitutions": 39,
+          "deletions": 2,
+          "insertions": 57,
+          "seconds": 24.68274887499865
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "edits": 84,
+          "reference_chars": 569,
+          "substitutions": 34,
+          "deletions": 3,
+          "insertions": 47,
+          "seconds": 25.743375874939375
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "edits": 94,
+          "reference_chars": 569,
+          "substitutions": 38,
+          "deletions": 2,
+          "insertions": 54,
+          "seconds": 24.255199042032473
+        },
+        {
+          "id": "wsl-cafeteria",
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "edits": 83,
+          "reference_chars": 569,
+          "substitutions": 35,
+          "deletions": 4,
+          "insertions": 44,
+          "seconds": 24.65892224991694
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 12.324906875030138
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 9,
+          "deletions": 7,
+          "insertions": 9,
+          "seconds": 13.244300874997862
+        },
+        {
+          "id": "s12m23f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 25,
+          "reference_chars": 287,
+          "substitutions": 10,
+          "deletions": 7,
+          "insertions": 8,
+          "seconds": 12.67229854199104
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "seconds": 13.225728083052672
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "seconds": 12.183620334020816
+        },
+        {
+          "id": "s12m23f1-cafeteria",
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "seconds": 13.066414792090654
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 7.774027209030464
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 8.285816165967844
+        },
+        {
+          "id": "s11m25f1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 21,
+          "reference_chars": 172,
+          "substitutions": 12,
+          "deletions": 6,
+          "insertions": 3,
+          "seconds": 7.762751125032082
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "none",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 4.627534249913879
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "relevant",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 5.116330457967706
+        },
+        {
+          "id": "s16f22m1-clean",
+          "group": "interview-clean",
+          "condition": "distractor",
+          "edits": 11,
+          "reference_chars": 96,
+          "substitutions": 5,
+          "deletions": 4,
+          "insertions": 2,
+          "seconds": 5.188447708031163
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.295798372477293e-05
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.0001027500256896019
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00012445799075067043
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 8.087500464171171e-05
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 8.233299013227224e-05
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 7.170799653977156e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 7.458403706550598e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 7.141707465052605e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010220904368907213
+        }
+      ],
+      "row_count": 39,
+      "chunks": 102,
+      "actual_generate_calls": 93,
+      "skipped_chunks": 9,
+      "max_generation_tokens": 169,
+      "groups": [
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 96,
+          "deletions": 36,
+          "insertions": 74,
+          "group": "lecture-clean",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 43.7155110409949,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 207,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.16939443535188217,
+          "inference_seconds": 46.45646400004625,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 211,
+          "reference_chars": 1222,
+          "substitutions": 99,
+          "deletions": 32,
+          "insertions": 80,
+          "group": "lecture-clean",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17266775777414076,
+          "inference_seconds": 45.685028709005564,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 102,
+          "deletions": 31,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 45.67703137593344,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 214,
+          "reference_chars": 1222,
+          "substitutions": 100,
+          "deletions": 33,
+          "insertions": 81,
+          "group": "lecture-office",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1751227495908347,
+          "inference_seconds": 46.457267333054915,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 206,
+          "reference_chars": 1222,
+          "substitutions": 95,
+          "deletions": 32,
+          "insertions": 79,
+          "group": "lecture-office",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.1685761047463175,
+          "inference_seconds": 58.95570020901505,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 212,
+          "reference_chars": 1222,
+          "substitutions": 107,
+          "deletions": 33,
+          "insertions": 72,
+          "group": "lecture-cafeteria",
+          "condition": "none",
+          "files": 2,
+          "cer": 0.1734860883797054,
+          "inference_seconds": 53.06533137499355,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 210,
+          "reference_chars": 1222,
+          "substitutions": 104,
+          "deletions": 32,
+          "insertions": 74,
+          "group": "lecture-cafeteria",
+          "condition": "relevant",
+          "files": 2,
+          "cer": 0.1718494271685761,
+          "inference_seconds": 52.50351279194001,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 213,
+          "reference_chars": 1222,
+          "substitutions": 110,
+          "deletions": 34,
+          "insertions": 69,
+          "group": "lecture-cafeteria",
+          "condition": "distractor",
+          "files": 2,
+          "cer": 0.17430441898527005,
+          "inference_seconds": 53.204065332887694,
+          "literal_absent_term_outputs": 1
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "none",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 24.72646833397448,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 26,
+          "deletions": 17,
+          "insertions": 14,
+          "group": "interview-clean",
+          "condition": "relevant",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 26.646447498933412,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 57,
+          "reference_chars": 555,
+          "substitutions": 27,
+          "deletions": 17,
+          "insertions": 13,
+          "group": "interview-clean",
+          "condition": "distractor",
+          "files": 3,
+          "cer": 0.10270270270270271,
+          "inference_seconds": 25.623497375054285,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 16,
+          "deletions": 20,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "none",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 13.225728083052672,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 42,
+          "reference_chars": 287,
+          "substitutions": 19,
+          "deletions": 19,
+          "insertions": 4,
+          "group": "interview-cafeteria",
+          "condition": "relevant",
+          "files": 1,
+          "cer": 0.14634146341463414,
+          "inference_seconds": 12.183620334020816,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 40,
+          "reference_chars": 287,
+          "substitutions": 15,
+          "deletions": 17,
+          "insertions": 8,
+          "group": "interview-cafeteria",
+          "condition": "distractor",
+          "files": 1,
+          "cer": 0.13937282229965156,
+          "inference_seconds": 13.066414792090654,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.0002484170254319906,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.0002565000904724002,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.0002983750309795141,
+          "literal_absent_term_outputs": 0
+        }
+      ]
+    },
+    "trim-reverse": {
+      "completed": true,
+      "report_sha256": "717e86a985a48fdf6fc612848d039578284f0716ead9fc4d08d13e59a41e0c7d",
+      "script_sha256": "278827bc1fb7d2b9aca0b19868200b729227a06d0ef8aa710611d6fb4fc06d8b",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "trim",
+        "activity_sha256": "d1cda7f10e984b9e435a508d5e21ebd9249f672e5bc43ff81ad05dd6b8496113",
+        "detector": {
+          "name": "Silero v6.2.0 native whisper.cpp1.9.5",
+          "model_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+          "utility_sha256": "6a6a607299bbda4b6fee869151d503936ac885d603988da67a25b47f77bb845f",
+          "threshold": 0.5,
+          "min_speech_ms": 250,
+          "min_silence_ms": 100,
+          "native_padding_ms": 0,
+          "threads": 1
+        },
+        "margin_ms": 1000,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 1.324703334015794,
+      "rows": [
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.0001628330210223794
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00014266697689890862
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00013383303303271532
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011612498201429844
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011079199612140656
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010591605678200722
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010645890142768621
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010800000745803118
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010100007057189941
+        }
+      ],
+      "row_count": 9,
+      "chunks": 9,
+      "actual_generate_calls": 0,
+      "skipped_chunks": 9,
+      "max_generation_tokens": 0,
+      "groups": [
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00038541690446436405,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00036145898047834635,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00034074916038662195,
+          "literal_absent_term_outputs": 0
+        }
+      ]
+    },
+    "gate-reverse": {
+      "completed": true,
+      "report_sha256": "d410cc8fb01ff8b8800c2370e1e5514f69d2c4c9e4bfc540e326dff49c2018fa",
+      "script_sha256": "278827bc1fb7d2b9aca0b19868200b729227a06d0ef8aa710611d6fb4fc06d8b",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "gate",
+        "activity_sha256": "d1cda7f10e984b9e435a508d5e21ebd9249f672e5bc43ff81ad05dd6b8496113",
+        "detector": {
+          "name": "Silero v6.2.0 native whisper.cpp1.9.5",
+          "model_sha256": "2aa269b785eeb53a82983a20501ddf7c1d9c48e33ab63a41391ac6c9f7fb6987",
+          "utility_sha256": "6a6a607299bbda4b6fee869151d503936ac885d603988da67a25b47f77bb845f",
+          "threshold": 0.5,
+          "min_speech_ms": 250,
+          "min_silence_ms": 100,
+          "native_padding_ms": 0,
+          "threads": 1
+        },
+        "margin_ms": 0,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 0.9239990420173854,
+      "rows": [
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00013216701336205006
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011933303903788328
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011212495155632496
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011337501928210258
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00010191695764660835
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 9.737501386553049e-05
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011262507177889347
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.0001168340677395463
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "seconds": 0.00011179095599800348
+        }
+      ],
+      "row_count": 9,
+      "chunks": 9,
+      "actual_generate_calls": 0,
+      "skipped_chunks": 9,
+      "max_generation_tokens": 0,
+      "groups": [
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.0003581671044230461,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00033808406442403793,
+          "literal_absent_term_outputs": 0
+        },
+        {
+          "edits": 0,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 0,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 0.00032129092141985893,
+          "literal_absent_term_outputs": 0
+        }
+      ]
+    },
+    "off-reverse": {
+      "completed": true,
+      "report_sha256": "ea73d8b4bc2f16239ac512adf64f2170edefcf1f4c618d0bfbd4b7fe2738d309",
+      "script_sha256": "278827bc1fb7d2b9aca0b19868200b729227a06d0ef8aa710611d6fb4fc06d8b",
+      "versions": {
+        "mlx": "0.32.3",
+        "mlx-audio": "0.5.8",
+        "transformers": "5.19.0"
+      },
+      "qwen_vad": {
+        "mode": "off",
+        "activity_sha256": null,
+        "detector": null,
+        "margin_ms": 0,
+        "timing_scope": "VAD precomputed once per input, not included in inference seconds"
+      },
+      "load_seconds": 0.9363383750896901,
+      "rows": [
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 9,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 9,
+          "seconds": 0.9732906670542434
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 12,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 12,
+          "seconds": 1.2882831250317395
+        },
+        {
+          "id": "s11m25f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 12,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 12,
+          "seconds": 0.7719239160651341
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 15,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 15,
+          "seconds": 0.8389951669378206
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 2,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 2,
+          "seconds": 0.41542783298064023
+        },
+        {
+          "id": "s12m23f1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 3,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 3,
+          "seconds": 0.6292968749767169
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "edits": 15,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 15,
+          "seconds": 1.1461946250637993
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "edits": 35,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 35,
+          "seconds": 0.9483067920664325
+        },
+        {
+          "id": "s16f22m1-sil",
+          "group": "annotated-silence",
+          "condition": "none",
+          "edits": 3,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 3,
+          "seconds": 0.5026533750351518
+        }
+      ],
+      "row_count": 9,
+      "chunks": 9,
+      "actual_generate_calls": 9,
+      "skipped_chunks": 0,
+      "max_generation_tokens": 24,
+      "groups": [
+        {
+          "edits": 39,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 39,
+          "group": "annotated-silence",
+          "condition": "distractor",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 2.9584804590558633,
+          "literal_absent_term_outputs": 6
+        },
+        {
+          "edits": 49,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 49,
+          "group": "annotated-silence",
+          "condition": "relevant",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 2.6520177500788122,
+          "literal_absent_term_outputs": 6
+        },
+        {
+          "edits": 18,
+          "reference_chars": 0,
+          "substitutions": 0,
+          "deletions": 0,
+          "insertions": 18,
+          "group": "annotated-silence",
+          "condition": "none",
+          "files": 3,
+          "cer": null,
+          "inference_seconds": 1.9038741660770029,
+          "literal_absent_term_outputs": 0
+        }
+      ]
+    }
+  },
+  "comparisons": {
+    "off_vs_previous_exact": 39,
+    "gate": {
+      "all_count": 39,
+      "exact_off": 30,
+      "speech_count": 30,
+      "speech_exact_off": 30,
+      "normalized_speech_exact_off": 30,
+      "changes": [
+        {
+          "id": "s11m25f1-sil",
+          "condition": "none",
+          "before_edits": 12,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 12,
+          "after_I": 0
+        },
+        {
+          "id": "s11m25f1-sil",
+          "condition": "relevant",
+          "before_edits": 12,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 12,
+          "after_I": 0
+        },
+        {
+          "id": "s11m25f1-sil",
+          "condition": "distractor",
+          "before_edits": 9,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 9,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "none",
+          "before_edits": 3,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 3,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "relevant",
+          "before_edits": 2,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 2,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "distractor",
+          "before_edits": 15,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 15,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "none",
+          "before_edits": 3,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 3,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "relevant",
+          "before_edits": 35,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 35,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "distractor",
+          "before_edits": 15,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 15,
+          "after_I": 0
+        }
+      ]
+    },
+    "trim": {
+      "all_count": 39,
+      "exact_off": 27,
+      "speech_count": 30,
+      "speech_exact_off": 27,
+      "normalized_speech_exact_off": 30,
+      "changes": [
+        {
+          "id": "wsl-clean",
+          "condition": "none",
+          "before_edits": 97,
+          "after_edits": 97,
+          "before_D": 6,
+          "after_D": 6,
+          "before_I": 52,
+          "after_I": 52
+        },
+        {
+          "id": "wsl-cafeteria",
+          "condition": "none",
+          "before_edits": 84,
+          "after_edits": 84,
+          "before_D": 3,
+          "after_D": 3,
+          "before_I": 47,
+          "after_I": 47
+        },
+        {
+          "id": "wsl-cafeteria",
+          "condition": "distractor",
+          "before_edits": 83,
+          "after_edits": 83,
+          "before_D": 4,
+          "after_D": 4,
+          "before_I": 44,
+          "after_I": 44
+        },
+        {
+          "id": "s11m25f1-sil",
+          "condition": "none",
+          "before_edits": 12,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 12,
+          "after_I": 0
+        },
+        {
+          "id": "s11m25f1-sil",
+          "condition": "relevant",
+          "before_edits": 12,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 12,
+          "after_I": 0
+        },
+        {
+          "id": "s11m25f1-sil",
+          "condition": "distractor",
+          "before_edits": 9,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 9,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "none",
+          "before_edits": 3,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 3,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "relevant",
+          "before_edits": 2,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 2,
+          "after_I": 0
+        },
+        {
+          "id": "s12m23f1-sil",
+          "condition": "distractor",
+          "before_edits": 15,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 15,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "none",
+          "before_edits": 3,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 3,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "relevant",
+          "before_edits": 35,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 35,
+          "after_I": 0
+        },
+        {
+          "id": "s16f22m1-sil",
+          "condition": "distractor",
+          "before_edits": 15,
+          "after_edits": 0,
+          "before_D": 0,
+          "after_D": 0,
+          "before_I": 15,
+          "after_I": 0
+        }
+      ]
+    },
+    "trim-reverse": {
+      "count": 9,
+      "exact_first_run": 9
+    },
+    "gate-reverse": {
+      "count": 9,
+      "exact_first_run": 9
+    },
+    "off-reverse": {
+      "count": 9,
+      "exact_first_run": 9
+    }
+  },
+  "limitations": [
+    "2 technical talks/slides with human-postedited automatic captions, not perfect verbatim gold or full university lectures.",
+    "Only labeled respondent intervals from3 Seoul Corpus interviews; not whole overlapping conversation CER.",
+    "Office/cafeteria are derived mixes of genuine environment noise; not newly recorded on-site noisy lectures.",
+    "Every original speech chunk has positive VAD, so no estimate of natural VAD-missed speech loss.",
+    "Fixed30s diagnostic boundaries differ from installed quiet_cut app segmentation.",
+    "Timing excludes precomputed VAD and one model load; no general speed claim. Background resource load is uncontrolled."
+  ],
+  "product_integration": {
+    "scope": "Current product functions with3 original SIL PCM inputs in isolated QA DB; initial empty transcript seeded, not first-pass Whisper test; no installed app interaction or microphone. Manual Qwen runs actual installed model worker.",
+    "app_rebuilt_or_installed": false,
+    "installed_version_observed": "0.3.24/build34",
+    "rows": [
+      {
+        "id": "s11m25f1-sil",
+        "source_sha256": "c1e2a77c665c5a19fc94c7c5136fba0d42ef2d675faffe26251ef0158271384f",
+        "vad_activity": [],
+        "auto_skipped": true,
+        "manual_qwen_generation_tokens": 10,
+        "original_transcripts_unchanged": true,
+        "automatic_second_request_blocked": true
+      },
+      {
+        "id": "s12m23f1-sil",
+        "source_sha256": "9415c158d34bff1d5601884dcf30916cd5420fbc22d1a7f65689a125c8a4f038",
+        "vad_activity": [],
+        "auto_skipped": true,
+        "manual_qwen_generation_tokens": 4,
+        "original_transcripts_unchanged": true,
+        "automatic_second_request_blocked": true
+      },
+      {
+        "id": "s16f22m1-sil",
+        "source_sha256": "e748dfec74213c3455e16bc434b97608d07d6a391ee3ef3c06a6a0294c27ce49",
+        "vad_activity": [],
+        "auto_skipped": true,
+        "manual_qwen_generation_tokens": 4,
+        "original_transcripts_unchanged": true,
+        "automatic_second_request_blocked": true
+      }
+    ],
+    "stored_pcm_audit": [
+      {
+        "id": "s11m25f1-sil",
+        "stored_pcm_matches_original": true,
+        "stored_wav_sha256": "c1e2a77c665c5a19fc94c7c5136fba0d42ef2d675faffe26251ef0158271384f"
+      },
+      {
+        "id": "s12m23f1-sil",
+        "stored_pcm_matches_original": true,
+        "stored_wav_sha256": "9415c158d34bff1d5601884dcf30916cd5420fbc22d1a7f65689a125c8a4f038"
+      },
+      {
+        "id": "s16f22m1-sil",
+        "stored_pcm_matches_original": true,
+        "stored_wav_sha256": "e748dfec74213c3455e16bc434b97608d07d6a391ee3ef3c06a6a0294c27ce49"
+      }
+    ]
+  },
+  "adoption": {
+    "automatic_qwen_successful_empty_snapshot_gate": true,
+    "manual_qwen_vad_block": false,
+    "trim": false,
+    "qwen_hotwords": false,
+    "reason": "Only empty-snapshot deferral demonstrated suppression without speech-content changes; manual bypass retained; no gain from envelope trimming."
+  },
+  "regression": {
+    "python_total": 637,
+    "python_passed": 632,
+    "python_skipped": 5,
+    "python_failed": 0,
+    "initial_sandbox_errors": 2,
+    "initial_error_cause": "PermissionError on two existing loopback bind fixtures; full suite rerun with local socket permission passed",
+    "focused_python": 51,
+    "frontend_total": 104,
+    "frontend_passed": 104,
+    "frontend_failed": 0,
+    "typecheck_build_passed": true,
+    "skip_scope": "2 optional embedding/Gemma model contracts and3 native fixture tests"
+  }
+}

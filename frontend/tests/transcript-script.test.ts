@@ -157,8 +157,22 @@ test('output errors have an audio review action without being described as empty
     assert.doesNotMatch(failed,/빈 전사 구간|발화 또는 소음/);
     assert.match(draw(null),/빈 전사 구간/);
     const job={...range,id:'review',kind:'asr_review',status:'queued',error:null,result:null,request:{chunk_id:range.id,reason:range.error,original_status:'failed',original_error:range.error,original_segments:[]}};
-    const card=renderToStaticMarkup(React.createElement(ReviewCard,{job,refresh:async()=>{}}));
+    const card=renderToStaticMarkup(React.createElement(ReviewCard,{job,refresh:async()=>{},review:async()=>{}}));
     assert.match(card,/전사 출력 오류로 저장된 인식문 없음/);
     assert.doesNotMatch(card,/\(빈 전사\)|확인한 전사 적용/);
+  }finally{await server.close();}
+});
+
+test('VAD-deferred automatic review shows audio and an enabled manual retry, not silence certainty',async()=>{
+  const server=await createServer({configFile:false,cacheDir:'../.local-state/transcript-test-vite',server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const {ReviewCard}=await server.ssrLoadModule('/src/TranscriptView.tsx');
+    const job={id:'review',kind:'asr_review',status:'done',error:null,start_ms:0,end_ms:3000,audio_url:'/api/recordings/r/audio',seek_seconds:0,request:{chunk_id:'r:0',reason:'빈 전사',original_segments:[]},result:{text:'',warning:'발화 미검출 · 원음 확인 필요',applied:false,metrics:{skipped_no_speech:true}}};
+    const draw=(busyReview=false)=>renderToStaticMarkup(React.createElement(ReviewCard,{job,refresh:async()=>{},review:async()=>{},busyReview}));
+    const card=draw();assert.match(card,/자동 재인식 보류/);assert.match(card,/발화 미검출 · 원음 확인 필요/);
+    assert.doesNotMatch(card,/<p>완료<\/p>/,'deferral must not imply model inference completed');
+    assert.match(card,/aria-label="재인식 구간 원음"/);assert.match(card,/<button type="button">원음 다시 인식<\/button>/);
+    assert.match(draw(true),/<button type="button" disabled="">원음 다시 인식<\/button>/);
+    assert.doesNotMatch(card,/무음 확정|발화 없음 확정/);
   }finally{await server.close();}
 });

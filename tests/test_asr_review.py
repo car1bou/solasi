@@ -60,6 +60,28 @@ class ReviewTests(unittest.IsolatedAsyncioTestCase):
         with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(side_effect=ValueError('모델 검증 실패'))),patch.object(tr,'transcribe_range',new=AsyncMock(side_effect=AssertionError('second inference'))):
             with self.assertRaisesRegex(ValueError,'검증'):await review.process_review(self.db,job,self.root/'runtime')
         self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime'))
+    async def test_auto_qwen_vad_empty_defers_without_overwriting_and_manual_can_retry(self):
+        self.first([]);before=tr.list_transcripts(self.db,self.sid)
+        with patch('lecture_study.qwen_asr.available',return_value=True):job=review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime',activity=[])
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(side_effect=AssertionError('VAD gate must not infer'))),patch.object(tr,'speech_activity',new=AsyncMock(side_effect=AssertionError('reuse successful VAD snapshot'))):
+            result=await review.process_review(self.db,job,self.root/'runtime')
+        self.assertEqual(result['text'],'');self.assertEqual(result['segments'],[]);self.assertTrue(result['metrics']['skipped_no_speech']);self.assertIn('발화 미검출',result['warning']);self.assertIn('원음 다시 인식',result['warning'])
+        self.assertEqual(tr.list_transcripts(self.db,self.sid),before)
+        with self.db:self.db.execute("UPDATE jobs SET status='done',result=? WHERE id=?",(json.dumps(result),job['id']))
+        self.assertIsNone(review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime',activity=[]))
+        with patch('lecture_study.qwen_asr.available',return_value=True):manual=review.queue_review(self.db,self.chunk['id'],automatic=False,runtime=self.root/'runtime',activity=[])
+        self.assertNotEqual(manual['id'],job['id'])
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(return_value={'text':'작은 목소리'}))as worker:
+            decoded=await review.process_review(self.db,manual,self.root/'runtime')
+        worker.assert_awaited_once();self.assertEqual(decoded['text'],'작은 목소리');self.assertEqual(tr.list_transcripts(self.db,self.sid),before)
+    async def test_missing_or_failed_vad_never_suppresses_automatic_qwen_candidate(self):
+        self.first([])
+        with patch('lecture_study.qwen_asr.available',return_value=True):job=review.queue_review(self.db,self.chunk['id'],automatic=True,runtime=self.root/'runtime')
+        with patch('lecture_study.qwen_asr.transcribe',new=AsyncMock(return_value={'text':'확인 후보'}))as worker:
+            self.assertEqual((await review.process_review(self.db,job,self.root/'runtime'))['text'],'확인 후보')
+            job['request']['voice_activity_ranges']=None
+            self.assertEqual((await review.process_review(self.db,job,self.root/'runtime'))['text'],'확인 후보')
+        self.assertEqual(worker.await_count,2)
     async def test_manual_change_makes_candidate_stale(self):
         self.first([{'start_ms':0,'end_ms':1000,'text':'기존'}]);job=review.queue_review(self.db,self.chunk['id'],automatic=False);await self.decode(job)
         tr.edit_segment(self.db,tr.list_transcripts(self.db,self.sid)[0]['id'],'사용자 수정')

@@ -30,3 +30,4 @@ docs/verification/*
 !docs/verification/mac-recovery-speech-20261016.json
 !docs/verification/mac-recovery-followup-20261016.json
 !docs/verification/lecture-material-hints-20261020.json
+!docs/verification/qwen-vad-20261020.json
