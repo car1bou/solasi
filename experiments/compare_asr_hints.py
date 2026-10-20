@@ -1,5 +1,5 @@
 """Offline, fixed-audio vocabulary ablation; raw results stay outside public docs."""
-import argparse,ast,asyncio,hashlib,importlib.metadata,json,os,sys,time,unicodedata
+import argparse,ast,asyncio,hashlib,importlib.metadata,json,os,sys,tempfile,time,unicodedata,wave
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from lecture_study.asr_hints import validate_hotwords
@@ -22,6 +22,33 @@ def vocabulary_counts(reference,text,terms):
     ref,out=normalize(reference),normalize(text)
     present=[t for t in terms if normalize(t)in ref];absent=[t for t in terms if normalize(t)not in ref]
     return {'present_terms':present,'correct_terms':[t for t in present if normalize(t)in out],'absent_terms':absent,'absent_terms_in_output':[t for t in absent if normalize(t)in out]}
+
+
+def occurrence_counts(reference,text,terms):
+    ref,out=normalize(reference),normalize(text)
+    result=[]
+    for term in terms:
+        word=normalize(term)
+        if not word:raise ValueError('Empty normalized vocabulary')
+        expected,observed=ref.count(word),out.count(word)
+        result.append({'term':term,'reference':expected,'output':observed,'missing':max(0,expected-observed),'excess':max(0,observed-expected)})
+    return result
+
+
+def split_pcm(path,folder):
+    folder.mkdir(parents=True,exist_ok=True);parts=[]
+    with wave.open(str(path))as source:
+        if(source.getnchannels(),source.getsampwidth(),source.getframerate(),source.getcomptype())!=(1,2,16000,'NONE'):raise ValueError('Use mono PCM16 16kHz WAV')
+        total=source.getnframes()
+        if not total:raise ValueError('Empty audio')
+        for start in range(0,total,480000):
+            end=min(total,start+480000);raw=source.readframes(end-start)
+            if len(raw)!=2*(end-start):raise ValueError('Truncated PCM')
+            target=folder/f'{start}.wav'
+            with wave.open(str(target),'wb')as handle:
+                handle.setparams((1,2,16000,0,'NONE','not compressed'));handle.writeframes(raw)
+            parts.append({'path':str(target),'start_frame':start,'end_frame':end,'sha256':hashlib.sha256(target.read_bytes()).hexdigest()})
+    return parts
 
 
 async def main(args):
@@ -51,22 +78,31 @@ async def main(args):
         partial=args.output.with_suffix('.json.partial');partial.write_text(json.dumps(report,ensure_ascii=False,indent=2));partial.replace(args.output)
     save()
     for clip in clips:
+      with tempfile.TemporaryDirectory(prefix='solasi-hint-eval-')as folder:
+        parts=split_pcm(Path(clip['path']),Path(folder));evaluation_terms=list(dict.fromkeys(clip['hint_terms']+clip['distractor_terms']))
         for condition in condition_sequence(args.reverse_order):
-            terms=condition_terms(clip,condition);row={'id':clip['id'],'sha256':clip['sha256'],'group':clip['group'],'category':clip['category'],'condition':condition,'terms':terms,'reference':clip['reference'],'hint_provenance':clip['hint_provenance']};started=time.perf_counter()
+            terms=condition_terms(clip,condition);row={'id':clip['id'],'sha256':clip['sha256'],'group':clip['group'],'category':clip['category'],'condition':condition,'terms':terms,'reference':clip['reference'],'hint_provenance':clip['hint_provenance'],'chunks':[]};started=time.perf_counter()
             try:
-                if args.engine=='qwen':
-                    mx.reset_peak_memory();result=model.generate(clip['path'],language='Korean',temperature=0.0,batch_size=1,max_tokens=1024,verbose=False,hotwords=terms)
-                    mx.synchronize();text=result.text;row.update(prompt_tokens=result.prompt_tokens,generation_tokens=result.generation_tokens,mlx_peak_bytes=mx.get_peak_memory(),system_prompt=merge_hotwords(None,terms))
-                    if result.generation_tokens>=1024:raise ValueError('Generation reached token limit')
-                else:
-                    segments=await tr.transcribe_range(Path(clip['path']),0,', '.join(terms),args.runtime,padding_ms=1000)
-                    text=' '.join(s['text']for s in segments);row['segments']=segments
-                row.update(recognized=text,**shared['score'](clip['reference'],text),**shared['character_errors'](clip['reference'],text),**vocabulary_counts(clip['reference'],text,terms),status='ok')
+                for part in parts:
+                    chunk={k:v for k,v in part.items()if k!='path'};stamp=time.perf_counter()
+                    if digest(part['path'])!=part['sha256']:raise ValueError('Changed chunk')
+                    if args.engine=='qwen':
+                        mx.reset_peak_memory();result=model.generate(part['path'],language='Korean',temperature=0.0,batch_size=1,max_tokens=1024,verbose=False,hotwords=terms)
+                        mx.synchronize();chunk.update(text=result.text,prompt_tokens=result.prompt_tokens,generation_tokens=result.generation_tokens,mlx_peak_bytes=mx.get_peak_memory(),system_prompt=merge_hotwords(None,terms))
+                        if result.generation_tokens>=1024:raise ValueError('Generation reached token limit')
+                    else:
+                        segments=await tr.transcribe_range(Path(part['path']),round(part['start_frame']/16),', '.join(terms),args.runtime,padding_ms=1000)
+                        chunk.update(text=' '.join(s['text']for s in segments),segments=segments)
+                    chunk['seconds']=time.perf_counter()-stamp;row['chunks'].append(chunk)
+                text=' '.join(c['text']for c in row['chunks'])
+                scores=shared['score'](clip['reference'],text)if normalize(clip['reference'])else{'edits':len(normalize(text)),'reference_chars':0,'cer':None}
+                row.update(recognized=text,**scores,**shared['character_errors'](clip['reference'],text),**vocabulary_counts(clip['reference'],text,evaluation_terms),term_occurrences=occurrence_counts(clip['reference'],text,evaluation_terms),status='ok')
             except Exception as error:row.update(status='failed',error=str(error))
             row['seconds']=time.perf_counter()-started
             if digest(clip['path'])!=clip['sha256']:raise ValueError('Audio changed during inference')
             report['rows'].append(row);save();print(clip['id'],condition,row['status'],row.get('edits'),round(row['seconds'],3),flush=True)
-    report['completed']=True;save()
+    report['completed']=all(r['status']=='ok'for r in report['rows']);save()
+    if not report['completed']:raise RuntimeError('Incomplete conditions; inspect failed rows')
 
 
 if __name__=='__main__':

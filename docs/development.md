@@ -144,6 +144,8 @@ npm run build
 
 ### 전사·요약 품질
 
+- [실제 강연 슬라이드·긴 발화·생활 소음의 힌트 비교](lecture-material-hints-20261020.md)
+
 - [색인 작업의 임베딩 worker 재사용·양보·실측](embedding-worker-reuse-20261019.md)
 
 - [단계별 시간·중복 변환 제거와 동일 음성 비교](local-stage-performance-20261019.md)
