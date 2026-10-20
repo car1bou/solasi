@@ -8,6 +8,10 @@ struct Point: Decodable { let x: Double; let y: Double; let pressure: Double }
 struct Stroke: Decodable { let tool: String; let width: Double; let points: [Point] }
 struct Input: Decodable { let page_width: Double; let page_height: Double; let strokes: [Stroke] }
 func fail(_ message: String) -> Never { FileHandle.standardError.write(Data(message.utf8)); exit(2) }
+func sourceBox(_ box: CGRect) -> [CGFloat] {
+    let b = box.intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+    return [b.minX, 1-b.maxY, b.width, b.height]
+}
 do {
     let arguments = Array(CommandLine.arguments.dropFirst())
     func argument(_ flag: String) -> String? {
@@ -81,11 +85,12 @@ do {
         let candidates = item.topCandidates(3)
         guard let top = candidates.first else { return nil }
         let b = item.boundingBox
-        return ["bbox": [b.minX, 1-b.maxY, b.width, b.height], "text": top.string,
+        return ["bbox": sourceBox(b), "text": top.string,
+                "edge_touching": b.minX < 0.015 || b.minY < 0.015 || b.maxX > 0.985 || b.maxY > 0.985,
                 "candidates": candidates.map { ["text": $0.string, "score": $0.confidence] as [String: Any] }]
     }
     let suffix = argument("--page-source") == nil ? "" : "/page"
-    let result: [String: Any] = ["engine": "apple-vision-accurate-v\(request.revision)\(suffix)", "revision": request.revision,
+    let result: [String: Any] = ["engine": "apple-vision-accurate-v\(request.revision)/bounds-v2\(suffix)", "revision": request.revision,
                                "languages": request.recognitionLanguages, "regions": regions]
     FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: result))
 } catch { fail(error.localizedDescription) }

@@ -1086,7 +1086,7 @@ def create_app(config: AppConfig) -> FastAPI:
     class InkRecognitionInput(Input):
         document_sha256:str=Field(pattern=r'^[a-f0-9]{64}$')
         force:bool=False
-        engine:Literal['vision','local']='vision'
+        engine:Literal['vision','local','gemma']='vision'
 
     @app.post('/api/courses/{cid}/assets/{aid}/pages/{page}/handwriting',status_code=202)
     async def handwriting_start(cid:str,aid:str,page:int,body:InkRecognitionInput):
@@ -1099,7 +1099,7 @@ def create_app(config: AppConfig) -> FastAPI:
             await wait_for_transcription(db,job['id'],include_recording=True)
             async with app.state.generation_lock:
                 await wait_for_transcription(db,job['id'],include_recording=True)
-                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True)) if body.engine=='local' else await recognize_ink(snapshot)
+                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True),model='gemma4:12b' if body.engine=='gemma' else 'qwen3.5:4b') if body.engine!='vision' else await recognize_ink(snapshot)
                 return save_recognition(db,snapshot,result)
         return launch_job(app,job,operation)
 

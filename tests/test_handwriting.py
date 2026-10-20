@@ -153,3 +153,90 @@ class HandwritingTests(unittest.TestCase):
         result=asyncio.run(recognize_local_ink(self.snapshot(),manager))
         self.assertEqual(result['regions'],[])
         manager.status.assert_not_called();manager.generate.assert_not_called()
+
+    def test_local_recognition_literal_input_and_warning_survive(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from PIL import Image
+        from lecture_study.handwriting import recognize_local_ink
+        async def render(snapshot,image_path=None):
+            Image.new('RGB',(400,200),'white').save(image_path)
+            return {'regions':[{'edge_touching':True}]}
+        async def generate(provider,messages,images,*args,**kwargs):
+            with Image.open(images[0])as image:self.assertEqual(image.size,(400,200)if provider.model=='gemma4:12b'else(1200,600))
+            self.assertIn('문장을 완성하지',messages[0]['content'])
+            self.assertIn('[판독 불가]',messages[0]['content'])
+            self.assertIn('수학 지식',messages[0]['content'])
+            return {'text':'F(x)=P(X≤x)','finish_reason':'length'}
+        manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+            result=asyncio.run(recognize_local_ink(self.snapshot(),manager,model='gemma4:12b'))
+        self.assertEqual(manager.generate.call_args.args[0].model,'gemma4:12b')
+        self.assertTrue(result['edge_touching']);self.assertEqual(result['finish_reason'],'length')
+        self.assertIn('/literal-v2',result['engine'])
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+            asyncio.run(recognize_local_ink(self.snapshot(),manager))
+        stored=save_recognition(self.db,self.snapshot(),result)
+        self.assertTrue(stored['result']['edge_touching']);self.assertFalse(self.ids())
+
+    def test_local_recognition_does_not_downsample_or_accept_arbitrary_model(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from PIL import Image
+        from lecture_study.handwriting import recognize_local_ink
+        async def render(snapshot,image_path=None):
+            Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
+        async def generate(provider,messages,images,*args,**kwargs):
+            with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1200))
+            return {'text':'x'}
+        manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+            asyncio.run(recognize_local_ink(self.snapshot(),manager))
+            with self.assertRaises(ValueError):asyncio.run(recognize_local_ink(self.snapshot(),manager,model='unknown'))
+
+    def test_imported_image_uses_original_pixels_before_one_upscale(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from PIL import Image
+        from lecture_study.handwriting import recognize_local_ink
+        self.mark_imported_handwriting();self.save([],1)
+        async def render(snapshot,image_path=None):
+            Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
+        async def generate(provider,messages,images,*args,**kwargs):
+            with Image.open(images[0])as image:self.assertEqual(image.size,(240,120))
+            return {'text':'x'}
+        manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
+        snapshot=self.snapshot();disguised=Path(self.temp.name)/'image.pdf';disguised.write_bytes(Path(snapshot['page_source']).read_bytes())
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+            asyncio.run(recognize_local_ink(snapshot,manager))
+            asyncio.run(recognize_local_ink(snapshot|{'page_source':str(disguised)},manager))
+
+    def test_local_pdf_content_with_image_extension_keeps_native_render(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from PIL import Image
+        from lecture_study.handwriting import recognize_local_ink
+        source=Path(self.temp.name)/'disguised.png';source.write_bytes(b'%PDF-1.7\n')
+        snapshot=self.snapshot()|{'ink':[],'page_source':str(source)}
+        async def render(snapshot,image_path=None):
+            Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
+        async def generate(provider,messages,images,*args,**kwargs):
+            with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1200))
+            return {'text':'x'}
+        manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):asyncio.run(recognize_local_ink(snapshot,manager))
+
+    def test_large_photo_keeps_bounded_native_render(self):
+        import asyncio
+        from unittest.mock import AsyncMock,patch
+        from PIL import Image
+        from lecture_study.handwriting import recognize_local_ink
+        source=Path(self.temp.name)/'large.jpg';Image.new('RGB',(6000,4000),'white').save(source)
+        snapshot=self.snapshot()|{'ink':[],'page_source':str(source)}
+        async def render(snapshot,image_path=None):
+            Image.new('RGB',(2400,1600),'white').save(image_path);return {'regions':[]}
+        async def generate(provider,messages,images,*args,**kwargs):
+            with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1600))
+            return {'text':'x'}
+        manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
+        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):asyncio.run(recognize_local_ink(snapshot,manager))

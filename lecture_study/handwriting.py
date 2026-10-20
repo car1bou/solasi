@@ -107,18 +107,32 @@ async def recognize_ink(snapshot,image_path=None):
             process.kill();await process.wait()
 
 
-async def recognize_local_ink(snapshot,manager,before_local=None):
+async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:4b'):
     from .models import ProviderConfig
+    if model not in ('qwen3.5:4b','gemma4:12b'):raise ValueError('비교한 손글씨 인식 모델을 선택하세요')
     strokes=ink_payload(snapshot)['strokes']
-    if not strokes and not snapshot.get('page_source'):return {'engine':'qwen3.5:4b','regions':[]}
+    if not strokes and not snapshot.get('page_source'):return {'engine':model,'regions':[]}
     with tempfile.TemporaryDirectory(prefix='solasi-ink-') as folder:
         image=Path(folder)/'ink.png'
-        await recognize_ink(snapshot,image_path=image)
-        identity=await manager.status('qwen3.5:4b')
-        result=await manager.generate(ProviderConfig(provider='local',model='qwen3.5:4b',vision=True,context_limit=8192),[{'role':'system','content':'보이는 손글씨를 그대로 읽으세요. 원문에 없는 말을 보완하거나 설명·정정하지 마세요. 판독할 수 없는 부분은 [판독 불가]로 남기세요.'},{'role':'user','content':'손글씨를 읽는 순서대로 전사하세요.'}],[image],None,output_limit=2048,before_local=before_local)
+        vision=await recognize_ink(snapshot,image_path=image)
+        from PIL import Image,ImageOps,UnidentifiedImageError
+        source=snapshot.get('page_source')
+        if source and not strokes:
+            try:
+                with Image.open(source)as original:
+                    if max(original.size)<2048:ImageOps.exif_transpose(original).convert('RGB').save(image)
+            except UnidentifiedImageError:pass  # PDF pages use the native renderer, regardless of extension.
+        with Image.open(image)as original:
+            if model=='qwen3.5:4b' and max(original.size)<2048:
+                scale=min(3,2048/max(original.size))
+                original.resize(tuple(round(d*scale)for d in original.size),Image.Resampling.LANCZOS).save(image)
+        identity=await manager.status(model)
+        result=await manager.generate(ProviderConfig(provider='local',model=model,vision=True,context_limit=8192),[{'role':'system','content':'보이는 문자와 수식만 그대로 전사하세요. 설명하거나 문장을 완성하지 마세요. 이미지 가장자리에서 잘렸거나 판독할 수 없는 부분은 [판독 불가]로 남기세요. 수학 지식으로 기호·단어를 정정하거나 추가하지 마세요. 부호·첨자·분수·극한의 방향을 원본 그대로 보존하고, 도형의 관계는 추측하지 마세요.'},{'role':'user','content':'이 이미지의 글을 읽는 순서대로 그대로 전사하세요.'}],[image],None,output_limit=2048,before_local=before_local)
+    metadata={'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{}),'edge_touching':any(r.get('edge_touching')for r in vision.get('regions',[]))}
+    engine=model+'/'+identity['digest']+'/literal-v2'
     if snapshot.get('page_source'):
-        return {'engine':'qwen3.5:4b/'+identity['digest']+'/page','regions':[{'bbox':[0,0,1,1],'text':result['text'],'candidates':[]}],'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{})}
+        return {'engine':engine+'/page','regions':[{'bbox':[0,0,1,1],'text':result['text'],'candidates':[]}],**metadata}
     points=[p for s in strokes for p in s['points']];padding=max(s['width'] for s in strokes)
     x=max(0,min(p['x'] for p in points)-padding);y=max(0,min(p['y'] for p in points)-padding)
     right=min(1,max(p['x'] for p in points)+padding);bottom=min(1,max(p['y'] for p in points)+padding)
-    return {'engine':'qwen3.5:4b/'+identity['digest'],'regions':[{'bbox':[x,y,right-x,bottom-y],'text':result['text'],'candidates':[]}],'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{})}
+    return {'engine':engine,'regions':[{'bbox':[x,y,right-x,bottom-y],'text':result['text'],'candidates':[]}],**metadata}

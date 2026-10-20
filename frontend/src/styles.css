@@ -553,3 +553,5 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 
 /* Keep saved ink and the page image on the same scale in short source dialogs. */
 .source-dialog .ink-region-preview img{max-height:none;height:auto}
+
+.knowledge-candidate{overflow-wrap:anywhere}
