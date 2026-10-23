@@ -65,6 +65,41 @@ class ChunkRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([(a,b)for a,b,_ in calls],[(0,1000),(1000,2000),(2000,3000),(0,2000),(0,3000),(1000,3000)])
         self.assertTrue(all(options['padding_ms']==1000 and options['timings']=={}for _,_,options in calls));self.assertEqual(digest(self.source),self.clip['sha256'])
 
+    async def test_disabled_vad_reaches_native_command_without_loading_vad(self):
+        import json
+        from pathlib import Path
+        from unittest.mock import patch
+        from experiments.compare_chunk_context import main
+        self.args.overlap_ms=[0];self.args.vad_enabled=False;calls=[]
+        async def native(argv,**options):
+            calls.append(argv)
+            self.assertNotIn('--vad',argv);self.assertNotIn('-vm',argv)
+            for option in ('--vad-speech-pad-ms','--vad-min-speech-duration-ms'):self.assertNotIn(option,argv)
+            Path(str(argv[argv.index('-of')+1])+'.json').write_text(json.dumps({'transcription':[{'offsets':{'from':0,'to':1000},'text':'구간'+str(len(calls)-1)}]}))
+            return b''
+        with patch('lecture_study.transcription.command',side_effect=native),patch('lecture_study.transcription.verify_model',side_effect=AssertionError('VAD must not be required')):
+            await main(self.args)
+        result=json.loads(self.args.output.read_text());self.assertTrue(result['completed']);self.assertFalse(result['vad_enabled']);self.assertEqual(len(calls),3)
+        self.assertEqual(result['rows'][0]['edits'],0);self.assertFalse(result['rows'][0]['vad_enabled'])
+
+    async def test_digital_zero_skip_is_explicit_and_equal_in_both_conditions(self):
+        import json,wave
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_chunk_context import main,digest
+        with wave.open(str(self.source),'wb')as w:w.setparams((1,2,16000,0,'NONE','not compressed'));w.writeframes(bytes(96000))
+        self.clip.update(sha256=digest(self.source),reference_kind='silence',reference='');self.args.manifest.write_text(json.dumps({'completed':True,'clips':[self.clip]}));self.args.overlap_ms=[0]
+        for enabled in (True,False):
+            self.args.vad_enabled=enabled;self.args.output=self.root/(str(enabled)+'.json')
+            with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(side_effect=AssertionError('digital zero must skip equally'))):await main(self.args)
+            row=json.loads(self.args.output.read_text())['rows'][0];self.assertEqual(row['output_chars'],0)
+            self.assertTrue(all(c['skipped_digital_silence']for c in row['chunks']))
+
+    async def test_invalid_vad_condition_is_rejected_before_output_creation(self):
+        from experiments.compare_chunk_context import main
+        self.args.vad_enabled='false'
+        with self.assertRaises(ValueError):await main(self.args)
+        self.assertFalse(self.args.output.exists())
+
     async def test_partial_reference_is_not_scored_as_complete(self):
         import json
         from unittest.mock import AsyncMock,patch
