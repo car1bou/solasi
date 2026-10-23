@@ -118,6 +118,54 @@ class HintRunnerTests(unittest.TestCase):
         model.assert_not_called()
         rows=json.loads(self.args.output.read_text())['rows'];self.assertTrue(all(r['recognized']==''and r['chunks'][0]['skipped_digital_silence']for r in rows))
 
+    def test_whisper_boundary_padding_is_explicit_and_recorded(self):
+        import asyncio,json
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        self.args.conditions=['none'];self.args.whisper_padding_ms=2000
+        with patch('lecture_study.transcription.transcribe_range',new=AsyncMock(return_value=[]))as model:asyncio.run(main(self.args))
+        self.assertEqual(model.call_args.kwargs,{'padding_ms':2000})
+        self.assertEqual(json.loads(self.args.output.read_text())['whisper_vad'],{'mode':'native','padding_ms':2000})
+
+    def test_whisper_full_gate_retains_same_pcm_and_only_empty_activity_skips(self):
+        import asyncio,json
+        from pathlib import Path
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        self.args.conditions=['none'];self.args.whisper_vad='gate-full'
+        for name,activity in [('speech',[{'start_ms':80,'end_ms':100}]),('silent',[])]:
+            self.args.output=Path(self.folder.name)/(name+'.json')
+            with patch('lecture_study.transcription.speech_activity',new=AsyncMock(return_value=activity)),patch('lecture_study.transcription.transcribe_range',new=AsyncMock(return_value=[]))as model:asyncio.run(main(self.args))
+            row=json.loads(self.args.output.read_text())['rows'][0];chunk=row['chunks'][0]
+            self.assertEqual(chunk['vad_activity'],activity)
+            if activity:
+                self.assertEqual(model.call_args.kwargs,{'padding_ms':1000,'vad_enabled':False})
+                self.assertEqual(chunk['start_frame'],0);self.assertEqual(chunk['end_frame'],1600)
+                self.assertEqual(chunk['sha256'],row['sha256'])
+            else:model.assert_not_called();self.assertTrue(chunk['skipped_no_speech'])
+
+    def test_whisper_gate_unavailable_or_failed_is_not_silence(self):
+        import asyncio,json
+        from pathlib import Path
+        from unittest.mock import AsyncMock,patch
+        from experiments.compare_asr_hints import main
+        self.args.conditions=['none'];self.args.whisper_vad='gate-full'
+        for name,options in [('missing',{'return_value':None}),('error',{'side_effect':ValueError('activity failed')})]:
+            self.args.output=Path(self.folder.name)/(name+'.json')
+            with patch('lecture_study.transcription.speech_activity',new=AsyncMock(**options)),patch('lecture_study.transcription.transcribe_range',new=AsyncMock(return_value=[]))as model,self.assertRaises(RuntimeError):asyncio.run(main(self.args))
+            model.assert_not_called();result=json.loads(self.args.output.read_text());self.assertFalse(result['completed']);self.assertEqual(result['rows'][0]['status'],'failed')
+
+    def test_invalid_whisper_options_fail_before_inference(self):
+        import asyncio
+        from experiments.compare_asr_hints import main
+        for name,value in [('whisper_padding_ms',-1),('whisper_padding_ms',True),('whisper_vad','unknown')]:
+            setattr(self.args,name,value)
+            with self.assertRaises(ValueError):asyncio.run(main(self.args))
+            self.assertFalse(self.args.output.exists());delattr(self.args,name)
+        self.args.engine='qwen';self.args.whisper_vad='gate-full'
+        with self.assertRaisesRegex(ValueError,'Unused Whisper'):asyncio.run(main(self.args))
+        self.assertFalse(self.args.output.exists())
+
     def test_qwen_vad_gate_skips_inference_only_for_validated_empty_activity(self):
         import asyncio,hashlib,json,sys
         from pathlib import Path

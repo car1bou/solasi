@@ -91,6 +91,9 @@ async def main(args):
     for clip in clips:
         if digest(clip['path'])!=clip['sha256']:raise ValueError('Changed audio')
         for condition in conditions:condition_terms(clip,condition)
+    whisper_mode=getattr(args,'whisper_vad','native');padding=getattr(args,'whisper_padding_ms',1000)
+    if whisper_mode not in ('native','gate-full')or type(padding)is not int or padding not in (1000,2000):raise ValueError('Invalid Whisper boundary settings')
+    if args.engine!='whisper'and (whisper_mode!='native'or padding!=1000):raise ValueError('Unused Whisper settings')
     vad_mode=getattr(args,'qwen_vad','off');vad_path=getattr(args,'vad_activity',None);vad=None
     if vad_mode!='off':
         if args.engine!='qwen'or vad_path is None:raise ValueError('Qwen VAD requires frozen activity')
@@ -103,6 +106,7 @@ async def main(args):
     shared={'unicodedata':unicodedata};exec(compile(ast.Module(body=[metrics[n]for n in('normalize','edit_distance','score','character_errors')],type_ignores=[]),'shared_metrics','exec'),shared)
     report={'completed':False,'engine':args.engine,'manifest_sha256':digest(args.manifest),'script_sha256':digest(__file__),'validator_sha256':digest(Path(__file__).resolve().parents[1]/'lecture_study/asr_hints.py'),'condition_order':conditions,'rows':[],'timing_scope':'inference per call; Qwen one shared model load, Whisper per-call normalization/model load; compare within each engine','versions':{n:importlib.metadata.version(n)for n in('mlx','mlx-audio','transformers')}}
     report['qwen_vad']={'mode':vad_mode,'activity_sha256':digest(vad_path)if vad else None,'detector':vad['detector']if vad else None,'margin_ms':1000 if vad_mode=='trim'else 0,'timing_scope':'VAD precomputed once per input, not included in inference seconds'}
+    report['whisper_vad']={'mode':whisper_mode,'padding_ms':padding}if args.engine=='whisper'else None
     os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',HF_HUB_DISABLE_TELEMETRY='1')
     if args.engine=='qwen':
         from lecture_study import qwen_asr
@@ -139,7 +143,14 @@ async def main(args):
                             chunk['seconds']=time.perf_counter()-stamp;row['chunks'].append(chunk)
                             raise ValueError('Generation reached token limit')
                     else:
-                        segments=await tr.transcribe_range(Path(part['path']),round(part['start_frame']/16),', '.join(terms),args.runtime,padding_ms=1000)
+                        activity=None
+                        if whisper_mode=='gate-full':
+                            vad_started=time.perf_counter();activity=await tr.speech_activity(Path(part['path']),args.runtime)
+                            if not isinstance(activity,list):raise ValueError('VAD unavailable, not silence')
+                            chunk.update(vad_activity=activity,vad_seconds=time.perf_counter()-vad_started,skipped_no_speech=not activity)
+                        options={'padding_ms':padding}
+                        if whisper_mode=='gate-full':options['vad_enabled']=False
+                        segments=[]if activity==[]else await tr.transcribe_range(Path(part['path']),round(part['start_frame']/16),', '.join(terms),args.runtime,**options)
                         chunk.update(text=' '.join(s['text']for s in segments),segments=segments)
                     chunk['seconds']=time.perf_counter()-stamp;row['chunks'].append(chunk)
                 text=' '.join(c['text']for c in row['chunks'])
@@ -156,5 +167,6 @@ async def main(args):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--engine',choices=['whisper','qwen'],required=True);parser.add_argument('--manifest',type=Path,required=True);parser.add_argument('--runtime',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--reverse-order',action='store_true')
     parser.add_argument('--qwen-vad',choices=['off','gate','trim'],default='off');parser.add_argument('--vad-activity',type=Path)
+    parser.add_argument('--whisper-vad',choices=['native','gate-full'],default='native');parser.add_argument('--whisper-padding-ms',type=int,choices=[1000,2000],default=1000)
     parser.add_argument('--conditions',nargs='+',choices=['none','relevant','distractor'],help='Run a fixed subset; default compares all three')
     asyncio.run(main(parser.parse_args()))

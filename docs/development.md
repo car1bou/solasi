@@ -144,6 +144,7 @@ npm run build
 
 ### 전사·요약 품질
 
+- [VAD 1초·2초·전체 구간 문맥 보존 비교](vad-context-20261023.md)
 - [로컬 소음 제거·앞구절 누락의 쌍별 비교와 적용 판정](local-denoise-20261021.md)
 - [저음량 한국어·생활 소음의 VAD 미검출·수동 후보 비교](quiet-korean-vad-20261021.md)
 - [같은 한국어 음성의 Qwen VAD 비교·자동 후보 보류](qwen-vad-20261020.md)
