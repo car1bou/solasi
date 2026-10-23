@@ -144,6 +144,7 @@ npm run build
 
 ### 전사·요약 품질
 
+- [발화 사이 200ms·400ms 쉼을 이용한 분할 경계 비교](speech-boundaries-20261023.md)
 - [긴 한국어 원음의 구간 앞뒤 0·1·2초 겹침 비교](chunk-overlap-20261023.md)
 - [VAD 1초·2초·전체 구간 문맥 보존 비교](vad-context-20261023.md)
 - [로컬 소음 제거·앞구절 누락의 쌍별 비교와 적용 판정](local-denoise-20261021.md)
