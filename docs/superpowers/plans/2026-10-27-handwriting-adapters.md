@@ -71,7 +71,7 @@
 - [x] 전체 Python 회귀 검사, frontend test/check, helper 컴파일과 frozen engine에 새 adapter가 포함되는지 확인한다. 실패는 이름과 원인을 기록한다.
 - [x] 개발 문서에 대체 renderer/recognizer 연결 예제와 실제 다른 OS 구현·MLX 실행은 미검증임을 명시한다.
 - [x] 독립 코드·증거 검토를 받고 지적을 해결한다.
-- [ ] 정확한 변경 파일만 커밋·`origin main`에 푸시하고 원격 SHA·작업 트리를 확인한다.
+- [x] 정확한 변경 파일만 커밋·`origin main`에 푸시하고 원격 SHA·작업 트리를 확인한다.
 
 ## 실행 방식
 
@@ -80,3 +80,5 @@
 ## 검증 결과
 
 [Mac 실제 대조·한계](../../handwriting-adapters-validation-20261027.md). Python 674통과·5선택생략, frontend 104통과·검사·빌드 통과. frozen 엔진과 Mac WKWebView에서 승인·검색·초안 복구를 확인했다. 현재 설치 앱 교체와 Windows·Android 실행은 이번 검증에 포함하지 않았다.
+
+구현 커밋 `60aab75a4133d8f50f1f97748de26c8deca379ee`를 main에 반영하고 원격 SHA 일치를 확인했다. 사용자 발표자료·기존 보관함·모델은 커밋하지 않았다.
