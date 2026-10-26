@@ -153,10 +153,10 @@ class HandwritingTests(unittest.TestCase):
         import asyncio
         from unittest.mock import AsyncMock,patch
         from lecture_study.handwriting import recognize_local_ink
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             image_path.write_bytes(png_fixture());return {'engine':'vision','regions':[]}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(return_value={'text':'교착 상태','usage':{}})
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[]})):
             result=asyncio.run(recognize_local_ink(self.snapshot(),manager))
         self.assertEqual(result['regions'][0]['text'],'교착 상태')
         self.assertGreaterEqual(result['regions'][0]['bbox'][0],0)
@@ -177,7 +177,7 @@ class HandwritingTests(unittest.TestCase):
         from unittest.mock import AsyncMock,patch
         from PIL import Image
         from lecture_study.handwriting import recognize_local_ink
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             Image.new('RGB',(400,200),'white').save(image_path)
             return {'regions':[{'edge_touching':True}]}
         async def generate(provider,messages,images,*args,**kwargs):
@@ -187,12 +187,12 @@ class HandwritingTests(unittest.TestCase):
             self.assertIn('수학 지식',messages[0]['content'])
             return {'text':'F(x)=P(X≤x)','finish_reason':'length'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[{'edge_touching':True}]})):
             result=asyncio.run(recognize_local_ink(self.snapshot(),manager,model='gemma4:12b'))
         self.assertEqual(manager.generate.call_args.args[0].model,'gemma4:12b')
         self.assertTrue(result['edge_touching']);self.assertEqual(result['finish_reason'],'length')
         self.assertIn('/literal-v2',result['engine'])
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[{'edge_touching':True}]})):
             asyncio.run(recognize_local_ink(self.snapshot(),manager))
         stored=save_recognition(self.db,self.snapshot(),result)
         self.assertTrue(stored['result']['edge_touching']);self.assertFalse(self.ids())
@@ -202,13 +202,13 @@ class HandwritingTests(unittest.TestCase):
         from unittest.mock import AsyncMock,patch
         from PIL import Image
         from lecture_study.handwriting import recognize_local_ink
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
         async def generate(provider,messages,images,*args,**kwargs):
             with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1200))
             return {'text':'x'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[]})):
             asyncio.run(recognize_local_ink(self.snapshot(),manager))
             with self.assertRaises(ValueError):asyncio.run(recognize_local_ink(self.snapshot(),manager,model='unknown'))
 
@@ -218,14 +218,14 @@ class HandwritingTests(unittest.TestCase):
         from PIL import Image
         from lecture_study.handwriting import recognize_local_ink
         self.mark_imported_handwriting();self.save([],1)
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
         async def generate(provider,messages,images,*args,**kwargs):
             with Image.open(images[0])as image:self.assertEqual(image.size,(240,120))
             return {'text':'x'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
         snapshot=self.snapshot();disguised=Path(self.temp.name)/'image.pdf';disguised.write_bytes(Path(snapshot['page_source']).read_bytes())
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[]})):
             asyncio.run(recognize_local_ink(snapshot,manager))
             asyncio.run(recognize_local_ink(snapshot|{'page_source':str(disguised)},manager))
 
@@ -236,13 +236,13 @@ class HandwritingTests(unittest.TestCase):
         from lecture_study.handwriting import recognize_local_ink
         source=Path(self.temp.name)/'disguised.png';source.write_bytes(b'%PDF-1.7\n')
         snapshot=self.snapshot()|{'ink':[],'page_source':str(source)}
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             Image.new('RGB',(2400,1200),'white').save(image_path);return {'regions':[]}
         async def generate(provider,messages,images,*args,**kwargs):
             with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1200))
             return {'text':'x'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):asyncio.run(recognize_local_ink(snapshot,manager))
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[]})):asyncio.run(recognize_local_ink(snapshot,manager))
 
     def test_large_photo_keeps_bounded_native_render(self):
         import asyncio
@@ -251,10 +251,10 @@ class HandwritingTests(unittest.TestCase):
         from lecture_study.handwriting import recognize_local_ink
         source=Path(self.temp.name)/'large.jpg';Image.new('RGB',(6000,4000),'white').save(source)
         snapshot=self.snapshot()|{'ink':[],'page_source':str(source)}
-        async def render(snapshot,image_path=None):
+        async def render(payload,image_path,**context):
             Image.new('RGB',(2400,1600),'white').save(image_path);return {'regions':[]}
         async def generate(provider,messages,images,*args,**kwargs):
             with Image.open(images[0])as image:self.assertEqual(image.size,(2400,1600))
             return {'text':'x'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
-        with patch('lecture_study.handwriting.recognize_ink',side_effect=render):asyncio.run(recognize_local_ink(snapshot,manager))
+        with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[]})):asyncio.run(recognize_local_ink(snapshot,manager))

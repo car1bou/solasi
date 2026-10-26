@@ -1,0 +1,103 @@
+{
+  "date": "2026-10-27",
+  "base": "9e8ab0dea7ea04879a52d5481a61305641575938",
+  "native_equivalence": [
+    {
+      "case": "ink",
+      "size_matches": true,
+      "pixels_match": true,
+      "vision_json_matches": true,
+      "region_count": 0,
+      "engine": "apple-vision-accurate-v3/bounds-v2"
+    },
+    {
+      "case": "image",
+      "size_matches": true,
+      "pixels_match": true,
+      "vision_json_matches": true,
+      "region_count": 78,
+      "engine": "apple-vision-accurate-v3/bounds-v2/page"
+    },
+    {
+      "case": "composite",
+      "size_matches": true,
+      "pixels_match": true,
+      "vision_json_matches": true,
+      "region_count": 77,
+      "engine": "apple-vision-accurate-v3/bounds-v2/page"
+    },
+    {
+      "case": "pdf",
+      "size_matches": true,
+      "pixels_match": true,
+      "vision_json_matches": true,
+      "region_count": 41,
+      "engine": "apple-vision-accurate-v3/bounds-v2/page"
+    }
+  ],
+  "local_models": [
+    {
+      "model": "qwen3.5:4b",
+      "input_pixels_messages_options_identical": true,
+      "result_except_usage_timing_identical": true,
+      "engine": "qwen3.5:4b/1e9f4174647623f03c75d972c6b26666fb45ef909d4c51092262d50a20e642ad/literal-v2/page",
+      "edge_touching": true,
+      "finish_reason": "stop"
+    },
+    {
+      "model": "gemma4:12b",
+      "input_pixels_messages_options_identical": true,
+      "result_except_usage_timing_identical": true,
+      "engine": "gemma4:12b/7cbffbae16ddc2fd76c6b19fc1a9ac8c1686eff0aa0e128f274b199b57f6b532/literal-v2/page",
+      "edge_touching": true,
+      "finish_reason": "stop",
+      "note": "Old actual model output compared with new actual model; input replay checks old preprocessing, compiled unchanged native helper avoids Swift interpreter resource pressure."
+    }
+  ],
+  "native_workflow": {
+    "engine": "frozen production engine + production WorkerBridge/AppResources + React WKWebView fixture",
+    "candidate_vision_regions": 11,
+    "unapproved_search_excluded": true,
+    "edited_draft_recovered_after_new_app_and_worker": true,
+    "approved_ui_and_keyword_search": true,
+    "original_note_and_strokes_preserved": true,
+    "changed_ink_excluded_from_current_search": true,
+    "old_source_and_ink_version_preserved": true,
+    "recognition_engine": "apple-vision-accurate-v3/bounds-v2/page",
+    "keyword_only_runtime": true,
+    "user_vault_modified": false
+  },
+  "checks": {
+    "python_total": 679,
+    "python_passed": 674,
+    "python_skipped": 5,
+    "frontend_passed": 104,
+    "typescript": true,
+    "vite_build": true,
+    "frozen_build": true,
+    "frozen_self_check": {
+      "frozen": true,
+      "versions": {
+        "mlx": "0.32.4",
+        "mlx-metal": "0.32.4",
+        "mlx-vlm": "0.7.8",
+        "transformers": "5.20.0",
+        "llguidance": "1.9.1",
+        "liteparse": "2.16.0",
+        "mlx-audio": "0.5.8"
+      },
+      "runtime_manifest": "present"
+    },
+    "frozen_handwriting_modules": [
+      "lecture_study.handwriting",
+      "lecture_study.handwriting_macos"
+    ]
+  },
+  "limits": [
+    "one mixed note per local model; no accuracy improvement claim",
+    "native live search used keyword mode without embedding weights",
+    "no Windows/Android implementation or hardware execution",
+    "installed user app was not replaced; actual vault unchanged",
+    "no new sleep/force-quit test in this refactor"
+  ]
+}

@@ -76,6 +76,11 @@ do {
         guard let png = rep.representation(using: .png, properties: [:]) else { fail("이미지 저장 실패") }
         try png.write(to: URL(fileURLWithPath: output), options: .atomic)
     }
+    if arguments.contains("--render-only") {
+        guard argument("--image") != nil else { fail("이미지 저장 경로를 확인하세요") }
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: ["renderer": "macos-coregraphics-v1", "width": image.width, "height": image.height]))
+        exit(0)
+    }
     let request = VNRecognizeTextRequest(); request.recognitionLevel = .accurate; request.usesLanguageCorrection = false
     let languages = try request.supportedRecognitionLanguages()
     request.recognitionLanguages = ["ko-KR", "en-US"].filter { languages.contains($0) }

@@ -19,6 +19,8 @@ Mac 기본 실행은 앱에 포함한 화면·Python 작업 엔진·직접 모�
 
 Python 패키지와 개발용 실행 명령 이름은 `lecture-study`입니다. 앱 이름은 Solasi입니다.
 
+필기 이미지 생성기·인식 엔진의 교체 접점과 다른 OS 확장 범위는 [필기 adapter 개발 안내](handwriting-adapters.md)를 참고하세요.
+
 ## Mac 앱 빌드
 
 ### 1. 빌드 환경

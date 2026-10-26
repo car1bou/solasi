@@ -1,5 +1,5 @@
 """Local ink recognition proposals, separate from user notes and approved sources."""
-import asyncio,hashlib,json,math,sys,tempfile
+import hashlib,json,math,tempfile
 from pathlib import Path
 from fastapi import HTTPException
 from .db import data_dir,new_id,now
@@ -89,32 +89,32 @@ def reject_recognition(db,ident):
     return get_recognition(db,ident)
 
 
-async def recognize_ink(snapshot,image_path=None):
+async def recognize_ink(snapshot,image_path=None,*,renderer=None,recognizer=None):
     payload=ink_payload(snapshot)
-    if not payload['strokes'] and not snapshot.get('page_source'):return {'engine':'apple-vision-accurate-v3','regions':[]}
-    if sys.platform!='darwin':raise ValueError('손글씨 인식은 현재 Mac에서 지원합니다')
-    binary=Path(sys.executable).parent/'HandwritingRecognition'
-    command=[str(binary)] if getattr(sys,'frozen',False) else ['/usr/bin/swift','-module-cache-path',str((Path(tempfile.gettempdir())/'solasi-handwriting-swift-cache').resolve()),str(Path(__file__).parent.parent/'macos/HandwritingRecognition.swift')]
-    if image_path is not None:command+=['--image',str(image_path)]
-    if snapshot.get('page_source'):command+=['--page-source',snapshot['page_source'],str(snapshot['page'])]
-    process=await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
-    try:
-        output,error=await asyncio.wait_for(process.communicate(json.dumps(payload).encode()),90)
-        if process.returncode:raise ValueError('로컬 손글씨 인식 실패: '+error.decode(errors='replace')[-200:])
-        return json.loads(output)
-    finally:
-        if process.returncode is None:
-            process.kill();await process.wait()
+    if not payload['strokes'] and not snapshot.get('page_source'):return {'engine':'apple-vision-accurate-v3'if renderer is None and recognizer is None else'empty-ink','regions':[]}
+    if renderer is None or recognizer is None:
+        from . import handwriting_macos
+        renderer=renderer or handwriting_macos.render_ink;recognizer=recognizer or handwriting_macos.recognize_image
+    with tempfile.TemporaryDirectory(prefix='solasi-ink-')as folder:
+        image=Path(image_path)if image_path is not None else Path(folder)/'ink.png'
+        await renderer(payload,image,page_source=snapshot.get('page_source'),page=snapshot['page'])
+        result=await recognizer(image)
+    if snapshot.get('page_source')and not result['engine'].endswith('/page'):result={**result,'engine':result['engine']+'/page'}
+    return result
 
 
-async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:4b'):
-    from .models import ProviderConfig
+async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:4b',*,renderer=None,diagnostic_recognizer=None):
     if model not in ('qwen3.5:4b','gemma4:12b'):raise ValueError('비교한 손글씨 인식 모델을 선택하세요')
     strokes=ink_payload(snapshot)['strokes']
     if not strokes and not snapshot.get('page_source'):return {'engine':model,'regions':[]}
+    if renderer is None:
+        from . import handwriting_macos
+        renderer=handwriting_macos.render_ink
+        diagnostic_recognizer=diagnostic_recognizer or handwriting_macos.recognize_image
     with tempfile.TemporaryDirectory(prefix='solasi-ink-') as folder:
         image=Path(folder)/'ink.png'
-        vision=await recognize_ink(snapshot,image_path=image)
+        await renderer(ink_payload(snapshot),image,page_source=snapshot.get('page_source'),page=snapshot['page'])
+        diagnostic=await diagnostic_recognizer(image)if diagnostic_recognizer is not None else None
         from PIL import Image,ImageOps,UnidentifiedImageError
         source=snapshot.get('page_source')
         if source and not strokes:
@@ -126,13 +126,21 @@ async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:
             if model=='qwen3.5:4b' and max(original.size)<2048:
                 scale=min(3,2048/max(original.size))
                 original.resize(tuple(round(d*scale)for d in original.size),Image.Resampling.LANCZOS).save(image)
-        identity=await manager.status(model)
-        result=await manager.generate(ProviderConfig(provider='local',model=model,vision=True,context_limit=8192),[{'role':'system','content':'보이는 문자와 수식만 그대로 전사하세요. 설명하거나 문장을 완성하지 마세요. 이미지 가장자리에서 잘렸거나 판독할 수 없는 부분은 [판독 불가]로 남기세요. 수학 지식으로 기호·단어를 정정하거나 추가하지 마세요. 부호·첨자·분수·극한의 방향을 원본 그대로 보존하고, 도형의 관계는 추측하지 마세요.'},{'role':'user','content':'이 이미지의 글을 읽는 순서대로 그대로 전사하세요.'}],[image],None,output_limit=2048,before_local=before_local)
-    metadata={'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{}),'edge_touching':any(r.get('edge_touching')for r in vision.get('regions',[]))}
-    engine=model+'/'+identity['digest']+'/literal-v2'
+        result=await recognize_local_image(image,manager,before_local,model)
+    metadata={'finish_reason':result.get('finish_reason'),'usage':result.get('usage',{})}
+    if diagnostic is not None:metadata['edge_touching']=any(r.get('edge_touching')for r in diagnostic.get('regions',[]))
+    engine=result['engine']
     if snapshot.get('page_source'):
         return {'engine':engine+'/page','regions':[{'bbox':[0,0,1,1],'text':result['text'],'candidates':[]}],**metadata}
     points=[p for s in strokes for p in s['points']];padding=max(s['width'] for s in strokes)
     x=max(0,min(p['x'] for p in points)-padding);y=max(0,min(p['y'] for p in points)-padding)
     right=min(1,max(p['x'] for p in points)+padding);bottom=min(1,max(p['y'] for p in points)+padding)
     return {'engine':engine,'regions':[{'bbox':[x,y,right-x,bottom-y],'text':result['text'],'candidates':[]}],**metadata}
+
+
+async def recognize_local_image(image_path,manager,before_local=None,model='qwen3.5:4b'):
+    from .models import ProviderConfig
+    if model not in ('qwen3.5:4b','gemma4:12b'):raise ValueError('비교한 손글씨 인식 모델을 선택하세요')
+    identity=await manager.status(model)
+    result=await manager.generate(ProviderConfig(provider='local',model=model,vision=True,context_limit=8192),[{'role':'system','content':'보이는 문자와 수식만 그대로 전사하세요. 설명하거나 문장을 완성하지 마세요. 이미지 가장자리에서 잘렸거나 판독할 수 없는 부분은 [판독 불가]로 남기세요. 수학 지식으로 기호·단어를 정정하거나 추가하지 마세요. 부호·첨자·분수·극한의 방향을 원본 그대로 보존하고, 도형의 관계는 추측하지 마세요.'},{'role':'user','content':'이 이미지의 글을 읽는 순서대로 그대로 전사하세요.'}],[image_path],None,output_limit=2048,before_local=before_local)
+    return {**result,'engine':model+'/'+identity['digest']+'/literal-v2'}
