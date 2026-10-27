@@ -547,6 +547,12 @@ def export_markdown(db,ident):
     elif saved['kind']=='note':lines.extend([saved['body']['addition'],''])
     elif saved['kind']=='candidates':
         for card in saved['body']['cards']:lines.extend(['## '+card['prompt'],card['quote'],'근거: '+card['source_id'],''])
+    elif saved['body'].get('answer_format')=='excerpts-v1':
+        lines.extend(['## 질문','',saved['metadata']['question'],'','## 관련 원문',''])
+        for section in saved['body']['sections']:lines.extend([section['text'],'근거: '+', '.join(section['evidence_ids']),''])
+        if not saved['body']['sections']:lines.extend([saved['body']['answer'],''])
+    elif saved['metadata'].get('answer_policy')=='explanation-v1':
+        lines.extend(['## 추가 해설 · AI 생성','',saved['body']['answer'],''])
     else: lines.extend([saved['body'].get('answer',saved['body'].get('description','')),''])
     lines.extend(['## 근거',''])
     for e in saved['evidence']:
