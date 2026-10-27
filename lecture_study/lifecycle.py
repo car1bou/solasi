@@ -130,7 +130,7 @@ def resolve_source(db,ref):
         if actual.kind in ('page_note','ink_note'):
             document=db.execute('SELECT revision FROM page_documents WHERE id=?',(actual.document_id,)).fetchone()
             if not document:result['status']='deleted';return result
-            if document['revision']!=actual.version:result['status']='changed'
+            if actual.kind=='page_note' and document['revision']!=actual.version:result['status']='changed'
             result['document_url']=f'/api/courses/{actual.course_id}/assets/{actual.asset_id}/pages/{actual.page}/document?document_sha256={actual.document_sha256}&revision={actual.version}'
         if actual.kind=='ink_note':
             ink=db.execute('SELECT ink FROM page_document_revisions WHERE document_id=? AND revision=?',(actual.document_id,actual.version)).fetchone()

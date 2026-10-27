@@ -38,6 +38,21 @@ class HandwritingTests(unittest.TestCase):
         self.save([],2)
         with self.assertRaises(HTTPException) as caught:approve_recognition(self.db,c['id'],'교착 상태',c['ink_hash'])
         self.assertEqual(caught.exception.status_code,409)
+    def test_approved_ink_source_stays_current_after_text_only_page_change(self):
+        from lecture_study.lifecycle import resolve_source
+        candidate=self.candidate();self.save(self.ink,1,'새 페이지 메모')
+        ref=approve_recognition(self.db,candidate['id'],'교착 상태 mutex',candidate['ink_hash'])
+        source=resolve_source(self.db,ref)
+        self.assertEqual(source['status'],'current')
+        self.assertEqual(source['ref']['version'],1)
+        self.assertEqual(source['ink_snapshot'],self.ink)
+        self.assertIn(ref.id,self.ids())
+        self.save([],2,'새 페이지 메모')
+        old=resolve_source(self.db,ref)
+        self.assertEqual(old['status'],'changed')
+        self.assertEqual(old['text_snapshot'],'교착 상태 mutex')
+        self.assertEqual(old['ink_snapshot'],self.ink)
+        self.assertNotIn(ref.id,self.ids())
     def test_rejection_and_same_input_are_idempotent(self):
         c=self.candidate();reject_recognition(self.db,c['id'])
         self.assertEqual(self.candidate()['id'],c['id']);self.assertFalse(self.ids())
