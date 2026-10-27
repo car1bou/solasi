@@ -5,20 +5,13 @@ from lecture_study.retrieval import embedding_format,embed_parts
 import httpx
 
 class NewModelsTests(unittest.IsolatedAsyncioTestCase):
-    def test_fixed_mac_catalog_and_portable_filter(self):
-        with patch('platform.system',return_value='Darwin'),patch('platform.machine',return_value='arm64'):
-            entries={e['model']:e for e in catalog()}
-            self.assertEqual(entries['gemma4:e2b']['bytes'],7476595162)
-            self.assertEqual(entries['embeddinggemma-2:270m-mxfp8-text']['bytes'],442218503)
-            self.assertEqual(entries['gemma4:e2b']['license'],'Apache-2.0')
-            self.assertEqual(entries['gemma4:e2b-it-qat']['runner'],'llamacpp')
-            self.assertEqual(entries['gemma4:e2b-it-qat']['bytes'],4336358185)
-            self.assertEqual(entries['gemma4:e4b-it-qat']['bytes'],6146501801)
-            self.assertEqual(entries['gemma4:12b']['runner'],'mlx')
-        with patch('platform.system',return_value='Linux'),patch('platform.machine',return_value='x86_64'):
-            self.assertNotIn('gemma4:e2b',{e['model'] for e in catalog()})
-            self.assertIn('gemma4:e2b-it-qat',{e['model'] for e in catalog()})
-            self.assertNotIn('gemma4:12b',{e['model'] for e in catalog()})
+    def test_single_generation_model_and_separate_embedding_roles(self):
+        for system,machine in [('Darwin','arm64'),('Linux','x86_64')]:
+            with patch('platform.system',return_value=system),patch('platform.machine',return_value=machine):
+                entries={e['model']:e for e in catalog()}
+                self.assertEqual({m for m in entries if not m.startswith('embedding')},{'qwen3.5:4b'})
+                self.assertEqual(entries['qwen3.5:4b']['license'],'Apache-2.0')
+                self.assertIn('embeddinggemma',entries)
 
     async def test_new_embedding_generation_has_distinct_format_and_search_prefix(self):
         self.assertNotEqual(embedding_format('embeddinggemma'),embedding_format('embeddinggemma-2:270m-mxfp8-text'))

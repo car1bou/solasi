@@ -1,6 +1,6 @@
 # 필기 이미지·인식 엔진 연결
 
-필기 입력 검증·후보 저장·승인은 공통으로 사용하고, **이미지 생성기와 이미지 인식기만 교체**할 수 있다. Mac 기본 구현은 CoreGraphics/PDFKit과 Apple Vision이다. Windows·Android용 생성기·인식기와 앱은 아직 구현하지 않았다. 현재 로컬 모델 manager는 Mac MLX 경로이며, 함수 분리가 다른 OS에서의 모델 실행을 보장하지 않는다.
+필기 입력 검증·후보 저장·승인은 공통으로 사용하고, **이미지 생성기와 이미지 인식기만 교체**할 수 있다. Mac 기본 구현은 CoreGraphics/PDFKit과 Apple Vision이다. Windows·Android용 생성기·인식기와 앱은 아직 구현하지 않았다. 현재 로컬 모델은 Qwen3.5 4B이며 manager는 Mac MLX 경로다. 함수 분리가 다른 OS에서의 모델 실행을 보장하지 않는다.
 
 ## 호출 경계
 
@@ -10,7 +10,7 @@
 | `handwriting_macos.render_ink(payload, image_path, *, page_source=None, page=1)` | 원본 페이지와 pen 획을 PNG로 합성한다. OCR을 실행하지 않는다. |
 | `handwriting_macos.recognize_image(image_path)` | 준비된 PNG를 Vision으로 인식한다. 렌더링하지 않는다. |
 | `handwriting.recognize_ink(snapshot, image_path=None, *, renderer=None, recognizer=None)` | 생성기·인식기를 연결해 기존 후보 결과를 반환한다. 기본값은 Mac adapter다. |
-| `handwriting.recognize_local_image(image_path, manager, before_local=None, model='qwen3.5:4b')` | 준비된 이미지를 Qwen/Gemma에 전달한다. 렌더러·Vision을 호출하지 않는다. |
+| `handwriting.recognize_local_image(image_path, manager, before_local=None, model='qwen3.5:4b')` | 준비된 이미지를 Qwen에 전달한다. 렌더러·Vision을 호출하지 않는다. |
 | `handwriting.recognize_local_ink(..., renderer=None, diagnostic_recognizer=None)` | 이미지 준비·로컬 인식·좌표를 연결한다. 기본 Mac 경로에서는 Vision 잘림 진단을 별도로 유지한다. |
 
 `image_path`는 `Path`다. 생성기는 지정한 파일에 PNG를 저장하고 `renderer / width / height` metadata를 반환한다. 원본 페이지는 1부터 시작한다. 인식기는 `engine / regions`를 반환한다. `regions`는 `bbox / text / candidates`를 가지며, bbox는 왼쪽 위 기준 정규화된 `[x, y, width, height]`다. 기존 `save_recognition`이 좌표·문자열 길이·페이지 현재성을 검사한다.
@@ -47,7 +47,7 @@ from lecture_study.handwriting import recognize_local_image
 result = await recognize_local_image(
     Path('/absolute/path/to/prepared.png'),
     manager,
-    model='qwen3.5:4b',  # 또는 gemma4:12b
+    model='qwen3.5:4b',  # 현재 제품의 단일 로컬 모델
 )
 ```
 

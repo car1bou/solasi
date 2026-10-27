@@ -3,7 +3,6 @@ import importlib.metadata
 import json
 import time
 from pathlib import Path
-from .gemma_direct import PROFILES as GEMMA_PROFILES, ENGINE_ID as GEMMA_ENGINE
 
 ENGINE_ID = 'mlx-vlm-0.7.8/mlx-0.32.4/transformers-5.20.0/ollama-nvfp4-v1'
 VERSIONS = {'mlx': '0.32.4', 'mlx-metal': '0.32.4', 'mlx-vlm': '0.7.8',
@@ -11,8 +10,7 @@ VERSIONS = {'mlx': '0.32.4', 'mlx-metal': '0.32.4', 'mlx-vlm': '0.7.8',
 SUPPORTED_MODELS = {'qwen3.5:4b': {
     'asset_digest': '3b6225ff07117608fdd54a729806671494c57980272eab2b7e7dd2b972423c1c',
     'model_type': 'qwen3_5', 'vision': True, 'completion': True, 'context_tokens':262144,
-    'engine':ENGINE_ID+'/chat-template-no-thinking-v1'},
-    **{name:profile|{'vision':True,'completion':True,'engine':GEMMA_ENGINE} for name,profile in GEMMA_PROFILES.items()}}
+    'engine':ENGINE_ID+'/chat-template-no-thinking-v1'}}
 
 
 def remap_qwen_weights(weights):
@@ -64,9 +62,7 @@ def generate(view: Path, messages: list, images: list[Path], schema: dict | None
         if not isinstance(path, Path) or not path.is_file() or path.stat().st_size > 20*1024**2: raise ValueError('이미지 파일 오류')
         with path.open('rb') as handle: signature = handle.read(8)
         if not (signature.startswith(b'\xff\xd8\xff') or signature == b'\x89PNG\r\n\x1a\n'): raise ValueError('PNG·JPEG 이미지만 지원합니다')
-    if json.loads((view/'config.json').read_text()).get('model_type') in ('gemma4','gemma4_unified'):
-        from .gemma_direct import generate as gemma_generate
-        return gemma_generate(view,messages,images,schema,output_limit,context_limit)
+    if json.loads((view/'config.json').read_text()).get('model_type')!='qwen3_5':raise ValueError('현재 로컬 AI는 Qwen3.5 4B를 사용합니다')
     from mlx_vlm import generate as mlx_generate
     from mlx_vlm.prompt_utils import apply_chat_template
     from mlx_vlm.structured import build_json_schema_logits_processor

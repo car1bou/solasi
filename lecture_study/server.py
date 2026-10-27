@@ -27,7 +27,7 @@ from .file_access import select_files
 from .materials import render_image, prune_cache, inspect_file, register_file, public_asset, original_path, ingest_asset, render_page, asset_dir, save_note, list_materials
 from .jobs import submit_job, get_job, launch_job,wait_for_transcription
 from .lifecycle import delete_session,delete_audio,resolve_source,playable_path,cleanup_files
-from .models import SourceRef,Scope,ProviderConfig
+from .models import SourceRef,Scope,ProviderConfig,LOCAL_MODEL
 from .providers import model_status,local_url
 from .credentials import Secrets
 from .local_models import OwnedOllama,catalog,installed_models
@@ -264,7 +264,11 @@ def create_app(config: AppConfig) -> FastAPI:
     def provider_config():
         saved=db.execute("SELECT value FROM settings WHERE key='provider'").fetchone()
         selected=ProviderConfig.model_validate_json(saved[0]) if saved else ProviderConfig()
-        return selected.model_copy(update={'provider':'local'}) if config.embedded and selected.provider=='ollama' else selected
+        if selected.provider in ('local','ollama'):selected=selected.model_copy(update={'model':LOCAL_MODEL,**({'provider':'local'} if config.embedded else {})})
+        return selected
+
+    def check_local_generation(selected):
+        if selected.provider in ('local','ollama')and selected.model!=LOCAL_MODEL:raise ValueError('현재 로컬 AI는 Qwen3.5 4B를 사용합니다. 현재 로컬 AI로 새로 실행하세요')
 
     @app.get('/api/settings')
     async def settings():
@@ -279,6 +283,7 @@ def create_app(config: AppConfig) -> FastAPI:
     async def save_settings(body:ProviderInput):
         try: selected=ProviderConfig(**body.model_dump())
         except ValidationError: raise ValueError('제공자·모델·입력 한도를 확인하세요') from None
+        check_local_generation(selected)
         if config.embedded and selected.provider=='ollama':selected=selected.model_copy(update={'provider':'local'})
         if selected.provider=='local':await app.state.direct_models.status(selected.model)
         with db: db.execute("INSERT OR REPLACE INTO settings VALUES ('provider',?)",(selected.model_dump_json(),))
@@ -572,7 +577,7 @@ def create_app(config: AppConfig) -> FastAPI:
         return review_attempts(db,sid)
 
     class LocalRetry(Input):
-        model:str='qwen3.5:4b'
+        model:str=LOCAL_MODEL
         context_limit:int=Field(default=8192,ge=512,le=262144)
 
     @app.post('/api/jobs/{ident}/retry-local')
@@ -580,16 +585,13 @@ def create_app(config: AppConfig) -> FastAPI:
         old=get_job(db,ident)
         if old['kind']!='ai' or old['status'] not in ('failed','cancelled','interrupted'): raise ValueError('실패·취소·중단된 생성 작업만 로컬 재시도가 가능합니다')
         selected=ProviderConfig(provider='local' if config.embedded else 'ollama',model=body.model,context_limit=body.context_limit)
+        check_local_generation(selected)
         status=await model_status(selected,ollama_url=app.state.ollama_url,direct_models=app.state.direct_models)
         if not status['completion'] or old['request']['request']['kind']=='vision' and not status['vision']: raise ValueError('로컬 모델이 요청 기능을 지원하지 않습니다')
         selected=selected.model_copy(update={'vision':status['vision']})
-        if config.embedded:
-            request=AIRequest.model_validate(old['request']['request']).model_copy(update={'provider':selected})
-            fresh=await freeze_request(db,request) if request.kind=='vision' else {'request':request.model_dump(),'snapshot':capture_request(db,request)}
-            return launch_ai(submit_job(db,old['session_id'],'ai',fresh,course_id=old['course_id']))
-        frozen=old['request'];frozen['request']['provider']=selected.model_dump()
-        with db: db.execute('UPDATE jobs SET request=? WHERE id=?',(json.dumps(frozen,ensure_ascii=False),ident))
-        return launch_ai(submit_job(db,old['session_id'],'ai',frozen,ident,course_id=old['course_id']))
+        request=AIRequest.model_validate(old['request']['request']).model_copy(update={'provider':selected})
+        fresh=await freeze_request(db,request) if request.kind=='vision' else {'request':request.model_dump(),'snapshot':capture_request(db,request)}
+        return launch_ai(submit_job(db,old['session_id'],'ai',fresh,course_id=old['course_id']))
 
     class SearchInput(Input):
         query: str = Field(min_length=1,max_length=2000)
@@ -860,11 +862,13 @@ def create_app(config: AppConfig) -> FastAPI:
             kick_transcription()
             return job
         if old['kind']=='ai':
+            check_local_generation(ProviderConfig.model_validate(old['request']['request']['provider']))
             if config.embedded and old['request']['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 요청입니다. 새 작업으로 실행하세요')
             job=submit_job(db,old['session_id'],'ai',old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks: launch_ai(job)
             return job
         if old['kind'] in ('grade','search'):
+            if old['kind']=='grade':check_local_generation(ProviderConfig.model_validate(old['request']['provider']))
             if config.embedded and old['kind']=='grade' and old['request']['provider']['provider']=='ollama':raise ValueError('이전 모델 엔진의 채점입니다. 새 작업으로 실행하세요')
             job=submit_job(db,old['session_id'],old['kind'],old['request'],ident,course_id=old['course_id'])
             if job['status']=='queued' and ident not in app.state.job_tasks:
@@ -1086,7 +1090,7 @@ def create_app(config: AppConfig) -> FastAPI:
     class InkRecognitionInput(Input):
         document_sha256:str=Field(pattern=r'^[a-f0-9]{64}$')
         force:bool=False
-        engine:Literal['vision','local','gemma']='vision'
+        engine:Literal['vision','local']='vision'
 
     @app.post('/api/courses/{cid}/assets/{aid}/pages/{page}/handwriting',status_code=202)
     async def handwriting_start(cid:str,aid:str,page:int,body:InkRecognitionInput):
@@ -1099,7 +1103,7 @@ def create_app(config: AppConfig) -> FastAPI:
             await wait_for_transcription(db,job['id'],include_recording=True)
             async with app.state.generation_lock:
                 await wait_for_transcription(db,job['id'],include_recording=True)
-                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True),model='gemma4:12b' if body.engine=='gemma' else 'qwen3.5:4b') if body.engine!='vision' else await recognize_ink(snapshot)
+                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True)) if body.engine!='vision' else await recognize_ink(snapshot)
                 return save_recognition(db,snapshot,result)
         return launch_job(app,job,operation)
 

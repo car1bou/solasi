@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import HTTPException
 from .db import data_dir,new_id,now
 from .course_materials import page_document,checked_document_path
-from .models import SourceRef,PageDocumentInput
+from .models import SourceRef,PageDocumentInput,LOCAL_MODEL
 from .retrieval import index_source
 
 
@@ -103,8 +103,8 @@ async def recognize_ink(snapshot,image_path=None,*,renderer=None,recognizer=None
     return result
 
 
-async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:4b',*,renderer=None,diagnostic_recognizer=None):
-    if model not in ('qwen3.5:4b','gemma4:12b'):raise ValueError('비교한 손글씨 인식 모델을 선택하세요')
+async def recognize_local_ink(snapshot,manager,before_local=None,model=LOCAL_MODEL,*,renderer=None,diagnostic_recognizer=None):
+    if model!=LOCAL_MODEL:raise ValueError('현재 로컬 AI는 Qwen3.5 4B를 사용합니다')
     strokes=ink_payload(snapshot)['strokes']
     if not strokes and not snapshot.get('page_source'):return {'engine':model,'regions':[]}
     if renderer is None:
@@ -123,7 +123,7 @@ async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:
                     if max(original.size)<2048:ImageOps.exif_transpose(original).convert('RGB').save(image)
             except UnidentifiedImageError:pass  # PDF pages use the native renderer, regardless of extension.
         with Image.open(image)as original:
-            if model=='qwen3.5:4b' and max(original.size)<2048:
+            if max(original.size)<2048:
                 scale=min(3,2048/max(original.size))
                 original.resize(tuple(round(d*scale)for d in original.size),Image.Resampling.LANCZOS).save(image)
         result=await recognize_local_image(image,manager,before_local,model)
@@ -138,9 +138,9 @@ async def recognize_local_ink(snapshot,manager,before_local=None,model='qwen3.5:
     return {'engine':engine,'regions':[{'bbox':[x,y,right-x,bottom-y],'text':result['text'],'candidates':[]}],**metadata}
 
 
-async def recognize_local_image(image_path,manager,before_local=None,model='qwen3.5:4b'):
+async def recognize_local_image(image_path,manager,before_local=None,model=LOCAL_MODEL):
     from .models import ProviderConfig
-    if model not in ('qwen3.5:4b','gemma4:12b'):raise ValueError('비교한 손글씨 인식 모델을 선택하세요')
+    if model!=LOCAL_MODEL:raise ValueError('현재 로컬 AI는 Qwen3.5 4B를 사용합니다')
     identity=await manager.status(model)
     result=await manager.generate(ProviderConfig(provider='local',model=model,vision=True,context_limit=8192),[{'role':'system','content':'보이는 문자와 수식만 그대로 전사하세요. 설명하거나 문장을 완성하지 마세요. 이미지 가장자리에서 잘렸거나 판독할 수 없는 부분은 [판독 불가]로 남기세요. 수학 지식으로 기호·단어를 정정하거나 추가하지 마세요. 부호·첨자·분수·극한의 방향을 원본 그대로 보존하고, 도형의 관계는 추측하지 마세요.'},{'role':'user','content':'이 이미지의 글을 읽는 순서대로 그대로 전사하세요.'}],[image_path],None,output_limit=2048,before_local=before_local)
     return {**result,'engine':model+'/'+identity['digest']+'/literal-v2'}

@@ -2,6 +2,8 @@ from typing import Literal
 import json
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+LOCAL_MODEL='qwen3.5:4b'
+
 class Input(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -120,7 +122,7 @@ class SearchResult(BaseModel):
 
 class ProviderConfig(Input):
     provider: Literal['openai','gemini','claude','ollama','local'] = 'ollama'
-    model: str = Field(default='qwen3.5:4b',pattern=r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,199}$')
+    model: str = Field(default=LOCAL_MODEL,pattern=r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,199}$')
     context_limit: int = Field(default=8192,ge=512,le=262144)
     vision: bool = False
 

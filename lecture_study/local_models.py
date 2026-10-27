@@ -12,11 +12,6 @@ from .runtime import component_status
 VERSION='0.40.3'
 CATALOG={
     'qwen3.5:4b':{'license':'Apache-2.0','runners':{'mlx':{'bytes':3973456016,'digest':'7f3251fa6878a78a606bcb3c074283306e5ad2ea411a7774a9dd98a4bc7f2d13'},'llamacpp':{'bytes':3324175492,'digest':'d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04'}}},
-    'qwen3.5:9b':{'license':'Apache-2.0','runners':{'mlx':{'bytes':7639445283,'digest':'d63f830f28d515fefea546f213fca7a75e9dd5176ef51a6deabc952d1c99a911'},'llamacpp':{'bytes':6550827108,'digest':'56671c2ab9385f9cfcb404638e32cd62d88e3501d44822208363c010179a3c90'}}},
-    'gemma4:e2b':{'license':'Apache-2.0','runners':{'mlx':{'bytes':7476595162,'digest':'45d11505b91d888e353859f5deeeeff3ffc9b3aa42263c00904120c53851ef96'}}},
-    'gemma4:e2b-it-qat':{'license':'Apache-2.0','runners':{'llamacpp':{'bytes':4336358185,'digest':'07ea59a474013479c8b6b802bef095c40e964a1d776ba02f264c0e30e1aede0c'}}},
-    'gemma4:e4b-it-qat':{'license':'Apache-2.0','runners':{'llamacpp':{'bytes':6146501801,'digest':'ee665637121887cf3befff38abbb1be4ee117c7db867d97a67e29049ecd7e15f'}}},
-    'gemma4:12b':{'license':'Apache-2.0','runners':{'mlx':{'bytes':7714091504,'digest':'c7597fc90b86aff6965317f37dd5465402284e26382d9b4bf2dfe3ef1491f4b6'}}},
     'embeddinggemma-2:270m-mxfp8-text':{'license':'Apache-2.0','runners':{'mlx':{'bytes':442218503,'digest':'47c561d1a77f8f4ec4f855a7704db5a893e0c51c368cec31eddeae758943b6f6'}}},
     'embeddinggemma':{'license':'Gemma Terms','runners':{'ggml':{'bytes':621875917,'digest':'85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1'}}},
 }

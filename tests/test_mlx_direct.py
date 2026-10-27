@@ -7,14 +7,13 @@ from lecture_study.mlx_direct import remap_qwen_weights, generate, SUPPORTED_MOD
 
 
 class DirectMLXTests(unittest.TestCase):
-    def test_verified_gemma_dispatch_and_context_profiles(self):
-        self.assertEqual(SUPPORTED_MODELS['gemma4:e2b']['context_tokens'],131072)
-        self.assertEqual(SUPPORTED_MODELS['gemma4:12b']['context_tokens'],262144)
+    def test_only_qwen_is_supported_and_retired_checkpoint_cannot_dispatch(self):
+        self.assertEqual(set(SUPPORTED_MODELS),{'qwen3.5:4b'})
         with tempfile.TemporaryDirectory() as directory:
             view=Path(directory);(view/'config.json').write_text(json.dumps({'model_type':'gemma4'}))
-            with patch('lecture_study.gemma_direct.generate',return_value={'text':'서울'}) as direct:
-                result=generate(view,[{'role':'user','content':'대한민국 수도'}],[],None,16,8192)
-                self.assertEqual(result,{'text':'서울'});direct.assert_called_once()
+            with self.assertRaisesRegex(ValueError,'현재 로컬 AI'):
+                generate(view,[{'role':'user','content':'수도'}],[],None,16,8192)
+
     def test_nvfp4_names_keep_values_and_reject_collisions(self):
         weight, scale = object(), object()
         mapped = remap_qwen_weights({'layer.weight': weight, 'layer.weight.scale': scale})

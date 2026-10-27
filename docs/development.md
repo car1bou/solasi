@@ -80,7 +80,9 @@ cd ..
 
 앱 아이콘은 `macos/Solasi.icns`, 화면 아이콘 원본은 `frontend/public/solasi-icon.png`입니다. 화면은 시스템·라이트·다크 모드를 제공합니다. [UI 설계·Figma](orbit-ui-design.md).
 
-직접 생성·임베딩 호환성은 [내장 모델 실행](direct-gemma-models.md)과 [임베딩 worker](embedding-worker.md)를 참고하세요. Gemma 4 E2B·12B 직접 생성·이미지 입력, Qwen3.5 4B MLX 생성·구조화 출력·이미지 입력과 EmbeddingGemma 768차원 검색을 확인한 기록이 있습니다. 이는 모든 모델·하드웨어의 호환성을 의미하지 않습니다. QAT 실측의 수정 헤더 artifact와 catalog의 공식 Ollama 배포물은 [비교 문서](gemma4-actual-comparison.md)에서 구분합니다. 모델 기본값은 비교만으로 자동 변경하지 않습니다.
+현재 제품의 로컬 생성·이미지 입력은 **Qwen3.5 4B**로 통일했습니다. 전사·의미 검색·빠른 OCR은 별도 엔진을 사용합니다. 임베딩은 [임베딩 worker](embedding-worker.md)를 참고하세요. 사용자 API의 모델 설정은 별도입니다.
+
+Gemma E2B·12B·QAT의 과거 실행 결과는 [내장 모델 실행 기록](direct-gemma-models.md)과 [비교 기록](gemma4-actual-comparison.md)에 보존합니다. 현재 제품의 지원·다운로드 목록과 구별하세요. 당시 실험 코드가 필요하면 해당 기록 시점의 Git 버전을 사용합니다.
 
 ## 개발용 브라우저 실행
 

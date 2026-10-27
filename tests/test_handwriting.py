@@ -181,15 +181,15 @@ class HandwritingTests(unittest.TestCase):
             Image.new('RGB',(400,200),'white').save(image_path)
             return {'regions':[{'edge_touching':True}]}
         async def generate(provider,messages,images,*args,**kwargs):
-            with Image.open(images[0])as image:self.assertEqual(image.size,(400,200)if provider.model=='gemma4:12b'else(1200,600))
+            with Image.open(images[0])as image:self.assertEqual(image.size,(1200,600))
             self.assertIn('문장을 완성하지',messages[0]['content'])
             self.assertIn('[판독 불가]',messages[0]['content'])
             self.assertIn('수학 지식',messages[0]['content'])
             return {'text':'F(x)=P(X≤x)','finish_reason':'length'}
         manager=type('Manager',(),{})();manager.status=AsyncMock(return_value={'digest':'a'*64});manager.generate=AsyncMock(side_effect=generate)
         with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[{'edge_touching':True}]})):
-            result=asyncio.run(recognize_local_ink(self.snapshot(),manager,model='gemma4:12b'))
-        self.assertEqual(manager.generate.call_args.args[0].model,'gemma4:12b')
+            result=asyncio.run(recognize_local_ink(self.snapshot(),manager))
+        self.assertEqual(manager.generate.call_args.args[0].model,'qwen3.5:4b')
         self.assertTrue(result['edge_touching']);self.assertEqual(result['finish_reason'],'length')
         self.assertIn('/literal-v2',result['engine'])
         with patch('lecture_study.handwriting_macos.render_ink',side_effect=render),patch('lecture_study.handwriting_macos.recognize_image',new=AsyncMock(return_value={'regions':[{'edge_touching':True}]})):

@@ -124,7 +124,7 @@ class AnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(next(e['text'] for e in stored['evidence'] if e['ref']['id']==ref.id),'')
 
 class AnswerApiTests(unittest.IsolatedAsyncioTestCase):
-    async def test_api_retry_keeps_id_and_attempts_and_reopen_never_generates(self):
+    async def test_api_local_retry_preserves_old_attempt_and_creates_new_job(self):
         import httpx
         from lecture_study.server import create_app
         from lecture_study.config import AppConfig
@@ -150,9 +150,10 @@ class AnswerApiTests(unittest.IsolatedAsyncioTestCase):
                             await asyncio.sleep(.001)
                         self.assertEqual(job['status'],'failed');self.assertEqual(generate.await_count,1)
                         retried=await client.post('/api/jobs/'+ident+'/retry-local',json={'model':'qwen3.5:4b'},headers=headers)
-                        self.assertEqual(retried.status_code,200,retried.text);self.assertEqual(retried.json()['id'],ident)
+                        self.assertEqual(retried.status_code,200,retried.text);fresh=retried.json()['id'];self.assertNotEqual(fresh,ident)
+                        original=(await client.get('/api/jobs/'+ident)).json();self.assertEqual(original['status'],'failed');self.assertEqual(original['request']['request']['provider']['model'],'gpt-4.1-mini')
                         for _ in range(100):
-                            job=(await client.get('/api/jobs/'+ident)).json()
+                            job=(await client.get('/api/jobs/'+fresh)).json()
                             if job['status']=='done': break
                             await asyncio.sleep(.001)
                         self.assertEqual(job['status'],'done',job)
@@ -160,8 +161,8 @@ class AnswerApiTests(unittest.IsolatedAsyncioTestCase):
                         self.assertEqual(saved.json()['body']['answer'],body['answer']);self.assertEqual(saved.json()['metadata']['provider'],'ollama')
                         await client.get('/api/sessions/'+sid+'/artifacts');await client.get('/api/artifacts/'+job['result']['id'])
                         self.assertEqual(generate.await_count,2)
-                        self.assertEqual(app.state.db.execute('SELECT count(*) FROM artifacts WHERE job_id=?',(ident,)).fetchone()[0],1)
-                        attempts=app.state.db.execute('SELECT provider,status FROM ai_attempts WHERE job_id=? ORDER BY created_at',(ident,)).fetchall()
+                        self.assertEqual(app.state.db.execute('SELECT count(*) FROM artifacts WHERE job_id=?',(fresh,)).fetchone()[0],1)
+                        attempts=app.state.db.execute('SELECT provider,status FROM ai_attempts WHERE job_id IN (?,?) ORDER BY created_at',(ident,fresh)).fetchall()
                         self.assertEqual([tuple(r) for r in attempts],[('openai','failed'),('ollama','done')])
                         self.assertNotIn('test-key','\n'.join(app.state.db.iterdump()))
             finally:

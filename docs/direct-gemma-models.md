@@ -1,4 +1,6 @@
-# Existing Gemma models: direct Mac execution
+# Historical Gemma models: direct Mac execution
+
+> Historical execution record. As of 2026-10-27 the product uses Qwen3.5 4B only for local generation/vision. The Gemma adapter and product choices have been retired; use the earlier Git revision to reproduce this comparison.
 
 Verified on this Apple Silicon Mac on 2026-10-16. The adapter reuses the installed
 model blobs read-only; it does not download, convert or overwrite weights.
