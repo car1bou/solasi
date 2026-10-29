@@ -271,7 +271,7 @@ h1{font-size:31px}
 .ink-toolbar label{display:flex;align-items:center;gap:5px;margin:0;font-size:11px;font-weight:500}
 .ink-toolbar input[type=color]{width:30px;height:29px;padding:2px}
 .ink-toolbar input[type=range]{width:74px;padding:0}
-.ink-toolbar select{width:82px;padding:5px;font-size:12px}
+.ink-toolbar select{width:116px;padding:5px;font-size:12px}
 .ink-help{font-size:11px;margin:8px 0 12px}
 .notebook-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:start}
 .notebook-layout.notes-closed{grid-template-columns:1fr}

@@ -39,6 +39,26 @@ test('fit width accounts for rotation and tiny viewports without changing manual
   }finally{await server.close();}
 });
 
+test('fit page uses both viewport dimensions and keeps its mode across reloads',async()=>{
+  const values=new Map<string,string>();
+  Object.defineProperty(globalThis,'location',{configurable:true,value:new URL('http://localhost/')});
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{localStorage:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}}});
+  const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+    const page={width:600,height:900},view={zoomMode:'page',zoom:1,rotation:0,notesOpen:true};
+    assert.equal(prefs.notebookZoom(view,page,680,510),.5);
+    assert.equal(prefs.notebookZoom({...view,rotation:90},page,680,340),.5);
+    assert.equal(prefs.notebookZoom({...view,rotation:270},page,340,680),1/3);
+    assert.equal(prefs.notebookZoom(view,{width:600,height:12000},680,136),.01);
+    assert.equal(prefs.notebookZoom({...view,zoomMode:'manual',zoom:2},page,680,136),2);
+    assert.equal(await prefs.saveNotebookView('a'.repeat(32),'b'.repeat(64),view),true);
+    server.moduleGraph.invalidateAll();
+    const restarted=await server.ssrLoadModule('/src/notebook-preferences.ts');
+    assert.deepEqual((await restarted.loadNotebookPreferences('a'.repeat(32),'b'.repeat(64))).view,view);
+  }finally{await server.close();}
+});
+
 test('native preferences use committed app storage and storage errors remain recoverable',async()=>{
   const values=new Map<string,unknown>();let fail=false;
   Object.defineProperty(globalThis,'location',{configurable:true,value:new URL('solasi-app://app/')});

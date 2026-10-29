@@ -66,7 +66,7 @@ def checked_preference(key, value):
             raise ValueError('페이지 보기 설정 항목 오류')
         if 'pageLayout' in value and value['pageLayout'] not in ('continuous','single'):
             raise ValueError('페이지 표시 방식 오류')
-        if (value['zoomMode'] not in ('fit','manual') or type(value['rotation']) is not int or
+        if (value['zoomMode'] not in ('fit','page','manual') or type(value['rotation']) is not int or
                 value['rotation'] not in (0,90,180,270) or type(value['notesOpen']) is not bool):
             raise ValueError('페이지 보기 설정 오류')
     for field,(low,high) in numeric.items():

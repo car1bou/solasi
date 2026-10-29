@@ -191,13 +191,18 @@ class NativePreferenceTests(unittest.TestCase):
 
     def test_view_limits_are_strict_and_do_not_coerce_types(self):
         valid=view_preferences();self.store.write_preference(VIEW_KEY,valid)
-        for field,value in (('zoomMode','page'),('zoom',.099),('zoom',3.001),('zoom',True),('zoom','1'),('rotation',True),('rotation',90.0),('rotation',45),('notesOpen',1),('notesOpen','false')):
+        for field,value in (('zoomMode','unknown'),('zoom',.099),('zoom',3.001),('zoom',True),('zoom','1'),('rotation',True),('rotation',90.0),('rotation',45),('notesOpen',1),('notesOpen','false')):
             with self.subTest(field=field,value=value):
                 with self.assertRaises(ValueError):self.store.write_preference(VIEW_KEY,{**valid,field:value})
                 self.assertEqual(self.store.read_preference(VIEW_KEY),{'value':valid})
         for rotation in (0,90,180,270):
             value={**valid,'zoomMode':'manual','zoom':3,'rotation':rotation,'notesOpen':False}
             self.assertEqual(self.store.write_preference(VIEW_KEY,value),{'value':value})
+
+    def test_page_fit_mode_is_saved_and_restored(self):
+        value={**view_preferences(),'zoomMode':'page'}
+        self.assertEqual(self.store.write_preference(VIEW_KEY,value),{'value':value})
+        self.assertEqual(self.store.read_preference(VIEW_KEY),{'value':value})
 
     def test_corrupt_saved_value_is_reported_without_rewriting_it(self):
         self.store.write_preference(VIEW_KEY,view_preferences())
