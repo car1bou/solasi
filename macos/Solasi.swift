@@ -552,10 +552,11 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
         components.scheme = nil; components.host = nil; components.fragment = nil
         let path = components.string!
         guard AppResourcePolicy.resourcePath(path) else { return }
-        let suffix = components.queryItems?.first(where: { $0.name == "format" })?.value == "txt" ? "txt" : "md"
+        let suffix = components.path.hasSuffix("/notebook.pdf") ? "pdf" : components.queryItems?.first(where: { $0.name == "format" })?.value == "txt" ? "txt" : "md"
+        page.showStatus("")
         saveDestination(page: page, filename: "Solasi-내보내기." + suffix) { selection in
             let export: ExclusiveExport
-            do { guard let selected = try selection.get() else { return }; export = selected }
+            do { guard let selected = try selection.get() else { page.showStatus("내보내기를 취소했습니다."); return }; export = selected }
             catch { page.showStatus("저장 위치를 준비할 수 없습니다. " + error.localizedDescription); return }
             var successful = false
             self.worker.request(["op":"http","method":"GET","path":path]) { header, bytes in

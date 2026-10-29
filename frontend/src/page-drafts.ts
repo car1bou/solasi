@@ -1,4 +1,5 @@
 import {api,ApiError,nativeApp} from './api';
+import {notebookExportIssue} from './notebook-export';
 import {readNativeDrafts,transferDraft} from './draft-migration';
 import type {DraftExport} from './draft-migration';
 import type {DocumentMetadata,InkStroke,PageDocument} from './types';
@@ -15,6 +16,11 @@ async function deleteJournal(key:string){if(nativeApp())await api('/native/draft
 function equal(a:Content,b:Content){return a.text===b.text&&JSON.stringify(a.ink)===JSON.stringify(b.ink);}
 const stores=new Map<string,PageDraft>();
 export function pageDraft(courseId:string,assetId:string,hash:string,page:number){const key=JSON.stringify([courseId,assetId,hash,page]);let store=stores.get(key);if(!store){store=new PageDraft(key,`/courses/${courseId}/assets/${assetId}/pages/${page}/document`,hash);stores.set(key,store);}return store;}
+export function notebookPDFIssue(courseId:string,assetId:string,hash:string){
+  const pages=[];
+  for(const [key,store]of stores){const [course,asset,digest,page]=JSON.parse(key);if(course===courseId&&asset===assetId&&digest===hash)pages.push({page,...store.snapshot()});}
+  return notebookExportIssue(pages);
+}
 export async function flushPageDrafts(){for(const store of stores.values())if(!await store.flushStorage())throw new Error('페이지 초안을 저장하지 못했습니다. 창을 유지하고 저장 상태를 확인하세요.');}
 export function resumePageDrafts(){for(const store of stores.values())store.resumeStorage();}
 export async function exportPageDrafts(vaultId:string,theme:DraftExport['theme'],unsavedInputs:unknown[]):Promise<DraftExport>{
@@ -67,7 +73,7 @@ export class PageDraft{
     if(this.saving||!this.state.loaded||this.state.status==='conflict'||this.state.status==='saved')return;
     const content={text:this.state.text,ink:this.state.ink},token=this.token,revision=this.state.revision;
     const points=content.ink.reduce((sum,stroke)=>sum+stroke.points.length,0);
-    if(content.text.length>200000||content.ink.length>2000||points>100000||new TextEncoder().encode(JSON.stringify(content.ink)).byteLength>8*1024*1024){this.update({status:'failed',error:'페이지 저장 한도(메모 20만 자, 2,000획·10만 점·8MiB)를 초과했습니다. 초안을 내보내고 내용을 줄여 주세요.'});return;}
+    if(content.text.length+content.ink.reduce((sum,stroke)=>sum+(stroke.tool==='text'?stroke.text.length:0),0)>200000||content.ink.length>2000||points>100000||new TextEncoder().encode(JSON.stringify(content.ink)).byteLength>8*1024*1024){this.update({status:'failed',error:'페이지 저장 한도(메모 20만 자, 2,000획·10만 점·8MiB)를 초과했습니다. 초안을 내보내고 내용을 줄여 주세요.'});return;}
     this.saving=true;this.update({status:'saving',error:''});
     try{
       const server=await api<PageDocument>(this.path,{method:'PUT',body:JSON.stringify({document_sha256:this.hash,expected_revision:revision,...content})});

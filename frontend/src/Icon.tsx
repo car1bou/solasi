@@ -2,6 +2,10 @@ import React from 'react';
 
 // Handwriting glyphs follow Solasi’s approved A outline concept. Other glyphs: Lucide 1ef60af944de207e0d5176905a0759ba12e6ee8d; notices: public/notices/lucide.txt.
 const paths={
+  'pages-continuous':<><rect x="7" y="5" width="10" height="14" rx="1.4"/><g opacity=".35"><path d="M7 2V1h10v1M7 22v1h10v-1"/></g></>,
+  'page-single':<><rect x="7" y="5" width="10" height="14" rx="1.4"/><g opacity=".35"><path d="M3 5H1v14h2M21 5h2v14h-2"/></g></>,
+  'more-vertical':<><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></>,
+  'text':<><path d="M4 5h16M12 5v15M8 20h8"/></>,
   'book':<><path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" /></>,
   'mic':<><path d="M12 19v3" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><rect x="9" y="2" width="6" height="13" rx="3" /></>,
   'settings':<><path d="M10 5H3" /><path d="M12 19H3" /><path d="M14 3v4" /><path d="M16 17v4" /><path d="M21 12h-9" /><path d="M21 19h-5" /><path d="M21 5h-7" /><path d="M8 10v4" /><path d="M8 12H3" /></>,
@@ -31,7 +35,7 @@ const paths={
   'play':<><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" /></>,
   'pause':<><rect x="14" y="3" width="5" height="18" rx="1" /><rect x="5" y="3" width="5" height="18" rx="1" /></>,
 };
-const handwritingIcons=new Set(['pen','highlighter','stroke-eraser','partial-eraser','lasso','hand','undo','redo']);
+const handwritingIcons=new Set(['pen','highlighter','stroke-eraser','partial-eraser','lasso','hand','undo','redo','pages-continuous','page-single']);
 export default function Icon({name,size=20}:{name:keyof typeof paths;size?:number}){
   return <svg className="ui-icon" aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={handwritingIcons.has(name)?1.65:2} strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
 }

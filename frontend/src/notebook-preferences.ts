@@ -1,22 +1,22 @@
 import {api,nativeApp} from './api.ts';
 import type {InkStroke} from './types.ts';
 
-export type NotebookTool='pen'|'highlighter'|'stroke-eraser'|'partial-eraser'|'lasso'|'pan';
-export type NotebookTools={tool:NotebookTool;eraserMode?:'stroke-eraser'|'partial-eraser';penColor:string;penWidth:number;penOpacity:number;highlighterColor:string;highlighterWidth:number;highlighterOpacity:number;eraserSize:number};
-export type NotebookView={zoomMode:'fit'|'manual';zoom:number;rotation:number;notesOpen:boolean};
-export const defaultTools:NotebookTools={tool:'pen',penColor:'#254f3f',penWidth:.0025,penOpacity:1,highlighterColor:'#254f3f',highlighterWidth:.018,highlighterOpacity:.35,eraserSize:.014};
+export type NotebookTool='pen'|'highlighter'|'text'|'stroke-eraser'|'partial-eraser'|'lasso'|'pan';
+export type NotebookTools={tool:NotebookTool;eraserMode?:'stroke-eraser'|'partial-eraser';textSize?:number;penColor:string;penWidth:number;penOpacity:number;highlighterColor:string;highlighterWidth:number;highlighterOpacity:number;eraserSize:number};
+export type NotebookView={pageLayout?:'continuous'|'single';zoomMode:'fit'|'manual';zoom:number;rotation:number;notesOpen:boolean};
+export const defaultTools:NotebookTools={tool:'pen',textSize:.025,penColor:'#254f3f',penWidth:.0025,penOpacity:1,highlighterColor:'#254f3f',highlighterWidth:.018,highlighterOpacity:.35,eraserSize:.014};
 export const defaultView:NotebookView={zoomMode:'fit',zoom:1,rotation:0,notesOpen:true};
 const cache=new Map<string,unknown>(),writes=new Map<string,Promise<boolean>>();
-const toolNames:NotebookTool[]=['pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'];
+const toolNames:NotebookTool[]=['pen','highlighter','text','stroke-eraser','partial-eraser','lasso','pan'];
 const inRange=(value:unknown,min:number,max:number)=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max;
 export function notebookColor(value:unknown){return typeof value==='string'&&/^#[0-9a-f]{6}$/i.test(value)?value.toLowerCase():null;}
 function tools(value:unknown):NotebookTools{
   const row=value as NotebookTools|null;
-  return row&&toolNames.includes(row.tool)&&(row.eraserMode===undefined||['stroke-eraser','partial-eraser'].includes(row.eraserMode))&&[row.penColor,row.highlighterColor].every(color=>notebookColor(color)!==null)&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
+  return row&&toolNames.includes(row.tool)&&(row.textSize===undefined||inRange(row.textSize,.012,.08))&&(row.eraserMode===undefined||['stroke-eraser','partial-eraser'].includes(row.eraserMode))&&[row.penColor,row.highlighterColor].every(color=>notebookColor(color)!==null)&&[row.penWidth,row.highlighterWidth].every(width=>inRange(width,.0005,.04))&&[row.penOpacity,row.highlighterOpacity].every(opacity=>inRange(opacity,.05,1))&&inRange(row.eraserSize,.003,.06)?{...row}:{...defaultTools};
 }
 function view(value:unknown):NotebookView{
   const row=value as NotebookView|null;
-  return row&&['fit','manual'].includes(row.zoomMode)&&inRange(row.zoom,.1,3)&&[0,90,180,270].includes(row.rotation)&&typeof row.notesOpen==='boolean'?{...row}:{...defaultView};
+  return row&&(row.pageLayout===undefined||['continuous','single'].includes(row.pageLayout))&&['fit','manual'].includes(row.zoomMode)&&inRange(row.zoom,.1,3)&&[0,90,180,270].includes(row.rotation)&&typeof row.notesOpen==='boolean'?{...row}:{...defaultView};
 }
 async function read(key:string){
   if(cache.has(key))return cache.get(key);

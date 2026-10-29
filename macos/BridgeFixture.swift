@@ -14,6 +14,9 @@ struct BridgeFixture {
         assert(!AppResourcePolicy.validAPIPath("https://example.org/api/courses"))
         assert(AppResourcePolicy.resourcePath("/api/recordings/" + String(repeating: "a", count: 32) + "/audio"))
         assert(!AppResourcePolicy.resourcePath("/api/provider"))
+        assert(AppResourcePolicy.resourcePath("/api/courses/" + String(repeating: "a", count: 32) + "/assets/" + String(repeating: "b", count: 32) + "/notebook.pdf?document_sha256=" + String(repeating: "c", count: 64)))
+        assert(!AppResourcePolicy.resourcePath("/api/courses/invalid/assets/invalid/notebook.pdf"))
+        assert(!AppResourcePolicy.resourcePath("/api/courses/" + String(repeating: "a", count: 32) + "/assets/" + String(repeating: "b", count: 32) + "/notebookXpdf"))
         let vault=String(repeating:"a",count:32),record=String(repeating:"b",count:32)
         let audio=URL(string:"solasi://audio/\(vault)/\(record)?start_ms=1000&end_ms=2000")!
         let link=AppResourcePolicy.audioLink(audio,vault:vault)

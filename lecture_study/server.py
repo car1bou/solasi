@@ -802,6 +802,33 @@ def create_app(config: AppConfig) -> FastAPI:
     async def put_page_document(ident:str,asset_id:str,page:int,body:PageDocumentInput):
         return save_page_document(db,ident,asset_id,page,body)
 
+    @app.get('/api/courses/{ident}/assets/{asset_id}/notebook.pdf')
+    async def notebook_pdf_export(ident:str,asset_id:str,document_sha256:str):
+        import tempfile,shutil
+        from starlette.background import BackgroundTask
+        from .notebook_pdf import saved_pages,export_pdf
+        source,asset,pages=saved_pages(db,ident,asset_id,document_sha256)
+        temporary=tempfile.TemporaryDirectory(prefix='solasi-pdf-')
+        folder=Path(temporary.name)
+        try:
+            copied=folder/'original.pdf'
+            await asyncio.to_thread(shutil.copyfile,source,copied)
+            if (await asyncio.to_thread(inspect_file,copied))['sha256']!=document_sha256:
+                raise ValueError('원본 PDF가 변경되었습니다. 다시 확인하세요')
+            output=folder/'notebook.pdf'
+            await export_pdf(copied,output,pages)
+            checked_document_path(db,asset_id,document_sha256)
+            async def content():
+                try:
+                    with output.open('rb')as handle:
+                        while chunk:=handle.read(256*1024):yield chunk
+                finally:temporary.cleanup()
+            from urllib.parse import quote
+            name=Path(asset['filename']).stem+'-노트.pdf'
+            return StreamingResponse(content(),media_type='application/pdf',headers={'Content-Disposition':"attachment; filename*=UTF-8''"+quote(name),'Cache-Control':'no-store'},background=BackgroundTask(temporary.cleanup))
+        except BaseException:
+            temporary.cleanup();raise
+
     @app.api_route("/api/assets/{ident}/original",methods=["GET","HEAD"])
     async def original_material(ident: str,document_sha256:str|None=None):
         folder,asset = asset_dir(db,ident)

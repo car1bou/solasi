@@ -50,10 +50,11 @@ def checked_preference(key, value):
     if key == 'notebook-tools':
         numeric = {'penWidth':(.0005,.04), 'penOpacity':(.05,1),
                    'highlighterWidth':(.0005,.04), 'highlighterOpacity':(.05,1), 'eraserSize':(.003,.06)}
-        if set(value) - {'eraserMode'} != {'tool','penColor','highlighterColor',*numeric}:
+        if set(value) - {'eraserMode','textSize'} != {'tool','penColor','highlighterColor',*numeric}:
             raise ValueError('필기 설정 항목 오류')
-        if value['tool'] not in ('pen','highlighter','stroke-eraser','partial-eraser','lasso','pan'):
+        if value['tool'] not in ('pen','highlighter','text','stroke-eraser','partial-eraser','lasso','pan'):
             raise ValueError('필기 도구 오류')
+        if 'textSize' in value:numeric['textSize']=(.012,.08)
         if 'eraserMode' in value and value['eraserMode'] not in ('stroke-eraser','partial-eraser'):
             raise ValueError('지우개 방식 오류')
         for field in ('penColor','highlighterColor'):
@@ -61,8 +62,10 @@ def checked_preference(key, value):
                 raise ValueError('필기 색상 오류')
     else:
         numeric = {'zoom':(.1,3)}
-        if set(value) != {'zoomMode','zoom','rotation','notesOpen'}:
+        if set(value) - {'pageLayout'} != {'zoomMode','zoom','rotation','notesOpen'}:
             raise ValueError('페이지 보기 설정 항목 오류')
+        if 'pageLayout' in value and value['pageLayout'] not in ('continuous','single'):
+            raise ValueError('페이지 표시 방식 오류')
         if (value['zoomMode'] not in ('fit','manual') or type(value['rotation']) is not int or
                 value['rotation'] not in (0,90,180,270) or type(value['notesOpen']) is not bool):
             raise ValueError('페이지 보기 설정 오류')

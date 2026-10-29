@@ -1,4 +1,4 @@
-import {inkPath} from './ink';
+import InkMark from './InkMark';
 import type {InkStroke} from './types';
 import React,{useState,useRef,useEffect} from 'react';
 import {api} from './api';
@@ -6,7 +6,7 @@ import PlaybackAudio from './PlaybackAudio';
 import Icon from './Icon';
 
 type Source={ink_snapshot?:InkStroke[];status:string;ref:{kind:string;page:number|null;version:number;start_ms:number|null;end_ms:number|null;bbox?:number[]|null;source_width?:number|null;source_height?:number|null};text_snapshot:string;open_url:string|null;image_url?:string;seek_seconds:number|null;end_seconds:number|null;original_status?:string;retrieved_at?:string;title?:string};
-export function SourceImage({source}:{source:Source}){return <>{source.image_url&&<div className="ink-region-preview"><img alt={'원본 '+source.ref.page+'쪽'} src={source.image_url}/>{source.ref.kind==='ink_note'&&<svg viewBox={'0 0 '+(source.ref.source_width||1)+' '+(source.ref.source_height||1)} preserveAspectRatio="none" aria-hidden="true">{source.ink_snapshot?.map(stroke=><path key={stroke.id} d={inkPath(stroke,source.ref.source_width||1,source.ref.source_height||1)} fill={stroke.color} opacity={stroke.opacity}/>)}{source.ref.bbox&&<rect x={source.ref.bbox[0]*(source.ref.source_width||1)} y={source.ref.bbox[1]*(source.ref.source_height||1)} width={source.ref.bbox[2]*(source.ref.source_width||1)} height={source.ref.bbox[3]*(source.ref.source_height||1)}/>}</svg>}</div>}</>;}
+export function SourceImage({source}:{source:Source}){return <>{source.image_url&&<div className="ink-region-preview"><img alt={'원본 '+source.ref.page+'쪽'} src={source.image_url}/>{source.ref.kind==='ink_note'&&<svg viewBox={'0 0 '+(source.ref.source_width||1)+' '+(source.ref.source_height||1)} preserveAspectRatio="none" aria-hidden="true">{source.ink_snapshot?.map(stroke=><InkMark key={stroke.id} stroke={stroke} width={source.ref.source_width||1} height={source.ref.source_height||1}/>)}{source.ref.bbox&&<rect x={source.ref.bbox[0]*(source.ref.source_width||1)} y={source.ref.bbox[1]*(source.ref.source_height||1)} width={source.ref.bbox[2]*(source.ref.source_width||1)} height={source.ref.bbox[3]*(source.ref.source_height||1)}/>}</svg>}</div>}</>;}
 export default function SourceLink({id,label}:{id:string;label:string}) {
   const [source,setSource]=useState<Source|null>(null),[error,setError]=useState('');
   const dialog=useRef<HTMLDialogElement>(null);

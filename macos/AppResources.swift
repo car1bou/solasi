@@ -18,7 +18,7 @@ enum AppResourcePolicy {
     }
     static func resourcePath(_ path: String) -> Bool {
         guard validAPIPath(path), let parts = URLComponents(string: path) else { return false }
-        let pattern = "^/api/(assets/[a-f0-9]{32}/(original|pages/[1-9][0-9]*|images/[A-Za-z0-9_.-]+)|recordings/[a-f0-9]{32}/audio|sessions/[a-f0-9]{32}/transcripts/export|artifacts/[a-f0-9]{32}/export)$"
+        let pattern = "^/api/(courses/[a-f0-9]{32}/assets/[a-f0-9]{32}/notebook\\.pdf|assets/[a-f0-9]{32}/(original|pages/[1-9][0-9]*|images/[A-Za-z0-9_.-]+)|recordings/[a-f0-9]{32}/audio|sessions/[a-f0-9]{32}/transcripts/export|artifacts/[a-f0-9]{32}/export)$"
         return parts.path.range(of: pattern, options: .regularExpression) != nil
     }
     static func byteRange(_ header: String?, size: Int) throws -> Range<Int> {

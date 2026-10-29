@@ -1,8 +1,9 @@
-import type {InkPoint,InkStroke} from './types';
+import type {InkPoint,InkStroke,InkText} from './types';
 export type Point={x:number;y:number};
 export type Bounds={x:number;y:number;width:number;height:number};
 export const clamp=(value:number,min=0,max=1)=>Math.max(min,Math.min(max,value));
 export function inkPath(stroke:InkStroke,width:number,height:number){
+  if(stroke.tool==='text')return '';
   const points=stroke.points;if(!points.length)return '';
   const half=(point:InkPoint)=>stroke.width*width*(stroke.tool==='pen'?.35+.65*point.pressure:1)/2;
   if(points.length===1){const p=points[0],r=half(p),x=p.x*width,y=p.y*height;return `M${x-r},${y}a${r},${r} 0 1,0 ${r*2},0a${r},${r} 0 1,0 ${-r*2},0`;}
@@ -11,11 +12,19 @@ export function inkPath(stroke:InkStroke,width:number,height:number){
   return 'M'+left.concat(right.reverse()).map(p=>p.x+','+p.y).join('L')+'Z';
 }
 export function inkBounds(strokes:InkStroke[]):Bounds|null{let minX=1,minY=1,maxX=0,maxY=0,found=false;for(const stroke of strokes)for(const point of stroke.points){found=true;minX=Math.min(minX,point.x);minY=Math.min(minY,point.y);maxX=Math.max(maxX,point.x);maxY=Math.max(maxY,point.y);}return found?{x:minX,y:minY,width:Math.max(.003,maxX-minX),height:Math.max(.003,maxY-minY)}:null;}
+export function textInkAt(strokes:InkStroke[],point:Point):InkText|undefined{
+  for(let i=strokes.length-1;i>=0;i--){const stroke=strokes[i];if(stroke.tool==='text'&&stroke.points.length===2&&point.x>=stroke.points[0].x&&point.y>=stroke.points[0].y&&point.x<=stroke.points[1].x&&point.y<=stroke.points[1].y)return stroke;}
+}
+export function textInkBox(origin:Point,width=.36,height=.12):InkPoint[]{
+  const w=clamp(width,.01,1),h=clamp(height,.01,1),x=clamp(origin.x,0,1-w),y=clamp(origin.y,0,1-h);
+  return [{x,y,pressure:.5},{x:x+w,y:y+h,pressure:.5}];
+}
 export function inside(point:Point,polygon:Point[]){let hit=false;for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){const a=polygon[i],b=polygon[j];if((a.y>point.y)!==(b.y>point.y)&&point.x<(b.x-a.x)*(point.y-a.y)/(b.y-a.y)+a.x)hit=!hit;}return hit;}
 function distance(p:Point,a:Point,b:Point,aspect:number){const dx=b.x-a.x,dy=(b.y-a.y)*aspect,length=dx*dx+dy*dy,t=length?clamp(((p.x-a.x)*dx+(p.y-a.y)*aspect*dy)/length):0;return Math.hypot(p.x-a.x-t*dx,(p.y-a.y)*aspect-t*dy);}
 function interpolate(a:InkPoint,b:InkPoint,t:number):InkPoint{return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,pressure:a.pressure+(b.pressure-a.pressure)*t,...(a.tilt_x!==undefined?{tilt_x:a.tilt_x+((b.tilt_x??a.tilt_x)-a.tilt_x)*t}:{}),...(a.tilt_y!==undefined?{tilt_y:a.tilt_y+((b.tilt_y??a.tilt_y)-a.tilt_y)*t}:{})};}
 export function eraseInk(strokes:InkStroke[],center:Point,radius:number,partial:boolean,aspect:number):InkStroke[]{
-  return strokes.flatMap(stroke=>{
+  return strokes.flatMap<InkStroke>(stroke=>{
+    if(stroke.tool==='text')return[stroke];
     const points=stroke.points,r=radius+stroke.width/2;
     const hits=points.length===1?Math.hypot(points[0].x-center.x,(points[0].y-center.y)*aspect)<=r:points.some((p,i)=>i>0&&distance(center,points[i-1],p,aspect)<=r);
     if(!hits)return[stroke];if(!partial||points.length===1)return[];

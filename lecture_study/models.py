@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 import json
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -93,14 +93,34 @@ class InkStroke(Input):
     points: list[InkPoint] = Field(min_length=1,max_length=100000)
 
 
+class InkText(Input):
+    id: str = Field(min_length=1,max_length=200)
+    tool: Literal['text']
+    text: str = Field(min_length=1,max_length=10000)
+    color: str = Field(pattern=r'^#[a-fA-F0-9]{6}$')
+    width: float = Field(ge=.0002,le=.1,allow_inf_nan=False,strict=True)
+    opacity: float = Field(ge=.05,le=1,allow_inf_nan=False,strict=True)
+    input: Literal['mouse','pen','touch']
+    points: list[InkPoint] = Field(min_length=2,max_length=2)
+
+    @model_validator(mode='after')
+    def valid_text_box(self):
+        if not self.text.strip():raise ValueError('글상자 내용을 입력하세요')
+        start,end=self.points
+        if end.x<=start.x or end.y<=start.y:raise ValueError('글상자 영역을 확인하세요')
+        return self
+
+
 class PageDocumentInput(Input):
     document_sha256: str = Field(pattern=r'^[a-f0-9]{64}$')
     expected_revision: int = Field(ge=0,strict=True)
     text: str = Field(max_length=200000)
-    ink: list[InkStroke] = Field(max_length=2000)
+    ink: list[Annotated[InkStroke | InkText,Field(discriminator='tool')]] = Field(max_length=2000)
 
     @model_validator(mode='after')
     def bounded_ink(self):
+        if len(self.text)+sum(len(item.text) for item in self.ink if item.tool=='text')>200000:
+            raise ValueError('페이지 메모와 글상자는 전체 200,000자까지 저장할 수 있습니다')
         if sum(len(stroke.points) for stroke in self.ink)>100000:
             raise ValueError('필기는 전체 100,000점까지 저장할 수 있습니다')
         if len({stroke.id for stroke in self.ink})!=len(self.ink):

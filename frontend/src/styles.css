@@ -254,6 +254,10 @@ h1{font-size:31px}
 .page-navigation{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
 .page-navigation label{display:flex;align-items:center;gap:10px;margin:0}
 .page-navigation select{width:auto;padding:6px 10px}
+.page-jump{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0}
+.page-jump input{width:5em;padding:6px 8px;text-align:center}
+.page-jump button{min-height:36px;padding:6px 10px}
+.page-jump [role=alert]{color:var(--error);font-size:12px}
 .page-ai-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
 .page-ai-actions button[aria-pressed=true],.ink-toolbar button[aria-pressed=true]{background:var(--primary-soft);border-color:var(--focus)}
 .notebook-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
@@ -446,6 +450,8 @@ small,.muted{color:var(--muted)}
 .ink-toolbar button[aria-pressed=true]{color:var(--selected-ink);background:var(--selected);border-color:var(--primary)}
 .icon-button,.ink-toolbar .icon-button,.notebook-heading .icon-button{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:40px;min-width:40px;height:40px;min-height:40px;padding:8px}
 .icon-label-button,.ink-toolbar .icon-label-button,.notebook-heading .icon-label-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:40px;white-space:nowrap}
+.notebook-heading a.icon-label-button{font:inherit;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:9px 16px;color:var(--ink);text-decoration:none}
+.notebook-heading a.icon-label-button:hover{border-color:var(--primary);background:var(--primary-soft)}
 .ink-active-tool{color:var(--ink);font-weight:650}
 .ink-tool-group{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding-right:10px;border-right:1px solid var(--line)}
 .ink-tool-group:last-child{border-right:0;padding-right:0}
@@ -488,6 +494,8 @@ small,.muted{color:var(--muted)}
   .brand small{font-size:9px}
 }
 @media(max-width:700px){
+  .material-topbar>.material-picker{flex-basis:100%;max-width:none}
+  .material-topbar>.page-navigation{margin-left:0}
   .session-utilities>.card{min-width:100%}
   .home,.session-workspace,.settings-view,.course-workspace{padding:24px 18px}
   .welcome-grid{grid-template-columns:1fr;gap:12px}
@@ -555,3 +563,210 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .source-dialog .ink-region-preview img{max-height:none;height:auto}
 
 .knowledge-candidate{overflow-wrap:anywhere}
+
+/* Course names stay in navigation; materials and lecture history live in the workspace. */
+.sidebar{width:216px;padding:16px 14px 18px;overflow:hidden;gap:0}
+.sidebar .brand{flex-shrink:0;margin-bottom:30px}
+.sidebar-home{flex:none!important;margin-bottom:8px}
+.sidebar .course-nav-link{flex:none;min-height:42px;font-size:13px;font-weight:500;text-align:left;width:100%;padding:10px 12px;overflow:hidden;gap:10px}
+.course-nav-link span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar .course-navigation{display:flex;flex-direction:column;overflow:auto;min-height:0;flex:1;gap:2px!important;margin:0 -4px;padding:0 4px;scrollbar-width:thin;overscroll-behavior:contain}
+.sidebar-label{margin:20px 10px 8px;flex:none}
+.sidebar-meetings{margin-top:18px}
+.sidebar-footer{flex:none;margin-top:0;padding-top:20px}
+.sidebar-footer .settings-button{width:100%;font-size:12px}
+.home,.session-workspace,.course-workspace{max-width:1500px;padding:28px 40px 40px;margin:auto}
+.workspace-location{display:block;color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:30px;overflow-wrap:anywhere}
+.workspace-location button{border:0;background:transparent;padding:0;font-size:inherit;color:inherit;min-height:24px}
+.workspace-location button:hover{color:var(--ink);background:transparent;text-decoration:underline;text-underline-offset:4px}
+.home-create h1{font-size:25px;margin-bottom:24px}
+.record-kind,.workspace-tabs{display:flex;border-bottom:1px solid var(--line);gap:28px;margin:0 0 22px;padding:0}
+.record-kind button,.workspace-tabs button{display:inline-flex;align-items:center;gap:10px;padding:12px 6px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;color:var(--muted);font-size:14px;font-weight:550;min-height:46px}
+.record-kind button[aria-pressed=true],.workspace-tabs button[aria-selected=true]{border-color:var(--ink);background:transparent;color:var(--ink)}
+.record-kind button:hover,.workspace-tabs button:hover{background:transparent;color:var(--ink)}
+.record-fields{display:grid;grid-template-columns:minmax(160px,1fr) minmax(180px,1.3fr) 88px;gap:18px;align-items:end}
+.record-fields label{min-width:0;margin:0;font-size:12px;font-weight:550;gap:8px}
+.record-fields input,.record-fields select{min-width:0;font-size:14px;height:44px;padding:8px 12px;background:var(--surface)}
+.record-fields.meeting-fields{grid-template-columns:1fr}
+.record-form .actions{margin-top:24px;gap:10px}
+.record-form .primary{min-height:44px;padding:10px 28px;font-size:14px}
+.home-create{padding-bottom:32px;border-bottom:1px solid var(--line);margin-bottom:30px}
+.recent-records .subheading{margin-bottom:12px}
+.recent-records h2,.course-recordings h2{margin:0;font-size:18px}
+.record-row{width:100%;display:flex;align-items:center;gap:18px;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;padding:20px 10px;min-height:82px}
+.record-row:hover{background:var(--surface-hover);border-color:var(--line)}
+.record-copy{display:grid;min-width:0;flex:1;gap:3px}
+.record-copy strong{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.record-copy small{font-size:12px;font-weight:400}
+.record-row time{font-size:12px;color:var(--muted);white-space:nowrap}
+.record-row>.ui-icon{color:var(--muted)}
+.record-live{color:var(--warm-ink)}
+.empty-records{font-size:14px;padding:24px 10px}
+.course-create{margin-top:28px;border-top:1px solid var(--line);padding-top:8px}
+.course-create>summary{font-size:13px;color:var(--muted);cursor:pointer;padding:12px 0}
+.course-create>label{margin-top:10px}
+.creation-dialog{padding:28px;width:min(540px,calc(100vw - 32px));max-height:calc(100dvh - 48px);overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);box-shadow:0 20px 70px #0005}
+.creation-dialog::backdrop{background:#0008}
+.creation-dialog .subheading{margin-bottom:24px}
+.creation-dialog h2{margin:0;font-size:22px}
+.creation-dialog .subheading>.icon-button{border:0;background:transparent}
+.creation-dialog .record-fields{grid-template-columns:minmax(0,1fr) 100px;gap:20px}
+.creation-dialog .record-title{grid-column:1/-1;grid-row:2}
+.creation-dialog .record-number{grid-column:2;grid-row:1}
+.creation-dialog .record-form .actions{justify-content:flex-end;margin-top:26px}
+.creation-hint{font-size:12px;text-align:right;margin:12px 0 0}
+.course-workspace .section-heading{align-items:center;margin-bottom:18px}
+.course-workspace .section-heading h1{margin:0;font-size:26px}
+.course-workspace .section-heading .primary{font-size:13px;min-height:42px}
+.course-workspace>.workspace-tabs{margin-bottom:24px}
+.course-recordings{margin:0;border:0;padding:0;background:transparent}
+.course-recordings .subheading{padding-bottom:12px;border-bottom:1px solid var(--line)}
+.material-library>.subheading h2{font-size:16px;margin:0}
+.material-library>.subheading>button{font-size:12px;min-height:36px}
+.material-picker{margin:12px 0 20px}
+.material-picker>summary{font-size:13px;cursor:pointer;color:var(--ink);padding:12px;border:1px solid var(--line);border-radius:8px;overflow-wrap:anywhere}
+.material-picker[open]>summary{margin-bottom:12px}
+.material-picker .concept-check{font-size:12px;margin:12px 0}
+.course-material-list{gap:0;margin:0}
+.course-material-list li{padding:14px 8px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;min-height:64px}
+.course-material-list li.selected{background:var(--primary-soft);border-color:var(--line)}
+.material-title{font-size:14px;min-height:36px}
+.material-actions a{font-size:12px}
+.material-library .empty-state{padding:32px 20px;margin:16px 0;border:1px dashed var(--line);border-radius:10px;background:transparent}
+.material-library .empty-state h3{font-size:16px}
+.material-library .empty-state p{font-size:13px;margin-bottom:20px}
+.session-workspace>.section-heading{align-items:center;margin-bottom:18px}
+.session-workspace>.section-heading h1{font-size:26px;margin-bottom:2px}
+.session-workspace>.section-heading p{margin:0}
+.session-management{display:block;position:relative;flex:none}
+.session-management>summary{cursor:pointer;color:var(--muted);font-size:13px;padding:8px 12px;min-height:38px;border-radius:8px;list-style:none}
+.session-management>summary::-webkit-details-marker{display:none}
+.session-management>summary:hover{color:var(--ink);background:var(--surface-hover)}
+.session-management[open]>div{position:absolute;z-index:12;right:0;top:100%;min-width:200px;display:grid;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px #0003}
+.session-management button{text-align:left;padding:10px;font-size:12px;color:var(--ink)}
+.session-management hr{width:100%;border:0;border-top:1px solid var(--line);margin:4px 0}
+.recorder{padding:10px 14px;gap:14px;min-height:68px;border-radius:9px;margin-bottom:12px;background:var(--surface)}
+.recorder-symbol{width:32px;height:38px;background:transparent}
+.recorder-symbol .ui-icon{width:22px;height:22px}
+.recorder>.recorder-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap;min-width:110px}
+.recorder h2{font-size:14px;margin:0}
+.recorder .muted{font-size:12px;font-variant-numeric:tabular-nums}
+.recorder>label{min-width:170px;max-width:230px;font-size:10px}
+.recorder select{padding:4px 8px;font-size:12px}
+.recorder .primary{min-height:40px;font-size:13px}
+.recorder-recording{background:var(--surface);border-color:var(--warm-line)}
+.session-tabs{margin:0 0 18px;gap:24px}
+.session-tabs button{font-size:13px;padding:12px 2px}
+.session-utilities[hidden]{display:none}
+.session-utilities{margin:0 0 16px}
+.session-workspace .material-library>.subheading{margin-bottom:8px}
+.page-navigation{font-size:12px;gap:8px;margin-bottom:8px}
+.page-navigation select{font-size:12px}
+.notebook-heading{margin-top:8px;margin-bottom:8px}
+.ink-toolbar{padding:7px 10px;margin-top:8px}
+.ink-help{margin:6px 0 10px;line-height:1.6}
+.notebook-layout{grid-template-columns:minmax(0,1fr) 270px;gap:16px}
+.page-viewport{border-radius:5px;padding:12px;min-height:400px;height:68vh}
+.page-notes{padding:12px;border-radius:8px}
+.page-notes label{margin:0}
+.page-notes textarea{min-height:360px;font-size:14px}
+.page-notes p{font-size:11px;margin:10px 0 0}
+@media(max-width:1200px){.notebook-layout{grid-template-columns:minmax(0,1fr)}.page-notes textarea{min-height:150px}}
+@media(max-width:1050px){
+  .sidebar{width:184px;padding-left:10px;padding-right:10px}
+  .home,.session-workspace,.course-workspace{padding:24px}
+  .record-fields{grid-template-columns:minmax(0,1fr) 78px;gap:14px}
+  .record-fields>label:first-child{grid-column:1/-1}
+  .record-title{grid-column:1}.record-number{grid-column:2}
+  .record-fields.meeting-fields{display:block}
+  .record-row{gap:12px;padding:16px 4px}
+}
+@media(max-width:700px){
+  .material-topbar>.material-picker{flex-basis:100%;max-width:none}
+  .material-topbar>.page-navigation{margin-left:0}
+  .session-utilities>.card{min-width:100%}
+  .home,.session-workspace,.course-workspace{padding:22px 18px}
+  .workspace-location{margin-bottom:22px}
+  .session-workspace>.section-heading,.course-workspace>.section-heading{flex-direction:row;gap:12px;align-items:flex-start}
+  .course-workspace .section-heading .primary{font-size:12px;white-space:nowrap;padding:8px 10px;margin:0}
+  .course-workspace .section-heading h1{font-size:23px}
+  .workspace-tabs{gap:14px;flex-wrap:wrap}
+  .workspace-tabs button{font-size:12px;padding:10px 2px}
+  .record-row time{display:none}
+  .recorder{padding:10px;gap:10px}
+  .recorder>label{order:3;width:100%;max-width:none}
+  .recorder select{width:100%}
+  .recorder>.primary,.recorder>.recording-stop{margin-left:auto}
+  .recorder-symbol{display:none}
+}
+@media(max-width:600px){
+  .sidebar{width:100%;height:auto;max-height:none;margin:0;padding:14px 18px;border-right:0;border-bottom:1px solid var(--line)}
+  .sidebar .brand{margin-bottom:12px}
+  .sidebar .sidebar-home{display:none}
+  .sidebar-label{margin-top:0}
+  .sidebar .course-navigation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));max-height:140px;overflow:auto;flex:auto}
+  .sidebar-meetings{margin-top:8px}
+  .sidebar-footer{padding-top:8px}
+  .sidebar-footer>span{display:none}
+  .creation-dialog .record-fields{grid-template-columns:minmax(0,1fr) 80px}
+  .creation-dialog .record-fields>label:first-child{grid-column:1}
+}
+
+.home-create .actions{justify-content:flex-start}
+
+/* Keep the document above supporting recognition and knowledge tools. */
+.material-topbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.material-topbar>.material-picker{flex:1;min-width:160px;margin:0}
+.material-topbar>.page-navigation{margin:0 0 0 auto;gap:6px}
+.material-topbar>.icon-button{width:36px;min-width:36px;height:36px;min-height:36px}
+.material-open .material-picker{position:relative;max-width:480px}
+.material-open .material-picker>summary{padding:10px 12px}
+.material-open .material-picker-body{position:absolute;z-index:10;top:calc(100% + 6px);left:0;width:max(100%,320px);max-width:calc(100vw - 60px);max-height:55vh;overflow:auto;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px #0003}
+.notebook-supporting{display:grid;gap:8px;margin-top:16px}
+.notebook-supporting>.knowledge-panel{margin:0}
+.continuous-pages{display:grid;gap:36px;margin-top:20px}
+.continuous-page{min-width:0;scroll-margin-top:20px}
+.continuous-placeholder{width:min(100%,680px);max-height:1200px;background:var(--page-frame);border:1px solid var(--line);border-radius:5px}
+.continuous-page .page-viewport{height:auto;min-height:0;overflow:visible;overscroll-behavior:auto}
+.continuous-page .page-image{line-height:normal}
+.continuous-page .page-image img{display:block;margin-top:12px}
+
+/* One PDF notebook viewport and one visible toolset; page storage stays independent. */
+.notebook-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start;min-width:0}
+.notebook-workspace.with-notes{grid-template-columns:minmax(0,1fr) minmax(220px,270px)}
+.notebook-primary,.notebook-sidebar,.notebook-controls{min-width:0}
+.notebook-sidebar{padding:14px;border-left:1px solid var(--line);background:var(--surface)}
+.notebook-sidebar[hidden]{display:none}
+.notebook-sidebar .session-note-panel h2{font-size:15px}
+.notebook-sidebar .session-note-panel textarea{width:100%;min-height:180px}
+.notebook-sidebar .page-notes{margin-top:18px}
+.notebook-sidebar .page-notes textarea{min-height:140px}
+.notebook-controls{position:relative;z-index:8;margin-top:12px}
+.notebook-controls .ink-toolbar{position:relative;top:0;margin:0;box-shadow:none}
+.notebook-controls .ink-help{margin:7px 0 10px}
+.notebook-controls .notebook-heading{margin-bottom:8px}
+.notebook-document-viewport{display:grid;align-content:start;gap:24px;height:clamp(180px,calc(100dvh - 290px),850px);overflow:auto;overscroll-behavior:contain;background:var(--page-frame);border:1px solid var(--line);border-radius:10px;padding:20px;margin-top:0;min-width:0;position:relative}
+.notebook-document-viewport .continuous-page{scroll-margin:0;min-width:0}
+.notebook-document-viewport .page-notebook{margin:0;padding:0;border:0;border-radius:0;background:none;box-shadow:none}
+.notebook-document-viewport .notebook-layout{display:block}
+.notebook-document-viewport .page-viewport{height:auto;min-height:0;max-height:none;overflow:visible;padding:0;border:0;background:none;border-radius:0}
+.notebook-document-viewport .notebook-error,.notebook-document-viewport .conflict-panel,.notebook-document-viewport .draft-backup{background:var(--surface);padding:12px}
+.pdf-text-editor{position:absolute;z-index:3;min-width:12px;min-height:12px}
+.pdf-text-editor textarea{display:block;width:100%;height:100%;padding:0;margin:0;resize:none;border:1px dashed var(--focus);border-radius:0;background:rgba(255,255,255,.95);font-family:sans-serif;line-height:1.25;white-space:pre-wrap;overflow-wrap:anywhere}
+.pdf-text-actions{display:flex;flex-wrap:wrap;gap:4px;position:absolute;top:100%;left:0;min-width:180px;padding-top:4px}
+.pdf-text-actions button{font-size:11px;padding:5px 8px;min-height:30px;white-space:nowrap}
+.session-management>summary{display:flex;align-items:center;justify-content:center;width:40px;height:40px;padding:8px}
+.session-tabs{flex-wrap:wrap;column-gap:20px;row-gap:0}
+@media(max-width:1050px){.notebook-workspace.with-notes{grid-template-columns:minmax(0,1fr)}.notebook-sidebar{border-left:0;border-top:1px solid var(--line)}.notebook-document-viewport{padding:12px}.session-tabs{column-gap:16px}}
+
+.notebook-page-layout{display:flex;gap:3px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:3px}
+.notebook-page-layout button{min-height:32px;padding:4px 10px;font-size:12px;border:0;box-shadow:none}
+.notebook-page-layout button[aria-pressed="true"]{background:var(--selected);outline:1px solid var(--ink);outline-offset:-1px}
+.notebook-document-viewport .continuous-page[hidden]{display:none}
+.notebook-more{position:relative;flex:none}
+.notebook-more>summary{display:flex;align-items:center;justify-content:center;list-style:none;cursor:pointer}
+.notebook-more>summary::-webkit-details-marker{display:none}
+.notebook-menu-panel{position:absolute;z-index:12;top:calc(100% + 6px);right:0;min-width:160px;max-width:calc(100vw - 48px);max-height:55dvh;overflow:auto;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}
+.notebook-menu-panel summary{padding:10px;font-size:13px;cursor:pointer}
+.notebook-menu-panel .notebook-page-layout{border:0;margin:0 6px 6px;gap:8px}
+.notebook-menu-panel .notebook-page-layout button{width:40px;height:40px;padding:8px}

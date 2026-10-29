@@ -146,3 +146,51 @@ test('explicit color apply accepts only complete RGB hex without corrupting sett
     for(const value of ['', '#12','#fff','#1234567','red',' #123456','#12345g',null,12])assert.equal(notebookColor(value),null);
   }finally{await server.close();}
 });
+
+test('text tool and size persist while legacy tool snapshots retain their existing values',async()=>{
+  const values=new Map<string,string>();
+  Object.defineProperty(globalThis,'location',{configurable:true,value:new URL('http://localhost/')});
+  Object.defineProperty(globalThis,'window',{configurable:true,value:{localStorage:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}}});
+  const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+  try{
+    const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+    assert.equal(prefs.defaultTools.textSize,.025);
+    const {textSize:_,...legacy}=prefs.defaultTools;
+    legacy.penColor='#abcdef';
+    values.set('solasi.notebook-tools',JSON.stringify(legacy));
+    assert.deepEqual((await prefs.loadNotebookPreferences('asset','hash')).tools,legacy);
+    for(const textSize of [.012,.025,.08]){
+      const tools={...legacy,tool:'text',textSize};
+      assert.equal(await prefs.saveNotebookTools(tools),true);
+      server.moduleGraph.invalidateAll();
+      const restarted=await server.ssrLoadModule('/src/notebook-preferences.ts');
+      assert.deepEqual((await restarted.loadNotebookPreferences('asset','hash')).tools,tools);
+    }
+    for(const textSize of [.011,.081,'large',null]){
+      values.set('solasi.notebook-tools',JSON.stringify({...legacy,tool:'text',textSize}));
+      server.moduleGraph.invalidateAll();
+      const restarted=await server.ssrLoadModule('/src/notebook-preferences.ts');
+      assert.deepEqual((await restarted.loadNotebookPreferences('asset','hash')).tools,restarted.defaultTools);
+    }
+  }finally{await server.close();}
+});
+
+
+test('single-page mode survives reload independently per PDF without changing legacy views',async()=>{
+ const values=new Map<string,string>();
+ Object.defineProperty(globalThis,'location',{configurable:true,value:new URL('http://localhost/')});
+ Object.defineProperty(globalThis,'window',{configurable:true,value:{localStorage:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)}}});
+ const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+ try{
+  const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+  const legacy={zoomMode:'manual',zoom:1.5,rotation:90,notesOpen:false};
+  await prefs.saveNotebookView('a','h',{...legacy,pageLayout:'single'});
+  await prefs.saveNotebookView('b','h',legacy);
+  server.moduleGraph.invalidateAll();
+  const restarted=await server.ssrLoadModule('/src/notebook-preferences.ts');
+  assert.deepEqual((await restarted.loadNotebookPreferences('a','h')).view,{...legacy,pageLayout:'single'});
+  assert.deepEqual((await restarted.loadNotebookPreferences('b','h')).view,legacy);
+  values.set('solasi.notebook-view:c:h',JSON.stringify({...legacy,pageLayout:'invalid'}));
+  assert.deepEqual((await restarted.loadNotebookPreferences('c','h')).view,restarted.defaultView);
+ }finally{await server.close();}
+});

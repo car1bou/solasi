@@ -35,7 +35,8 @@ def checked_document_path(db,asset_id,sha256):
 
 
 async def document_metadata(db,asset_id,runtime_dir):
-    source,asset,inspected=await asyncio.to_thread(current_document,db,asset_id)
+    # Keep the shared SQLite connection on the request thread during page refresh.
+    source,asset,inspected=current_document(db,asset_id)
     if inspected['kind'] not in ('pdf','png','jpg'):raise ValueError('페이지 이미지가 없는 자료입니다')
     digest=inspected['sha256'];folder=data_dir(db)/'assets'/asset_id
     saved=db.execute('SELECT metadata FROM asset_documents WHERE asset_id=? AND sha256=?',(asset_id,digest)).fetchone()
@@ -54,7 +55,7 @@ async def document_metadata(db,asset_id,runtime_dir):
         for p in pages:
             ref=SourceRef(id=f'{asset_id}:document:{digest}:page:{p["page"]}',kind='material',asset_id=asset_id,page=p['page'],document_sha256=digest,coord_system='pdf_points' if inspected['kind']=='pdf' else 'pixels',source_width=p['width'],source_height=p['height'])
             metadata['pages'].append({**p,'ref':ref.model_dump()})
-    await asyncio.to_thread(checked_document_path,db,asset_id,digest)
+    checked_document_path(db,asset_id,digest)
     with db:
         db.execute('INSERT OR IGNORE INTO asset_documents VALUES (?,?,?,?)',(asset_id,digest,json.dumps(metadata,ensure_ascii=False),now()))
         for p in metadata['pages']:
@@ -88,14 +89,15 @@ def save_page_document(db,course_id,asset_id,page,body):
         if (row['revision'] if row else 0)!=body.expected_revision:raise HTTPException(409,'다른 창에서 페이지를 저장했습니다. 현재 메모와 초안을 비교하세요')
         ident=row['id'] if row else new_id();revision=body.expected_revision+1
         ref=SourceRef(id=f'{ident}:page-note:{revision}',kind='page_note',course_id=course_id,asset_id=asset_id,document_id=ident,document_sha256=body.document_sha256,page=page,version=revision)
-        db.execute('INSERT INTO sources(id,ref,text_snapshot) VALUES (?,?,?)',(ref.id,ref.model_dump_json(),body.text))
+        source_text='\n'.join(text for text in [body.text,*[item.text for item in body.ink if item.tool=='text']] if text)
+        db.execute('INSERT INTO sources(id,ref,text_snapshot) VALUES (?,?,?)',(ref.id,ref.model_dump_json(),source_text))
         if not row:db.execute('INSERT INTO page_documents VALUES (?,?,?,?,?,?)',(ident,course_id,asset_id,body.document_sha256,page,revision))
         else:db.execute('UPDATE page_documents SET revision=? WHERE id=?',(revision,ident))
         ink=json.dumps([s.model_dump(exclude_none=True) for s in body.ink],ensure_ascii=False,separators=(',',':'))
         db.execute('INSERT INTO page_document_revisions VALUES (?,?,?,?,?,?)',(ident,revision,body.text,ink,ref.id,now()))
         from .handwriting import ink_hash
         db.execute("UPDATE ink_recognitions SET status='stale' WHERE document_id=? AND ink_hash!=? AND status!='stale'",(ident,ink_hash(json.loads(ink))))
-        index_source(db,ref,body.text)
+        index_source(db,ref,source_text)
         checked_document_path(db,asset_id,body.document_sha256)
         db.commit()
     except BaseException:db.rollback();raise

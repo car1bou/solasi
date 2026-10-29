@@ -13,7 +13,9 @@ export type Job<T> = {id:string;kind:string;status:string;error:string|null;resu
 export type DocumentPage = {page:number;width:number;height:number;rotation:number;ref:SourceRef};
 export type DocumentMetadata = {asset_id:string;sha256:string;total_pages:number;pages:DocumentPage[]};
 export type InkPoint = {x:number;y:number;pressure:number;tilt_x?:number;tilt_y?:number};
-export type InkStroke = {id:string;tool:'pen'|'highlighter';color:string;width:number;opacity:number;input:'mouse'|'pen'|'touch';points:InkPoint[]};
+type InkBase = {id:string;color:string;width:number;opacity:number;input:'mouse'|'pen'|'touch';points:InkPoint[]};
+export type InkText = InkBase&{tool:'text';text:string};
+export type InkStroke = (InkBase&{tool:'pen'|'highlighter'})|InkText;
 export type PageDocument = {id:string|null;course_id:string;asset_id:string;document_sha256:string;page:number;revision:number;text:string;ink:InkStroke[];source_id:string|null;updated_at:string|null};
 export type CourseScope = {course_id:string;mode:'course';asset_id?:string;page?:number;document_sha256?:string};
 

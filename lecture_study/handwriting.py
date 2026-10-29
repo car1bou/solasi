@@ -9,6 +9,7 @@ from .retrieval import index_source
 
 
 def ink_hash(ink):
+    ink=[item for item in ink if item.get('tool')!='text']
     return hashlib.sha256(json.dumps(ink,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
 

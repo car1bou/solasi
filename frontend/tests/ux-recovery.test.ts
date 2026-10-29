@@ -23,7 +23,7 @@ test('recording materials and notes stay mounted when switching between the same
     const {default:MaterialView}=await server.ssrLoadModule('/src/MaterialView.tsx');
     for(const mode of ['material','note']){
       const markup=renderToStaticMarkup(React.createElement(MaterialView,{session:{id:'synthetic',kind:'lecture',title:'검증'},mode}));
-      assert.match(markup,/aria-label="회차 노트"/);
+      assert.match(markup,/aria-label="메모"/);
       assert.match(markup,/class="material-library"/);
       assert.match(markup,/hidden=""/);
     }

@@ -26,7 +26,8 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
       const result=response.text?JSON.parse(response.text):undefined;
       if(response.status<200||response.status>=300)throw new ApiError(typeof result?.detail==='string'?result.detail:'입력 정보를 확인하세요.',response.status);
       return result as T;
-    }finally{options.signal?.removeEventListener('abort',abort);}
+    }catch(error){options.signal?.throwIfAborted();throw error;}
+    finally{options.signal?.removeEventListener('abort',abort);}
   }
   if (path !== '/bootstrap' && path !== '/client') await connect();
   const headers = new Headers(options.headers);
