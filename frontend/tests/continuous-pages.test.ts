@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {pageAtPosition,pageShortcut,parsePageNumber} from '../src/continuous-pages.ts';
+import {pageAtPosition,pageShortcut,parsePageNumber,notebookViewportHeight} from '../src/continuous-pages.ts';
+
+test('the notebook uses remaining visible height after wrapping controls and window resizing',()=>{
+  assert.equal(notebookViewportHeight(720,120),588);
+  assert.equal(notebookViewportHeight(480,220),248);
+  assert.equal(notebookViewportHeight(480,260),208);
+  assert.equal(notebookViewportHeight(480,-30),468);
+  assert.equal(notebookViewportHeight(480,500),180);
+});
 
 test('the current page follows the page at the reading position',()=>{
   const pages=[{page:1,top:-300,bottom:120},{page:2,top:130,bottom:900},{page:3,top:910,bottom:1500}];

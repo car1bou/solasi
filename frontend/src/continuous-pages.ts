@@ -13,3 +13,7 @@ export function parsePageNumber(value:string,total:number){
   const text=value.trim();if(!/^\d+$/.test(text))return null;
   const page=Number(text);return Number.isSafeInteger(page)&&page>=1&&page<=total?page:null;
 }
+
+export function notebookViewportHeight(height:number,top:number){
+  return Math.max(180,height-Math.max(0,top)-12);
+}
