@@ -732,11 +732,17 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .continuous-page .page-image img{display:block;margin-top:12px}
 
 /* One PDF notebook viewport and one visible toolset; page storage stays independent. */
-:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open){padding-top:12px}
-:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.workspace-location{margin-bottom:8px}
-:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading{margin-bottom:8px}
-:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading h1{font-size:22px}
-:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs){margin-bottom:10px}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open){padding-top:8px;padding-bottom:12px}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.workspace-location{display:none}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading{margin-bottom:2px;min-height:32px;gap:8px;align-items:center}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading>div{min-width:0;flex:1}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading h1{margin:0;font-size:14px;line-height:1.4;letter-spacing:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading p{display:none}
+.course-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .primary{font-size:0;width:32px;min-width:32px;height:32px;min-height:32px;padding:6px}
+.session-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .session-management>summary{width:32px;height:32px;padding:6px}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs){margin:0 0 6px;gap:14px}
+:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs) button{font-size:12px;min-height:32px;padding:4px 2px}
+@media(any-pointer:coarse){:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs) button,.course-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .primary,.session-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .session-management>summary{min-width:44px;min-height:44px}}
 .notebook-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start;min-width:0}
 .notebook-workspace.with-notes{grid-template-columns:minmax(0,1fr) minmax(220px,270px)}
 .notebook-primary,.notebook-sidebar,.notebook-controls{min-width:0}
