@@ -6,6 +6,7 @@ export type NotebookTools={tool:NotebookTool;eraserMode?:'stroke-eraser'|'partia
 export type NotebookView={pageLayout?:'continuous'|'single';zoomMode:'fit'|'page'|'manual';zoom:number;rotation:number;notesOpen:boolean};
 export const defaultTools:NotebookTools={tool:'pen',textSize:.025,penColor:'#254f3f',penWidth:.0025,penOpacity:1,highlighterColor:'#254f3f',highlighterWidth:.018,highlighterOpacity:.35,eraserSize:.014};
 export const defaultView:NotebookView={zoomMode:'fit',zoom:1,rotation:0,notesOpen:true};
+export function notebookViewAfterCollapse(view:NotebookView):NotebookView{return view.zoomMode==='page'?{...view,zoomMode:'fit'}:view;}
 const cache=new Map<string,unknown>(),writes=new Map<string,Promise<boolean>>();
 const toolNames:NotebookTool[]=['pen','highlighter','text','stroke-eraser','partial-eraser','lasso','pan'];
 const inRange=(value:unknown,min:number,max:number)=>typeof value==='number'&&Number.isFinite(value)&&value>=min&&value<=max;

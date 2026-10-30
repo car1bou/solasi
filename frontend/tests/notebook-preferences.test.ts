@@ -12,6 +12,10 @@ test('notebook preferences keep each pen and document view independently across 
     const prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
     const initial=await prefs.loadNotebookPreferences(asset,hash);
     assert.equal(initial.view.zoomMode,'fit');
+    const pageFit={...initial.view,zoomMode:'page',pageLayout:'single',rotation:90,notesOpen:false};
+    assert.deepEqual(prefs.notebookViewAfterCollapse(pageFit),{...pageFit,zoomMode:'fit'});
+    assert.equal(pageFit.zoomMode,'page');
+    for(const zoomMode of ['fit','manual']){const view={...pageFit,zoomMode,zoom:1.5};assert.equal(prefs.notebookViewAfterCollapse(view),view);}
     const tools={...initial.tools,tool:'highlighter',eraserMode:'partial-eraser',penColor:'#123456',penWidth:.004,highlighterColor:'#abcdef',highlighterOpacity:.4,eraserSize:.02};
     assert.equal(await prefs.saveNotebookTools(tools),true);
     const view={zoomMode:'manual',zoom:1.5,rotation:90,notesOpen:false};
