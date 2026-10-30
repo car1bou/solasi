@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {api,connect} from './api';
 import type {Course,Session} from './types';
 import SessionView from './SessionView';
@@ -10,6 +10,7 @@ import Icon from './Icon';
 import NativePlayback from './NativePlayback';
 import {navigate} from './native-lifecycle';
 import {useCloseGuard} from './use-close-guard';
+import {loadSidebarCollapsed,saveSidebarCollapsed} from './notebook-preferences';
 
 export function CourseNavigation({courses,active,onCourse}:{courses:Course[];active:string|null;onCourse:(id:string)=>void}){
   return <nav aria-label="과목 목록" className="course-navigation">{courses.map(course=><button key={course.id} className={'course-nav-link '+(active===course.id?'active':'')} aria-current={active===course.id?'page':undefined} title={course.title} onClick={()=>onCourse(course.id)}><Icon name="book" size={18}/><span>{course.title}</span></button>)}</nav>;
@@ -19,6 +20,12 @@ export default function App(){
   const [courses,setCourses]=useState<Course[]>([]),[sessions,setSessions]=useState<Session[]>([]),[selected,setSelected]=useState<string|null>(null),[selectedCourse,setSelectedCourse]=useState<string|null>(null),[recording,setRecording]=useState<string[]>([]);
   const [error,setError]=useState(''),[ready,setReady]=useState(false),[settings,setSettings]=useState(false),[creating,setCreating]=useState(false),[addingCourse,setAddingCourse]=useState(false),[busy,setBusy]=useState(false),[kind,setKind]=useState<'lecture'|'meeting'>('lecture'),[title,setTitle]=useState(''),[courseId,setCourseId]=useState(''),[lectureNo,setLectureNo]=useState('1'),[courseTitle,setCourseTitle]=useState('');
   const [connectionError,setConnectionError]=useState(''),[connecting,setConnecting]=useState(true),[navigationError,setNavigationError]=useState(''),[meetingsOnly,setMeetingsOnly]=useState(false);
+  const [sidebarCollapsed,setSidebarCollapsed]=useState(false),[sidebarReady,setSidebarReady]=useState(false),[sidebarWarning,setSidebarWarning]=useState('');
+  useEffect(()=>{let live=true;void loadSidebarCollapsed().then(value=>{if(live)setSidebarCollapsed(value);}).catch(()=>{if(live)setSidebarWarning('과목 목록 보기 설정을 불러오지 못해 펼친 상태로 표시합니다.');}).finally(()=>{if(live)setSidebarReady(true);});return()=>{live=false;};},[]);
+  const sidebarRequest=useRef(0);
+  async function toggleSidebar(){const request=++sidebarRequest.current,next=!sidebarCollapsed;setSidebarCollapsed(next);setSidebarWarning('');const saved=await saveSidebarCollapsed(next);if(request===sidebarRequest.current)setSidebarWarning(saved?'':'과목 목록 보기 설정을 저장하지 못했습니다. 이번 실행 동안만 적용합니다.');}
+  useLayoutEffect(()=>{const sidebar=document.getElementById('course-sidebar');if(sidebar?.contains(document.activeElement)&&getComputedStyle(sidebar).display==='none')document.querySelector<HTMLElement>('.course-workspace .sidebar-toggle,.active-session .sidebar-toggle')?.focus();},[sidebarCollapsed,selectedCourse,selected,settings]);
+  const sidebarToggle=<button className="icon-button sidebar-toggle" aria-label={sidebarCollapsed?'과목 목록 펼치기':'과목 목록 접기'} title={sidebarCollapsed?'과목 목록 펼치기':'과목 목록 접기'} aria-controls="course-sidebar" aria-expanded={!sidebarCollapsed} disabled={!sidebarReady} onClick={()=>void toggleSidebar()}><Icon name={sidebarCollapsed?'panel-open':'panel-close'} size={20}/></button>;
   const connectionPending=useRef(false),dialog=useRef<HTMLDialogElement>(null);
   useCloseGuard('새 기록 제목',busy&&!addingCourse||!!title);
   useCloseGuard('새 과목 이름',!!courseTitle||busy&&addingCourse);
@@ -57,8 +64,8 @@ export default function App(){
     <div className="actions">{modal&&<button type="button" onClick={cancelCreation}>취소</button>}<button className="primary" disabled={busy||!ready}>{busy?'만드는 중…':'기록 만들기'}</button>{!modal&&title&&<button type="button" onClick={()=>setTitle('')}>제목 지우기</button>}</div>
     {modal&&<p className="creation-hint">녹음은 다음 화면에서 시작합니다.</p>}
   </fieldset></form>;}
-  return <div className="app-shell"><a className="skip-link" href="#workspace">작업 화면으로 이동</a>
-    <aside className="sidebar">
+  return <div className={'app-shell'+(sidebarCollapsed?' sidebar-collapsed':'')}><a className="skip-link" href="#workspace">작업 화면으로 이동</a>
+    <aside id="course-sidebar" className="sidebar">
       <button className="brand" onClick={home} aria-label="Solasi 홈"><img className="brand-image" src="/solasi-icon.png" alt="" width={40} height={40}/><span>Solasi</span></button>
       <button className={'sidebar-home course-nav-link '+(!selected&&!selectedCourse&&!settings&&!meetingsOnly?'active':'')} onClick={home}><Icon name="book" size={18}/>홈</button>
       <div className="sidebar-label">과목 <button className="sidebar-add" aria-label="과목 추가" disabled={!ready} onClick={()=>navigate(()=>{showHome();setAddingCourse(true);})}><Icon name="plus" size={17}/></button></div>
@@ -67,12 +74,13 @@ export default function App(){
       <div className="sidebar-footer"><button className={'settings-button '+(settings?'active':'')} disabled={!ready} onClick={()=>{if(!settings)navigate(()=>{setNavigationError('');setSelected(null);setSelectedCourse(null);setSettings(true);});}}><Icon name="settings" size={18}/>모델·키 설정</button><span><Icon name="shield" size={13}/> 로컬 워크스페이스</span></div>
     </aside>
     <main id="workspace" tabIndex={-1}>
+      {sidebarWarning&&<p role="status" className="sidebar-warning">{sidebarWarning}</p>}
       {!creating&&error&&<div className="error-banner" role="alert">{error}<button aria-label="오류 메시지 닫기" onClick={()=>setError('')}>×</button></div>}
       {!creating&&navigationError&&<div className="error-banner navigation-warning" role="alert">{navigationError}<button aria-label="미저장 입력 안내 닫기" onClick={()=>setNavigationError('')}>×</button></div>}
       {!ready&&<section className="card" aria-label="앱 연결">{connecting?<p role="status">연결 중…</p>:<><p role="alert">앱에 연결하지 못했습니다. {connectionError}</p><button onClick={()=>void initialize()}>다시 연결</button></>}</section>}
       {recording.filter(id=>id!==selected).length>0&&<div className="recording-navigation" role="status">녹음이 계속되고 있습니다.{recording.filter(id=>id!==selected).map(id=><button key={id} onClick={()=>openSession(id)}>{sessions.find(s=>s.id===id)?.title} 녹음으로 이동</button>)}</div>}
-      {sessions.filter(session=>session.id===selected||recording.includes(session.id)).map(session=><div key={session.id} hidden={!visibleSession||selected!==session.id}><SessionView session={session} course={courses.find(c=>c.id===session.course_id)} onCourse={openCourse} onRecordingChange={active=>setRecording(current=>active?(current.includes(session.id)?current:[...current,session.id]):current.filter(id=>id!==session.id))} onDeleted={async pending=>{setRecording(current=>current.filter(id=>id!==session.id));showHome();await refresh();if(pending)setError('일부 앱 파일 정리 대기 · 재실행 시 재시도');}}/></div>)}
-      {settings?<SettingsView/>:course?<CourseView key={course.id} course={course} sessions={sessions.filter(s=>s.kind==='lecture'&&s.course_id===course.id)} recording={recording} onNewLecture={()=>newSession('lecture',course.id)} onSession={openSession}/>:!visibleSession&&<div className="home">
+      {sessions.filter(session=>session.id===selected||recording.includes(session.id)).map(session=><div key={session.id} className={visibleSession&&selected===session.id?'active-session':undefined} hidden={!visibleSession||selected!==session.id}><SessionView session={session} sidebarToggle={sidebarToggle} course={courses.find(c=>c.id===session.course_id)} onCourse={openCourse} onRecordingChange={active=>setRecording(current=>active?(current.includes(session.id)?current:[...current,session.id]):current.filter(id=>id!==session.id))} onDeleted={async pending=>{setRecording(current=>current.filter(id=>id!==session.id));showHome();await refresh();if(pending)setError('일부 앱 파일 정리 대기 · 재실행 시 재시도');}}/></div>)}
+      {settings?<SettingsView/>:course?<CourseView key={course.id} sidebarToggle={sidebarToggle} course={course} sessions={sessions.filter(s=>s.kind==='lecture'&&s.course_id===course.id)} recording={recording} onNewLecture={()=>newSession('lecture',course.id)} onSession={openSession}/>:!visibleSession&&<div className="home">
         <span className="workspace-location">{meetingsOnly?'회의 기록':'홈'}</span>
         <section className="home-create"><h1>새 기록</h1>{recordForm()}</section>
         <section className="recent-records"><div className="subheading"><h2>{meetingsOnly?'회의 기록':'최근 기록'}</h2></div><SessionList sessions={meetingsOnly?sessions.filter(s=>s.kind==='meeting'):sessions} courses={courses} recording={recording} onSession={openSession}/>{ready&&!(meetingsOnly?sessions.some(s=>s.kind==='meeting'):sessions.length)&&<p className="empty-records">{meetingsOnly?'아직 회의 기록이 없습니다.':'아직 기록이 없습니다.'}</p>}</section>

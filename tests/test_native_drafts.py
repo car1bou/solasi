@@ -16,6 +16,17 @@ def draft(key='["c","a","hash",1]', text='메모'):
 
 
 class NativeDraftTests(unittest.TestCase):
+    def test_workspace_sidebar_preference_roundtrip_and_validation(self):
+        self.assertEqual(self.store.read_preference('workspace-layout'), {'value':None})
+        for collapsed in (True,False):
+            value={'sidebarCollapsed':collapsed}
+            self.store.write_preference('workspace-layout',value)
+            self.assertEqual(NativeDrafts(self.db).read_preference('workspace-layout'),{'value':value})
+        for value in (None,{},True,{'sidebarCollapsed':1},{'sidebarCollapsed':'true'},
+                      {'sidebarCollapsed':True,'extra':'unexpected'}):
+            with self.assertRaises(ValueError):self.store.write_preference('workspace-layout',value)
+        self.assertEqual(self.store.read_preference('workspace-layout'),{'value':{'sidebarCollapsed':False}})
+
     def setUp(self):
         self.folder = tempfile.TemporaryDirectory()
         self.addCleanup(self.folder.cleanup)
@@ -234,7 +245,7 @@ class NativePreferenceApiTests(unittest.TestCase):
 
     def test_get_and_put_only_expose_the_requested_preference(self):
         from urllib.parse import quote
-        for key,value in (('notebook-tools',tool_preferences()),(VIEW_KEY,view_preferences())):
+        for key,value in (('notebook-tools',tool_preferences()),(VIEW_KEY,view_preferences()),('workspace-layout',{'sidebarCollapsed':True})):
             path='/api/native/preferences/'+quote(key,safe='')
             response=self.client.get(path);self.assertEqual(response.status_code,200);self.assertEqual(response.json(),{'value':None})
             response=self.client.put(path,json={'value':value});self.assertEqual(response.status_code,200);self.assertEqual(response.json(),{'value':value})

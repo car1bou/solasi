@@ -214,3 +214,22 @@ test('single-page mode survives reload independently per PDF without changing le
   assert.deepEqual((await restarted.loadNotebookPreferences('c','h')).view,restarted.defaultView);
  }finally{await server.close();}
 });
+
+test('sidebar collapse survives reload, defaults expanded and reports failed persistence',async()=>{
+ const values=new Map<string,string>();let fail=false;
+ Object.defineProperty(globalThis,'location',{configurable:true,value:new URL('http://localhost/')});
+ Object.defineProperty(globalThis,'window',{configurable:true,value:{localStorage:{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>{if(fail)throw new Error('disk unavailable');values.set(key,value);}}}});
+ const server=await createServer({configFile:false,server:{middlewareMode:true,hmr:false,ws:false},appType:'custom'});
+ try{
+  let prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+  assert.equal(await prefs.loadSidebarCollapsed(),false);
+  for(const collapsed of [true,false,true]){
+   assert.equal(await prefs.saveSidebarCollapsed(collapsed),true);await prefs.flushNotebookPreferences();
+   server.moduleGraph.invalidateAll();prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+   assert.equal(await prefs.loadSidebarCollapsed(),collapsed);
+  }
+  fail=true;assert.equal(await prefs.saveSidebarCollapsed(false),false);await prefs.flushNotebookPreferences();
+  server.moduleGraph.invalidateAll();prefs=await server.ssrLoadModule('/src/notebook-preferences.ts');
+  assert.equal(await prefs.loadSidebarCollapsed(),true);
+ }finally{await server.close();}
+});

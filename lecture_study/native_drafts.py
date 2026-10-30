@@ -38,7 +38,7 @@ def checked_draft(row):
 
 
 def preference_key(key):
-    if not isinstance(key, str) or (key != 'notebook-tools' and not re.fullmatch(
+    if not isinstance(key, str) or (key not in ('notebook-tools','workspace-layout') and not re.fullmatch(
             r'notebook-view:[0-9a-f]{32}:[0-9a-f]{64}', key)):
         raise ValueError('필기 설정 키 오류')
     return 'native_preference:'+key
@@ -47,6 +47,10 @@ def preference_key(key):
 def checked_preference(key, value):
     preference_key(key)
     if not isinstance(value, dict): raise ValueError('필기 설정 형식 오류')
+    if key == 'workspace-layout':
+        if set(value) != {'sidebarCollapsed'} or type(value['sidebarCollapsed']) is not bool:
+            raise ValueError('과목 목록 보기 설정 오류')
+        return value
     if key == 'notebook-tools':
         numeric = {'penWidth':(.0005,.04), 'penOpacity':(.05,1),
                    'highlighterWidth':(.0005,.04), 'highlighterOpacity':(.05,1), 'eraserSize':(.003,.06)}

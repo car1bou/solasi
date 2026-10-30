@@ -23,7 +23,7 @@ async function read(key:string){
   const value=nativeApp()?(await api<{value:unknown}>('/native/preferences/'+encodeURIComponent(key))).value:JSON.parse(window.localStorage.getItem('solasi.'+key)||'null');
   cache.set(key,value);return value;
 }
-function save(key:string,value:NotebookTools|NotebookView){
+function save(key:string,value:NotebookTools|NotebookView|{sidebarCollapsed:boolean}){
   cache.set(key,value);
   const pending=(writes.get(key)||Promise.resolve(true)).then(async()=>{
     if(cache.get(key)!==value)return true;
@@ -39,6 +39,8 @@ export async function loadNotebookPreferences(asset:string,hash:string){
 }
 export const saveNotebookTools=(value:NotebookTools)=>save('notebook-tools',value);
 export const saveNotebookView=(asset:string,hash:string,value:NotebookView)=>save(viewKey(asset,hash),value);
+export async function loadSidebarCollapsed(){const value=await read('workspace-layout') as {sidebarCollapsed?:unknown}|null;return value?.sidebarCollapsed===true;}
+export const saveSidebarCollapsed=(sidebarCollapsed:boolean)=>save('workspace-layout',{sidebarCollapsed});
 export async function flushNotebookPreferences(){await Promise.all([...writes.values()]);}
 export function notebookZoom(value:NotebookView,page:{width:number;height:number},availableWidth:number,availableHeight=0){
   if(value.zoomMode==='manual'||availableWidth<=0)return value.zoom;

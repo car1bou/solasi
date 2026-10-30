@@ -732,6 +732,10 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .continuous-page .page-image img{display:block;margin-top:12px}
 
 /* One PDF notebook viewport and one visible toolset; page storage stays independent. */
+.app-shell.sidebar-collapsed:has(.course-workspace .sidebar-toggle,.active-session .sidebar-toggle)>.sidebar{display:none}
+.sidebar-toggle.icon-button{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px}
+.sidebar-toggle .ui-icon{transform:scaleX(-1)}
+.sidebar-warning{margin:8px 18px;font-size:12px}
 :is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open){padding-top:8px;padding-bottom:12px}
 :is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.workspace-location{display:none}
 :is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading{margin-bottom:2px;min-height:32px;gap:8px;align-items:center}
@@ -743,6 +747,7 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 :is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs){margin:0 0 6px;gap:14px}
 :is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs) button{font-size:12px;min-height:32px;padding:4px 2px}
 @media(any-pointer:coarse){:is(.course-workspace,.session-workspace):has([role=tabpanel]>div:not([hidden]) .material-open)>:is(.workspace-tabs,.session-tabs) button,.course-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .primary,.session-workspace:has([role=tabpanel]>div:not([hidden]) .material-open)>.section-heading .session-management>summary{min-width:44px;min-height:44px}}
+@media(any-pointer:coarse){.sidebar-toggle.icon-button{width:44px;min-width:44px;height:44px;min-height:44px}}
 .notebook-workspace{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start;min-width:0}
 .notebook-workspace.with-notes{grid-template-columns:minmax(0,1fr) minmax(220px,270px)}
 .notebook-primary,.notebook-sidebar,.notebook-controls{min-width:0}
