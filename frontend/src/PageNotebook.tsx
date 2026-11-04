@@ -11,14 +11,14 @@ import RelatedKnowledge from './RelatedKnowledge';
 import {clamp,eraseInk,inkBounds,inkPath,inside,textInkAt,textInkBox} from './ink';
 import type {Bounds,Point} from './ink';
 import {defaultTools,defaultView,loadNotebookPreferences,saveNotebookTools,saveNotebookView,notebookZoom,notebookExport,notebookColor,notebookViewAfterCollapse} from './notebook-preferences';
-import type {NotebookTool,NotebookTools,NotebookView} from './notebook-preferences';
+import type {NotebookTool,NotebookTools,NotebookView,NotebookPanel} from './notebook-preferences';
 
 type Tool=NotebookTool;
 type Gesture={id:number;kind:Tool|'move'|'resize';origin:Point;base:InkStroke[];work:InkStroke[];stroke?:InkStroke;polygon:Point[];bounds?:Bounds;screen:Point;scroll:Point};
 const labels:Record<Tool,string>={pen:'펜',highlighter:'형광펜','stroke-eraser':'획 지우기','partial-eraser':'부분 지우기',lasso:'올가미',pan:'이동',text:'텍스트'};
 const toolIcons={pen:'pen',highlighter:'highlighter','stroke-eraser':'stroke-eraser','partial-eraser':'partial-eraser',lasso:'lasso',pan:'hand',text:'text'} as const;
 const statusLabels={loading:'불러오는 중',saved:'저장됨',pending:'저장 대기',saving:'저장 중',failed:'저장 실패 · 초안 보존',conflict:'충돌 · 초안 보존'};
-export default function PageNotebook({courseId,document:metadata,page,filename,handwritten=false,active=true,controlsTarget,headingTarget,menuActions,notesTarget,scrollViewport}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string;handwritten?:boolean;active?:boolean;controlsTarget?:HTMLElement|null;headingTarget?:HTMLElement|null;menuActions?:React.ReactNode;notesTarget?:HTMLElement|null;scrollViewport?:React.RefObject<HTMLDivElement|null>}){
+export default function PageNotebook({courseId,document:metadata,page,filename,handwritten=false,active=true,controlsTarget,headingTarget,menuActions,notesTarget,notesPanel,scrollViewport}:{courseId:string;document:DocumentMetadata;page:DocumentPage;filename:string;handwritten?:boolean;active?:boolean;controlsTarget?:HTMLElement|null;headingTarget?:HTMLElement|null;menuActions?:React.ReactNode;notesTarget?:HTMLElement|null;notesPanel?:NotebookPanel;scrollViewport?:React.RefObject<HTMLDivElement|null>}){
   const noteId=useId(),settingsId=useId();
   const settings=useRef<HTMLDivElement>(null),settingsTrigger=useRef<HTMLButtonElement|null>(null);
   const [editingText,setEditingText]=useState<InkText|null>(null);
@@ -166,10 +166,11 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
     </div>
 
   </>;
-  const notes=<>      {notesOpen&&<aside className="page-notes"><details><summary>이 페이지의 기존 메모</summary><label htmlFor={noteId}>{page.page}쪽 메모<textarea id={noteId} rows={16} maxLength={200000} disabled={!state.loaded} value={state.text} onChange={event=>store.change({text:event.target.value,ink:state.ink})}/></label><p className="muted">입력한 메모는 과목 검색 근거로 사용됩니다. 손글씨는 별도 잉크로 보관됩니다.</p></details></aside>}    <div className="notebook-supporting">
-    {state.loaded&&<HandwritingReview key={metadata.asset_id+metadata.sha256+page.page} courseId={courseId} assetId={metadata.asset_id} page={page.page} digest={metadata.sha256} revision={state.revision} saved={state.status==='saved'} imported={handwritten} width={page.width} height={page.height} active={active}/>}
-    <RelatedKnowledge courseId={courseId} assetId={metadata.asset_id} page={page.page} active={active}/>
-    </div>  </>;
+  const notes=<>
+    <div hidden={notesPanel!==undefined&&notesPanel!=='memo'}>{notesOpen&&<aside className="page-notes"><label htmlFor={noteId}>{page.page}쪽 메모<textarea id={noteId} rows={6} maxLength={200000} disabled={!state.loaded} value={state.text} onChange={event=>store.change({text:event.target.value,ink:state.ink})}/></label><p className="muted">저장한 메모는 과목 검색의 근거로 사용합니다.</p></aside>}</div>
+    <div hidden={notesPanel!==undefined&&notesPanel!=='recognition'}>{state.loaded&&<HandwritingReview key={metadata.asset_id+metadata.sha256+page.page} courseId={courseId} assetId={metadata.asset_id} page={page.page} digest={metadata.sha256} revision={state.revision} saved={state.status==='saved'} imported={handwritten} width={page.width} height={page.height} active={active} embedded={notesPanel!==undefined}/>}</div>
+    <div hidden={notesPanel!==undefined&&notesPanel!=='connections'}><RelatedKnowledge courseId={courseId} assetId={metadata.asset_id} page={page.page} active={active} embedded={notesPanel!==undefined}/></div>
+  </>;
   return <section className={controlsTarget!==undefined?'page-notebook notebook-sheet':'page-notebook'} aria-label={filename+' '+page.page+'쪽 메모와 필기'}>
     {active&&headingTarget&&createPortal(heading,headingTarget)}
     {controlsTarget!==undefined?(active&&controlsTarget?createPortal(controls,controlsTarget):null):controls}

@@ -1,4 +1,4 @@
-import React,{useEffect,useLayoutEffect,useRef,useState} from 'react';
+import React,{useEffect,useLayoutEffect,useId,useRef,useState} from 'react';
 import {api} from './api';
 import type {Asset,Course,DocumentMetadata,Session} from './types';
 import ContinuousPage from './ContinuousPage';
@@ -8,10 +8,15 @@ import {navigate} from './native-lifecycle';
 import QuestionView from './QuestionView';
 import {materialView,rememberMaterialView,connectedMaterialView} from './material-selection';
 import {loadNotebookPreferences} from './notebook-preferences';
+import type {NotebookPanel} from './notebook-preferences';
 import {pageAtPosition,pageShortcut,parsePageNumber,notebookViewportHeight} from './continuous-pages';
 const sources:Record<string,string>={current:'',changed:'원본 변경',missing:'파일 없음',denied:'접근 권한 필요'};
 const statuses:Record<string,string>={queued:'대기',running:'추출 중',ready:'추출됨',partial:'일부 추출',failed:'추출 실패',stale:'원본 변경 · 재추출 필요'};
 export default function MaterialLibrary({session,course,notePanel}:{session?:Session;course?:Course;notePanel?:React.ReactNode}){
+  const [notesPanel,setNotesPanel]=useState<NotebookPanel>('memo');
+  const panelId=useId(),panelTabs=useRef<HTMLDivElement>(null);
+  const panels=[['memo','메모'],['recognition','인식·검토'],['connections','연결']] as const;
+  function movePanel(event:React.KeyboardEvent){const index=panels.findIndex(([value])=>value===notesPanel),next=event.key==='Home'?0:event.key==='End'?panels.length-1:event.key==='ArrowRight'?(index+1)%panels.length:event.key==='ArrowLeft'?(index+panels.length-1)%panels.length:-1;if(next<0)return;event.preventDefault();setNotesPanel(panels[next][0]);panelTabs.current?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next]?.focus();}
   const [headingTarget,setHeadingTarget]=useState<HTMLDivElement|null>(null);
   const [controlsTarget,setControlsTarget]=useState<HTMLDivElement|null>(null),[notesTarget,setNotesTarget]=useState<HTMLDivElement|null>(null),[notesOpen,setNotesOpen]=useState(true),[pageLayout,setPageLayout]=useState<'continuous'|'single'>('continuous');
   const path=session?'/sessions/'+session.id:'/courses/'+course!.id;
@@ -74,10 +79,15 @@ export default function MaterialLibrary({session,course,notePanel}:{session?:Ses
         {question&&documentPage&&<><p>{question==='summary'?'자료 전체':questionPage+'쪽'}에 대한 작업</p><QuestionView key={[asset.id,metadata.sha256,questionPage,question].join(':')} {...(course?{course,scope:{course_id:course.id,mode:'course' as const,asset_id:asset.id,document_sha256:metadata.sha256,...(question!=='summary'?{page:questionPage}:{})}}:{session,scope:{session_id:session!.id,mode:'current' as const,asset_id:asset.id,page:questionPage,document_sha256:metadata.sha256}})} kind={question==='explain'?'vision':question} imageId={question==='explain'?documentPage.ref.id:undefined} initialPrompt={question==='answer'?'이 페이지의 핵심 내용을 근거로 답해 주세요.':undefined}/></>}
         {!course&&asset.kind==='pdf'&&<p className="muted">과목에 속한 강의 자료는 과목의 페이지 메모·필기를 함께 사용합니다.</p>}
         <div ref={setControlsTarget} className="notebook-controls"/>
-        <div ref={pagesElement} className="continuous-pages notebook-document-viewport" data-page-layout={pageLayout} onPointerDownCapture={event=>{const row=(event.target as HTMLElement).closest<HTMLElement>('[data-material-page]');if(row)setPage(Number(row.dataset.materialPage));}} onFocusCapture={event=>{const row=(event.target as HTMLElement).closest<HTMLElement>('[data-material-page]');if(row)setPage(Number(row.dataset.materialPage));}}>{metadata.pages.map(row=><ContinuousPage key={[asset.id,metadata.sha256,row.page].join(':')} asset={asset} course={course} metadata={metadata} page={row} active={row.page===page} hidden={pageLayout==='single'&&row.page!==page} controlsTarget={controlsTarget} headingTarget={headingTarget} menuActions={menuActions} notesTarget={notesTarget} scrollViewport={pagesElement}/>)}</div>
+        <div ref={pagesElement} className="continuous-pages notebook-document-viewport" data-page-layout={pageLayout} onPointerDownCapture={event=>{const row=(event.target as HTMLElement).closest<HTMLElement>('[data-material-page]');if(row)setPage(Number(row.dataset.materialPage));}} onFocusCapture={event=>{const row=(event.target as HTMLElement).closest<HTMLElement>('[data-material-page]');if(row)setPage(Number(row.dataset.materialPage));}}>{metadata.pages.map(row=><ContinuousPage key={[asset.id,metadata.sha256,row.page].join(':')} asset={asset} course={course} metadata={metadata} page={row} active={row.page===page} hidden={pageLayout==='single'&&row.page!==page} controlsTarget={controlsTarget} headingTarget={headingTarget} menuActions={menuActions} notesTarget={notesTarget} notesPanel={notesPanel} scrollViewport={pagesElement}/>)}</div>
       </>}
       {!metadata&&!documentLoading&&!['pdf','png','jpg','jpeg'].includes(asset.kind)&&<p>텍스트 자료는 원본 열기에서 확인할 수 있고 검색·질문에 사용됩니다.</p>}
     </div>}
-    </div><aside className="notebook-sidebar" hidden={!notesOpen}>{notePanel}<div ref={setNotesTarget}/></aside></div>
+    </div><aside className="notebook-sidebar" hidden={!notesOpen} aria-label="노트 보조 패널">
+      {metadata&&course&&<div ref={panelTabs} className="notebook-panel-tabs" role="tablist" aria-label="노트 보조 도구" onKeyDown={movePanel}>{panels.map(([value,label])=><button key={value} id={panelId+'-'+value} role="tab" aria-selected={notesPanel===value} aria-controls={panelId+'-content'} tabIndex={notesPanel===value?0:-1} onClick={()=>setNotesPanel(value)}>{label}</button>)}</div>}
+      <div className="notebook-panel-body" {...(metadata&&course?{role:'tabpanel',id:panelId+'-content','aria-labelledby':panelId+'-'+notesPanel}:{})}>
+        <div hidden={!!metadata&&!!course&&notesPanel!=='memo'}>{notePanel}</div><div ref={setNotesTarget}/>
+      </div>
+    </aside></div>
   </section>;
 }

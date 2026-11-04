@@ -803,3 +803,50 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .notebook-menu-panel .notebook-page-layout{border:0;margin:0 6px 6px;gap:8px}
 .notebook-menu-panel .notebook-page-layout button{width:40px;height:40px;padding:8px}
 @media(any-pointer:coarse){.notebook-controls .icon-button,.notebook-document-actions .icon-button,.material-open .page-navigation .icon-button{width:44px;min-width:44px;height:44px;min-height:44px}.material-open .material-topbar{flex-wrap:wrap}.notebook-menu-panel .notebook-menu-action{min-height:44px}}
+
+/* Quiet notebook controls; selected tools and keyboard focus stay distinct. */
+.notebook-controls .ink-toolbar .icon-button:not([aria-pressed=true]){border-color:transparent;background:transparent}
+.notebook-controls .ink-toolbar .icon-button:not([aria-pressed=true]):not(:disabled):hover{background:var(--surface-hover);border-color:var(--line)}
+.notebook-sidebar{padding:0 0 0 14px;background:transparent}
+.notebook-panel-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.notebook-panel-tabs button{flex:1;min-width:0;min-height:36px;padding:6px 3px;border:0;border-radius:0;background:transparent;color:var(--muted);font-size:12px;white-space:nowrap;box-shadow:none}
+.notebook-panel-tabs button[aria-selected=true]{color:var(--ink);box-shadow:inset 0 -2px var(--ink)}
+.notebook-sidebar .knowledge-panel.embedded{padding:0;margin:0;border:0;border-radius:0;max-height:none;overflow:visible}
+.notebook-sidebar .knowledge-panel.embedded h3{font-size:14px;margin:0 0 10px}
+.notebook-sidebar .session-note-panel textarea{min-height:120px}
+.notebook-sidebar .page-notes{margin:18px 0 0;padding:0;border:0;background:transparent}
+.notebook-sidebar .page-notes textarea{min-height:120px}
+@media(max-width:1050px){.notebook-sidebar{padding:12px 0 0}}
+
+/* Keep the transcript above the fold without changing active recording controls. */
+.transcript-workspace>.workspace-location{margin-bottom:6px;font-size:11px}
+.transcript-workspace>.section-heading{margin-bottom:6px;min-height:32px;align-items:center}
+.transcript-workspace>.section-heading>div{min-width:0}
+.transcript-workspace>.section-heading h1{margin:0;font-size:18px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.transcript-workspace>.section-heading p{font-size:11px;margin:2px 0 0}
+.transcript-workspace>.session-tabs{margin:0 0 8px;gap:14px}
+.transcript-workspace>.session-tabs button{min-height:32px;padding:4px 2px;font-size:12px}
+.transcript-workspace .recorder-idle{min-height:44px;padding:6px 10px;gap:10px;margin-bottom:8px;border-color:transparent;background:var(--surface-subtle)}
+.transcript-workspace .recorder-idle .recorder-symbol{display:none}
+.transcript-workspace .recorder-idle>.recorder-info{min-width:80px;gap:6px}
+.transcript-workspace .recorder-idle>label{position:relative;order:0;width:auto;min-width:0;max-width:200px}
+.transcript-workspace .recorder-idle>label>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.transcript-workspace .recorder-idle .primary{min-height:36px;white-space:nowrap}
+.transcript-workspace .session-utilities{gap:8px;margin:0 0 6px}
+.transcript-workspace .session-utilities>.card{flex:0 1 auto;min-width:0;padding:4px 8px;border:0;background:transparent}
+.transcript-workspace .session-utilities>.card[open]{flex-basis:100%}
+.transcript-workspace .session-utilities summary{min-height:28px;align-content:center}
+.transcript-workspace .transcript-view{padding:10px 0 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}
+.transcript-view>.subheading{margin-bottom:6px}
+.transcript-view>.subheading h2{font-size:14px;margin:0}
+.transcript-view>.subheading button{min-height:32px;font-size:12px;padding:4px 10px}
+.transcript-recordings{display:flex;flex-wrap:wrap;column-gap:14px;row-gap:4px}
+.transcript-recordings .recording-status{padding:0;min-width:0;overflow-wrap:anywhere;font-size:12px}
+.transcript-recordings .recording-status:has([role=alert]){flex-basis:100%}
+.transcript-recordings button{min-height:30px;padding:3px 8px;font-size:12px;margin-left:6px}
+.transcript-workspace .transcript-heading{margin-top:8px;gap:8px}
+.transcript-workspace .transcript-heading h3{font-size:14px}
+.transcript-workspace .transcript-script{margin:10px 0;padding:14px 16px;max-height:none;border:0}
+.transcript-usage{font-size:12px;color:var(--muted);margin:12px 0}
+.transcript-usage summary{min-height:32px;align-content:center;cursor:pointer}
+@media(any-pointer:coarse){.notebook-panel-tabs button,.transcript-workspace>.session-tabs button,.transcript-workspace .recorder-idle .primary,.transcript-workspace .session-utilities summary,.transcript-view>.subheading button,.transcript-recordings button,.transcript-usage summary{min-height:44px}}
