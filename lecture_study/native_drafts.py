@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 
 MAX_UPLOAD = 64*1024*1024
 CHUNK_SIZE = 256*1024
+MAX_SNAPSHOT = 64*1024
 MAX_PREFERENCE = 4096
 
 
@@ -136,8 +137,8 @@ class NativeDrafts:
 
     def begin(self, size, *, kind, journal_key=None):
         if type(size) is not int or not 1 <= size <= MAX_UPLOAD: raise ValueError('초안 전송 크기 오류')
-        if kind not in ('write','import'): raise ValueError('초안 전송 형식 오류')
-        if kind == 'write': checked_key(journal_key)
+        if kind not in ('write','checkpoint','import'): raise ValueError('초안 전송 형식 오류')
+        if kind in ('write','checkpoint'): checked_key(journal_key)
         with self.db:
             self.db.execute('DELETE FROM native_uploads WHERE created<?', (time.time()-3600,))
             if self.db.execute('SELECT count(*) FROM native_uploads').fetchone()[0] >= 4:
@@ -167,6 +168,29 @@ class NativeDrafts:
         with self.db: self.db.execute('DELETE FROM native_uploads WHERE id=?', (ident,))
         return {'cancelled':True}
 
+    def _write(self, row, journal_key, checkpoint=False):
+        checked_draft(row)
+        checked_key(journal_key)
+        if not journal_key.startswith(row['key']+'::') or journal_key == row['key']+'::':
+            raise ValueError('초안 복구 키 오류')
+        if checkpoint:
+            if row.get('dirty') is not True or not journal_key.startswith(row['key']+'::stroke-'):
+                raise ValueError('진행 중 필기 복구 형식 오류')
+            self.db.execute('INSERT OR REPLACE INTO native_drafts VALUES (?,?)',
+                            (journal_key,encoded({**row,'key':journal_key,'inProgress':True})))
+        else:
+            self.db.execute('INSERT OR REPLACE INTO native_drafts VALUES (?,?)', (row['key'],encoded(row)))
+            if row.get('dirty',True):
+                self.db.execute('INSERT OR REPLACE INTO native_drafts VALUES (?,?)', (journal_key,encoded({**row,'key':journal_key})))
+            else: self.db.execute('DELETE FROM native_drafts WHERE key=?', (journal_key,))
+
+    def write_snapshot(self, value, *, journal_key, checkpoint=False):
+        if type(checkpoint) is not bool: raise ValueError('필기 복구 요청 형식 오류')
+        raw = encoded(value).encode('utf-8')
+        if len(raw) > MAX_SNAPSHOT: raise ValueError('초안 직접 저장 크기 오류')
+        with self.db: self._write(value,journal_key,checkpoint)
+        return {'sha256':hashlib.sha256(raw).hexdigest(),'count':1}
+
     def commit(self, ident):
         upload = self._upload(ident)
         if upload['received'] != upload['size']: raise ValueError('초안 전송이 끝나지 않았습니다')
@@ -177,15 +201,8 @@ class NativeDrafts:
         try: value = json.loads(raw,parse_constant=invalid_constant)
         except (UnicodeError,json.JSONDecodeError): raise ValueError('초안 JSON 형식 오류') from None
         with self.db:
-            if upload['kind'] == 'write':
-                row = checked_draft(value)
-                journal_key = upload['journal_key']
-                if not journal_key.startswith(row['key']+'::') or journal_key == row['key']+'::':
-                    raise ValueError('초안 복구 키 오류')
-                self.db.execute('INSERT OR REPLACE INTO native_drafts VALUES (?,?)', (row['key'],encoded(row)))
-                if row.get('dirty',True):
-                    self.db.execute('INSERT OR REPLACE INTO native_drafts VALUES (?,?)', (journal_key,encoded({**row,'key':journal_key})))
-                else: self.db.execute('DELETE FROM native_drafts WHERE key=?', (journal_key,))
+            if upload['kind'] in ('write','checkpoint'):
+                self._write(value,upload['journal_key'],upload['kind']=='checkpoint')
                 report = {'sha256':digest,'count':1}
             else: report = self._import(value, raw, digest)
             self.db.execute('DELETE FROM native_uploads WHERE id=?', (ident,))
@@ -264,6 +281,16 @@ def attach_native_drafts(app, db):
 
     @router.delete('/drafts/journal')
     async def delete(key: str): return store.delete(key)
+
+    @router.post('/drafts/snapshot')
+    async def snapshot(request: Request):
+        raw = await request.body()
+        if len(raw) > MAX_SNAPSHOT+8192: raise ValueError('초안 직접 저장 크기 오류')
+        try: body = json.loads(raw)
+        except (UnicodeError,json.JSONDecodeError): raise ValueError('초안 JSON 형식 오류') from None
+        if not isinstance(body,dict) or set(body) != {'value','journal_key','checkpoint'}:
+            raise ValueError('초안 직접 저장 요청 오류')
+        return store.write_snapshot(**body)
 
     @router.post('/drafts/uploads')
     async def begin(body: BeginInput): return store.begin(**body.model_dump())

@@ -1,7 +1,11 @@
-import {api} from './api.ts';
+import {api,ApiError} from './api.ts';
 
-export async function transferDraft(value:unknown,kind:'write'|'import',journalKey?:string){
+export async function transferDraft(value:unknown,kind:'write'|'checkpoint'|'import',journalKey?:string){
   const bytes=new TextEncoder().encode(JSON.stringify(value));
+  if(kind!=='import'&&bytes.length<=64*1024){
+    try{return await api<{sha256:string;count:number}>('/native/drafts/snapshot',{method:'POST',body:JSON.stringify({value,journal_key:journalKey,checkpoint:kind==='checkpoint'})});}
+    catch(error){if(!(error instanceof ApiError&&error.status===422&&error.message==='초안 직접 저장 크기 오류'))throw error;}
+  }
   const upload=await api<{id:string;chunk_size:number}>('/native/drafts/uploads',{method:'POST',body:JSON.stringify({size:bytes.length,kind,...(journalKey?{journal_key:journalKey}:{})})});
   try{
     if(!Number.isInteger(upload.chunk_size)||upload.chunk_size<1||upload.chunk_size>256*1024)throw new Error('초안 전송 크기가 올바르지 않습니다.');

@@ -24,6 +24,7 @@ test('native review edits use the existing acknowledged draft store and report f
  Object.defineProperty(globalThis,'window',{configurable:true,value:{webkit:{messageHandlers:{solasi:{async postMessage(m:any){
   const body=m.body?JSON.parse(m.body):{};let result:any={};
   if(m.path.startsWith('/api/native/drafts/read')){const query=new URL(m.path,'http://local').searchParams,key=query.get('key')!,after=query.get('after')!;result=[...saved.values()].filter(r=>r.key===key&&r.key>after).slice(0,1);}
+  else if(m.path==='/api/native/drafts/snapshot'){if(fail)return {status:500,text:JSON.stringify({detail:'disk unavailable'})};saved.set(body.value.key,body.value);result={count:1};}
   else if(m.path==='/api/native/drafts/uploads'){uploads.set('u',{bytes:[],key:body.journal_key});result={id:'u',chunk_size:512};}
   else if(m.path.endsWith('/commit')){if(fail)return {status:500,text:JSON.stringify({detail:'disk unavailable'})};const row=JSON.parse(Buffer.from(uploads.get('u')!.bytes).toString());saved.set(row.key,row);result={count:1};}
   else if(m.method==='PUT'){const u=uploads.get('u')!;u.bytes.push(...Buffer.from(body.data,'base64'));result={received:u.bytes.length};}

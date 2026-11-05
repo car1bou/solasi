@@ -53,16 +53,17 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
   useEffect(()=>{const finish=()=>finishGesture();window.addEventListener('solasi-finish-ink',finish);return()=>window.removeEventListener('solasi-finish-ink',finish);},[store]);
   useEffect(()=>{const flush=()=>{finishGesture();void store.save();};const before=(event:BeforeUnloadEvent)=>{flush();if(!['saved','loading'].includes(store.state.status)){event.preventDefault();event.returnValue='';}};const finish=()=>finishGesture();window.addEventListener('beforeunload',before);window.addEventListener('blur',finish);return()=>{flush();window.removeEventListener('beforeunload',before);window.removeEventListener('blur',finish);};},[store]);
   function commit(ink:InkStroke[],base=latest.current.ink){
-    if(base!==latest.current.ink){cancelGesture();setInputError('다른 창의 필기가 갱신되어 진행 중이던 입력을 취소했습니다. 최신 내용에서 다시 입력하세요.');return;}
-    if(JSON.stringify(ink)===JSON.stringify(base))return;
-    if(ink.length>2000||ink.reduce((sum,s)=>sum+s.points.length,0)>100000){setInputError('페이지당 2,000획·10만 점까지 저장할 수 있습니다. 일부 필기를 지우거나 다른 페이지를 사용하세요.');return;}
+    if(base!==latest.current.ink){cancelGesture();setInputError('다른 창의 필기가 갱신되어 진행 중이던 입력을 취소했습니다. 최신 내용에서 다시 입력하세요.');return false;}
+    if(JSON.stringify(ink)===JSON.stringify(base))return false;
+    if(ink.length>2000||ink.reduce((sum,s)=>sum+s.points.length,0)>100000){setInputError('페이지당 2,000획·10만 점까지 저장할 수 있습니다. 일부 필기를 지우거나 다른 페이지를 사용하세요.');return false;}
     lastOwnInk.current=ink;setHistory(current=>({past:[...current.past.slice(-39),base],future:[]}));store.change({text:latest.current.text,ink});
+    return true;
   }
   function undo(redo=false){if(gesture.current)return;setEditingText(null);if(latest.current.ink!==lastOwnInk.current){setHistory({past:[],future:[]});return;}const from=redo?history.future:history.past;if(!from.length)return;const current=latest.current.ink,ink=from[from.length-1];setHistory(redo?{past:[...history.past,current],future:from.slice(0,-1)}:{past:from.slice(0,-1),future:[...history.future,current]});setSelected([]);lastOwnInk.current=ink;store.change({text:latest.current.text,ink});}
   useEffect(()=>{function key(event:KeyboardEvent){if(!active||!viewport.current?.getClientRects().length)return;const element=event.target as HTMLElement;if(element.closest('input,textarea,select,[contenteditable="true"]'))return;if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='z'){event.preventDefault();undo(event.shiftKey);}if(event.key==='Escape'){cancelGesture();setSelected([]);}}window.addEventListener('keydown',key);return()=>window.removeEventListener('keydown',key);});
   function coordinates(event:{clientX:number;clientY:number}):Point{const matrix=svg.current?.getScreenCTM();if(!matrix)return{x:0,y:0};const point=new DOMPoint(event.clientX,event.clientY).matrixTransform(matrix.inverse());return{x:clamp(point.x/page.width),y:clamp(point.y/page.height)};}
   function inkPoint(event:PointerEvent|React.PointerEvent):InkPoint{return{...coordinates(event),pressure:event.pointerType==='pen'?clamp(event.pressure):.5,...(event.pointerType==='pen'?{tilt_x:clamp(event.tiltX,-90,90),tilt_y:clamp(event.tiltY,-90,90)}:{})};}
-  function cancelGesture(){gesture.current=null;setPreview(null);setLiveStroke(null);setPolygon([]);touches.current.clear();pinch.current=null;}
+  function cancelGesture(){if(gesture.current?.stroke)store.endStroke(false);gesture.current=null;setPreview(null);setLiveStroke(null);setPolygon([]);touches.current.clear();pinch.current=null;}
   function down(event:React.PointerEvent<SVGSVGElement>){
     if(!state.loaded||!imageReady||!preferencesReady)return;
     if(tool==='text'&&event.button===0){event.preventDefault();finishGesture();const hit=textInkAt(state.ink,coordinates(event));setEditingText(hit||{id:crypto.randomUUID(),tool:'text',text:'',color:tools.penColor,width:tools.textSize??.025,opacity:tools.penOpacity,input:event.pointerType==='pen'?'pen':event.pointerType==='touch'?'touch':'mouse',points:textInkBox(coordinates(event))});return;}
@@ -70,7 +71,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
     if(event.pointerType==='touch'){
       if(gesture.current?.stroke?.input==='pen')return;
       touches.current.set(event.pointerId,{x:event.clientX,y:event.clientY});
-      if(touches.current.size===2){const [a,b]=[...touches.current.values()];pinch.current={distance:Math.hypot(a.x-b.x,a.y-b.y),zoom};gesture.current=null;setPreview(null);setLiveStroke(null);setPolygon([]);event.currentTarget.setPointerCapture(event.pointerId);event.preventDefault();return;}
+      if(touches.current.size===2){const [a,b]=[...touches.current.values()];pinch.current={distance:Math.hypot(a.x-b.x,a.y-b.y),zoom};if(gesture.current?.stroke)store.endStroke(false);gesture.current=null;setPreview(null);setLiveStroke(null);setPolygon([]);event.currentTarget.setPointerCapture(event.pointerId);event.preventDefault();return;}
     }else if(gesture.current)return;
     event.preventDefault();event.currentTarget.setPointerCapture(event.pointerId);setInputError('');
     const origin=coordinates(event),eraser=event.button===2||event.button===5||(event.buttons&32)!==0;
@@ -84,6 +85,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
     }else if(kind==='stroke-eraser'||kind==='partial-eraser'){next.work=eraseInk(next.work,origin,eraserSize,kind==='partial-eraser',page.height/page.width);setPreview(next.work);}
     else if(kind==='lasso'){setSelected([]);setPolygon([origin]);}
     gesture.current=next;
+    if(next.stroke)store.checkpointStroke(next.base,next.stroke);
   }
   function move(event:React.PointerEvent<SVGSVGElement>){
     if(event.pointerType==='touch'&&touches.current.has(event.pointerId)){
@@ -96,7 +98,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
     if(g.stroke){
       const coalesced=event.nativeEvent.getCoalescedEvents?.(),samples=coalesced?.length?coalesced:[event.nativeEvent],points=[...g.stroke.points],used=g.base.reduce((sum,s)=>sum+s.points.length,0);
       for(const sample of samples){const next=inkPoint(sample),last=points[points.length-1];if(Math.hypot((next.x-last.x)*page.width,(next.y-last.y)*page.height)>.35&&used+points.length<100000)points.push(next);}
-      g.stroke={...g.stroke,points};setLiveStroke(g.stroke);
+      g.stroke={...g.stroke,points};setLiveStroke(g.stroke);store.checkpointStroke(g.base,g.stroke);
     }else if(g.kind==='stroke-eraser'||g.kind==='partial-eraser'){const distance=Math.hypot(point.x-g.origin.x,(point.y-g.origin.y)*page.height/page.width),steps=Math.max(1,Math.ceil(distance/(eraserSize*.6)));for(let i=1;i<=steps;i++)g.work=eraseInk(g.work,{x:g.origin.x+(point.x-g.origin.x)*i/steps,y:g.origin.y+(point.y-g.origin.y)*i/steps},eraserSize,g.kind==='partial-eraser',page.height/page.width);g.origin=point;setPreview(g.work);}
     else if(g.kind==='lasso'){g.polygon=[...g.polygon,point];setPolygon(g.polygon);}
     else if(g.bounds){const bounds=g.bounds,dx=clamp(point.x-g.origin.x,-bounds.x,1-bounds.x-bounds.width),dy=clamp(point.y-g.origin.y,-bounds.y,1-bounds.y-bounds.height),sx=clamp((point.x-bounds.x)/bounds.width,.05,(1-bounds.x)/bounds.width),sy=clamp((point.y-bounds.y)/bounds.height,.05,(1-bounds.y)/bounds.height);g.work=g.base.map(stroke=>selected.includes(stroke.id)?{...stroke,points:stroke.points.map(p=>({...p,x:clamp(g.kind==='move'?p.x+dx:bounds.x+(p.x-bounds.x)*sx),y:clamp(g.kind==='move'?p.y+dy:bounds.y+(p.y-bounds.y)*sy)}))}:stroke);setPreview(g.work);}
@@ -107,7 +109,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
   }
   function finishGesture(){
     const g=gesture.current;if(!g)return;gesture.current=null;
-    if(g.stroke)commit([...g.base,g.stroke],g.base);else if(g.kind==='lasso')setSelected(g.base.filter(stroke=>stroke.points.some(point=>inside(point,g.polygon))).map(stroke=>stroke.id));else if(g.kind!=='pan')commit(g.work,g.base);
+    if(g.stroke){const completed=commit([...g.base,g.stroke],g.base);store.endStroke(completed);}else if(g.kind==='lasso')setSelected(g.base.filter(stroke=>stroke.points.some(point=>inside(point,g.polygon))).map(stroke=>stroke.id));else if(g.kind!=='pan')commit(g.work,g.base);
     touches.current.clear();pinch.current=null;
     setPreview(null);setLiveStroke(null);setPolygon([]);
   }
@@ -179,7 +181,7 @@ export default function PageNotebook({courseId,document:metadata,page,filename,h
     {controlsTarget!==undefined?(active&&controlsTarget?createPortal(controls,controlsTarget):null):controls}
     {(state.error||state.storageError||inputError||imageError)&&<div role="alert" className="notebook-error">{state.error&&<p>{state.error}</p>}{state.storageError&&<p>{state.storageError}</p>}{inputError&&<p>{inputError}</p>}{imageError&&<p>{imageError}</p>}{state.status==='failed'&&<button onClick={()=>store.retry()}>다시 불러오기·저장</button>}<button onClick={()=>download('페이지-'+page.page+'-초안.json',{course_id:courseId,asset_id:metadata.asset_id,document_sha256:metadata.sha256,page:page.page,text:state.text,ink:state.ink})}>현재 초안 내보내기</button></div>}
     {state.status==='conflict'&&state.server&&<section className="conflict-panel"><h3>저장 충돌</h3><p>현재 초안과 서버 v{state.server.revision}을 모두 보존합니다. 선택하지 않은 내용은 비교용 사본으로 남깁니다.</p><details><summary>서버 메모·필기 확인</summary><pre className="source-text">{state.server.text||'(빈 메모)'}</pre><p>{state.server.ink.length}획</p><svg className="conflict-ink-preview" viewBox={`0 0 ${page.width} ${page.height}`} aria-label="서버 필기 미리보기">{state.server.ink.map(stroke=><InkMark key={stroke.id} stroke={stroke} width={page.width} height={page.height}/>)}</svg><button onClick={()=>download('서버-페이지-'+page.page+'.json',state.server)}>서버 내용 내보내기</button></details><button onClick={()=>{setEditingText(null);store.resolve(true);}}>내 초안을 다음 버전으로 저장</button><button onClick={()=>{setEditingText(null);store.resolve(false);setHistory({past:[],future:[]});}}>서버 내용 사용</button></section>}
-    {!!state.recovered.length&&<details className="draft-backup"><summary>다른 창·이전 실행의 미저장 초안 {state.recovered.length}개 보존됨</summary>{state.recovered.map(draft=><div key={draft.key}><p>{draft.ink.length}획 · {draft.text.length}자{draft.updatedAt?' · '+new Date(draft.updatedAt).toLocaleString('ko-KR'):''}</p><button onClick={()=>download('복구-페이지-'+page.page+'.json',draft)}>초안 내보내기</button><button onClick={()=>{setEditingText(null);store.recover(draft);setHistory({past:[],future:[]});}}>현재 편집으로 복구</button></div>)}</details>}
+    {!!state.recovered.length&&<details className="draft-backup"><summary>{state.recovered.some(draft=>draft.inProgress)?'그리던 획·미저장 초안':'다른 창·이전 실행의 미저장 초안'} {state.recovered.length}개 보존됨</summary>{state.recovered.map(draft=><div key={draft.key}>{draft.inProgress&&<><p><strong>그리던 획 복구 후보</strong> · 마지막으로 기록된 위치까지만 남아 있습니다. 원본과 비교한 뒤 적용하세요.</p><svg className="conflict-ink-preview" viewBox={`0 0 ${page.width} ${page.height}`} aria-label="그리던 획 복구 후보 미리보기">{draft.ink.map(stroke=><InkMark key={stroke.id} stroke={stroke} width={page.width} height={page.height}/>)}</svg></>}<p>{draft.ink.length}획 · {draft.text.length}자{draft.updatedAt?' · '+new Date(draft.updatedAt).toLocaleString('ko-KR'):''}</p><button onClick={()=>download('복구-페이지-'+page.page+'.json',draft)}>초안 내보내기</button><button onClick={()=>{setEditingText(null);store.recover(draft);setHistory({past:[],future:[]});}}>{draft.inProgress?'그리던 획 적용':'현재 편집으로 복구'}</button></div>)}</details>}
     {state.backup&&<details className="draft-backup"><summary>충돌 해결 전 사본 보관됨</summary><p>{state.backup.ink.length}획 · {state.backup.text.length}자</p><button onClick={()=>download('보관-페이지-'+page.page+'.json',state.backup)}>보관 사본 내보내기</button></details>}
     <div className={'notebook-layout'+(notesOpen&&notesTarget===undefined?'':' notes-closed')}>
       <div className="page-viewport" ref={viewport} onWheel={event=>{if(preferencesReady&&(event.ctrlKey||event.metaKey)){event.preventDefault();finishGesture();setZoom(clamp(zoom*Math.exp(-event.deltaY*.002),.1,3));}}}>

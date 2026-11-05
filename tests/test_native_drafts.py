@@ -16,6 +16,40 @@ def draft(key='["c","a","hash",1]', text='메모'):
 
 
 class NativeDraftTests(unittest.TestCase):
+    def test_small_snapshot_and_partial_journal_are_atomic_and_separate(self):
+        row = draft()
+        self.store.write_snapshot(row, journal_key=row['key']+'::writer')
+        partial = {**row, 'dirty':True, 'ink':[{'id':'partial', 'points':[{'x':.2,'y':.3}]}]}
+        key = row['key']+'::stroke-writer'
+        self.store.write_snapshot(partial, journal_key=key, checkpoint=True)
+        self.assertEqual(self.store.read(row['key']), [row, {**partial,'key':key,'inProgress':True}])
+
+        other = open_db(self.root)
+        try:self.assertEqual(NativeDrafts(other).read(row['key']), self.store.read(row['key']))
+        finally:other.close()
+        handle, _ = self.upload(partial, kind='checkpoint', journal_key=key)
+        self.store.commit(handle)
+        self.assertEqual(self.store.read(row['key'])[0], row)
+        for value, journal, checkpoint in [(row,'wrong',False), (row,key,True),
+                                            ({**row,'text':'x'*65537},row['key']+'::writer',False)]:
+            with self.assertRaises(ValueError):self.store.write_snapshot(value,journal_key=journal,checkpoint=checkpoint)
+        self.db.execute("CREATE TRIGGER fail_checkpoint BEFORE INSERT ON native_drafts WHEN NEW.key LIKE '%::stroke-%' BEGIN SELECT RAISE(FAIL,'disk unavailable'); END")
+        with self.assertRaises(Exception):self.store.write_snapshot({**partial,'text':'new'},journal_key=key,checkpoint=True)
+        self.assertEqual(self.store.read(row['key']), [row, {**partial,'key':key,'inProgress':True}])
+
+    def test_number_encoding_boundary_can_use_the_chunk_fallback(self):
+        from lecture_study.native_drafts import encoded,MAX_SNAPSHOT
+        row={**draft(), 'text':'', 'dirty':True, 'ink':[dict(id='boundary',tool='pen',color='#254f3f',width=.01,opacity=1,input='mouse',points=[dict(x=1e-7,y=.3,pressure=.5) for _ in range(1000)])]}
+        row['text']='x'*(MAX_SNAPSHOT-len(encoded(row).replace('1e-07','1e-7').encode()))
+        wire=encoded(row).replace('1e-07','1e-7').encode()
+        self.assertEqual(len(wire),MAX_SNAPSHOT)
+        with self.assertRaisesRegex(ValueError,'초안 직접 저장 크기 오류'):
+            self.store.write_snapshot(row,journal_key=row['key']+'::writer')
+        for kind,key in [('write',row['key']+'::writer'),('checkpoint',row['key']+'::stroke-writer')]:
+            handle=self.store.begin(len(wire),kind=kind,journal_key=key)['id']
+            self.store.append(handle,0,base64.b64encode(wire).decode());self.store.commit(handle)
+        self.assertEqual(self.store.read(row['key'])[0],row)
+
     def test_workspace_sidebar_preference_roundtrip_and_validation(self):
         self.assertEqual(self.store.read_preference('workspace-layout'), {'value':None})
         for collapsed in (True,False):
@@ -242,6 +276,19 @@ class NativePreferenceApiTests(unittest.TestCase):
         async def invalid(request,exc):return JSONResponse({'detail':str(exc)},status_code=422)
         attach_native_drafts(app,self.db)
         self.client=TestClient(app);self.addCleanup(self.client.close)
+
+    def test_snapshot_request_validation_and_checkpoint_isolation(self):
+        row=draft();path='/api/native/drafts/snapshot'
+        body={'value':row,'journal_key':row['key']+'::writer','checkpoint':False}
+        self.assertEqual(self.client.post(path,json=body).status_code,200)
+        partial={**row,'dirty':True,'ink':[{'id':'stroke','points':[]}]}
+        self.assertEqual(self.client.post(path,json={**body,'value':partial,'journal_key':row['key']+'::stroke-writer','checkpoint':True}).status_code,200)
+        self.assertEqual(self.store.read(row['key'])[0],row)
+        for bad in ({},[],{**body,'extra':True},{**body,'checkpoint':'yes'},
+                    {**body,'value':{**row,'text':'x'*65537}}):
+            self.assertEqual(self.client.post(path,json=bad).status_code,422)
+        self.assertEqual(self.client.post(path,content=' '*80000).status_code,422)
+        self.assertEqual(self.store.read(row['key'])[0],row)
 
     def test_get_and_put_only_expose_the_requested_preference(self):
         from urllib.parse import quote
