@@ -850,3 +850,15 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .transcript-usage{font-size:12px;color:var(--muted);margin:12px 0}
 .transcript-usage summary{min-height:32px;align-content:center;cursor:pointer}
 @media(any-pointer:coarse){.notebook-panel-tabs button,.transcript-workspace>.session-tabs button,.transcript-workspace .recorder-idle .primary,.transcript-workspace .session-utilities summary,.transcript-view>.subheading button,.transcript-recordings button,.transcript-usage summary{min-height:44px}}
+
+.ink-setting-preview{display:flex;justify-content:center;overflow:hidden;border:1px solid var(--line);border-radius:7px;background:#fff;color:#222}
+.ink-setting-preview svg{display:block;max-width:100%;height:auto;flex:none}
+.ink-tool-settings .ink-setting-scale{margin:6px 0 12px;font-size:11px;color:var(--muted)}
+.ink-tool-settings .ink-range-setting{display:grid;gap:8px;margin:16px 0}
+.ink-range-setting>span{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ink-range-setting output{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+.ink-tool-settings .ink-range-setting input[type=range]{width:100%;margin:0;min-height:24px}
+.notebook-menu-section+.notebook-menu-section{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.notebook-menu-panel .notebook-menu-label{margin:4px 10px;font-size:11px;font-weight:600;color:var(--muted)}
+.notebook-menu-panel .notebook-menu-action .ui-icon{width:18px;height:18px;flex:none}
+@media(any-pointer:coarse){.ink-tool-settings .ink-range-setting input[type=range]{min-height:44px}}
