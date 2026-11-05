@@ -892,3 +892,11 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .knowledge-errors li p{margin:0;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
 @media(max-width:850px){.settings-view .form-row{grid-template-columns:minmax(0,1fr)}}
 @media(any-pointer:coarse){.home .home-heading>.primary,.settings-details>summary,.knowledge-errors>summary{min-height:44px}}
+
+.material-recovery{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;overflow-wrap:anywhere}
+.material-recovery strong{font-weight:600}.material-recovery p{margin:6px 0;color:var(--muted);line-height:1.6}
+.material-recovery .actions{justify-content:flex-start;gap:8px;flex-wrap:wrap;margin:8px 0 2px}.material-recovery .actions button{font-size:13px;min-height:34px;padding:6px 10px}
+.material-recovery-notice{font-size:13px;color:var(--muted)}
+@media(any-pointer:coarse){.material-recovery .actions button{min-height:44px}}
+
+.material-error-details{font-size:13px;margin:8px 0;overflow-wrap:anywhere}.material-error-details summary{cursor:pointer;min-height:32px;align-content:center}.material-error-details p{white-space:pre-wrap;color:var(--muted)}

@@ -720,20 +720,28 @@ def create_app(config: AppConfig) -> FastAPI:
 
     class FileOptions(Input):
         handwritten:bool=False
+        reconnect_asset_id:str|None=Field(default=None,pattern=r"^[a-f0-9]{32}$")
 
     @app.post("/api/sessions/{ident}/files/select",status_code=201)
     async def connect_files(ident: str,request:Request,body:FileOptions|None=None):
         session(db,ident)
-        return await connect_owner_files(session_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False)
+        return await connect_owner_files(session_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False,reconnect_asset_id=body.reconnect_asset_id if body else None)
 
     @app.post('/api/courses/{ident}/files/select',status_code=201)
     async def connect_course_files(ident:str,request:Request,body:FileOptions|None=None):
         course(db,ident)
-        return await connect_owner_files(course_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False)
+        return await connect_owner_files(course_id=ident,selected=request.scope.get('native_selected_files'),handwritten=body.handwritten if body else False,reconnect_asset_id=body.reconnect_asset_id if body else None)
 
-    async def connect_owner_files(session_id=None,course_id=None,selected=None,handwritten=False):
+    async def connect_owner_files(session_id=None,course_id=None,selected=None,handwritten=False,reconnect_asset_id=None):
         async with app.state.file_selection:
             paths = await chosen_files(selected)
+        if reconnect_asset_id:
+            if not paths:return []
+            if len(paths)!=1:raise ValueError('다시 찾을 원본 파일 하나만 선택하세요')
+            from .material_recovery import reconnect_original
+            inspected=await asyncio.to_thread(inspect_file,paths[0])
+            asset=reconnect_original(db,reconnect_asset_id,inspected,session_id=session_id,course_id=course_id)
+            return [{"asset":asset,"job":None}]
         result = []
         for path in paths:
             inspected = await asyncio.to_thread(inspect_file,path)
