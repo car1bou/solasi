@@ -29,10 +29,10 @@ The installed Mac app was exercised at **680 × 480** in both light and dark mod
 
 Private screenshots, accessibility snapshots, file-hash receipts and backups are under `.local-state/notebook-polish-20261104/`, excluded from Git. They contain user workspace information and are not included in this public report.
 
-## Boundaries and remaining observations
+## Boundaries and display-check resolution
 
 No new model inference, microphone recording, or generated PDF-file comparison was performed for this presentation change. Existing export guards remain covered by the regression suite.
 
-During resumed native verification, the tool sometimes captured an empty/background window and could not target it. Resizing or using macOS **Window → Center** restored the home screen and operable notebook at the same 680 × 480 size. This does not establish the internal cause or prove a startup defect was fixed; no speculative cache, database or native-window code change was applied.
+During resumed native verification, the tool sometimes captured an empty/background window and could not target it. Resizing or using macOS **Window → Center** restored the home screen and operable notebook at the same 680 × 480 size. This does not establish the internal cause or prove a startup defect was fixed; no speculative cache, database or native-window code change was applied. On November 5, the user directly selected Solasi on the Mac and confirmed that its home and course screens were displayed normally. The pending visible-display check is therefore closed based on the user’s observation; the tool’s internal capture mechanism remains unconfirmed.
 
 Original-file relinking remains separate work: selecting a moved file through the current generic file picker can create a new asset identity and does not safely reattach existing page ink. This release does not label that behavior as recovery.
