@@ -862,3 +862,33 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 .notebook-menu-panel .notebook-menu-label{margin:4px 10px;font-size:11px;font-weight:600;color:var(--muted)}
 .notebook-menu-panel .notebook-menu-action .ui-icon{width:18px;height:18px;flex:none}
 @media(any-pointer:coarse){.ink-tool-settings .ink-range-setting input[type=range]{min-height:44px}}
+
+.home .home-heading{justify-content:space-between;gap:12px;margin-bottom:14px;min-height:40px}
+.home .home-heading h1{font-size:24px;margin:0}
+.home .home-heading>.primary{min-height:36px;padding:7px 12px;white-space:nowrap;font-size:13px;flex:none}
+.home .home-create{padding:16px 0 20px;margin:0 0 12px;border-top:1px solid var(--line)}
+.home .home-create h2{font-size:16px;margin:0 0 12px}
+.home .home-create .record-kind{margin-bottom:14px}
+.home .home-create .record-form .actions{margin-top:14px}
+.home .record-row{min-height:64px;padding:12px 8px;gap:12px}
+.home .record-copy strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.5}
+.home .course-create{margin-top:20px}
+.settings-view h1{font-size:24px;margin-bottom:18px}
+.settings-view>.card{padding:16px 0;margin:0;border:0;border-bottom:1px solid var(--line);border-radius:0;background:transparent;box-shadow:none}
+.settings-view>.card>h2{font-size:15px;padding:0;border:0;margin:0 0 12px}
+.settings-view .settings-details{margin-top:12px;min-width:0}
+.settings-details>summary,.knowledge-errors>summary{min-height:36px;align-content:center;cursor:pointer;font-size:13px;font-weight:550;color:var(--ink)}
+.settings-details[open]>summary{margin-bottom:10px}
+.settings-view .form-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+.settings-view .settings-details .model-preparation{padding:12px 0;margin:0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent}
+.settings-view .settings-details .path-text{font-size:12px;overflow-wrap:anywhere}
+.settings-component-status{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.settings-component-status li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:13px}
+.settings-component-status .badge{white-space:nowrap;flex:none}
+.knowledge-errors{margin:8px 0 12px;min-width:0}
+.knowledge-errors ul{list-style:none;margin:0;padding:0}
+.knowledge-errors li{display:flex;align-items:baseline;gap:10px;border-top:1px solid var(--line);padding:10px 0}
+.knowledge-errors li .badge{flex:none}
+.knowledge-errors li p{margin:0;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}
+@media(max-width:850px){.settings-view .form-row{grid-template-columns:minmax(0,1fr)}}
+@media(any-pointer:coarse){.home .home-heading>.primary,.settings-details>summary,.knowledge-errors>summary{min-height:44px}}
