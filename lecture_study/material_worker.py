@@ -1,4 +1,5 @@
 import sys
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -10,8 +11,17 @@ def main():
     mode, source, output, runtime, ident, version, kind, *rest = sys.argv[1:]
     version = int(version)
     source,output,runtime = Path(source),Path(output),Path(runtime)
+    if mode=='ink-render':
+        from .materials_portable import render_ink
+        encoded=sys.stdin.buffer.read(8*1024*1024+1)
+        if len(encoded)>8*1024*1024:raise ValueError('필기 입력이 너무 큽니다')
+        result=render_ink(json.loads(encoded),output,page_source=rest[0]or None,page=int(rest[1]))
+        print(json.dumps(result));return
     if mode=='metadata':
-        if sys.platform!='darwin':raise ValueError('원본 페이지 정보는 현재 Mac에서 지원합니다')
+        if sys.platform=='win32':
+            from .materials_portable import read_metadata
+            output.write_text(json.dumps(read_metadata(source)),encoding='utf-8');return
+        if sys.platform!='darwin':raise ValueError('현재 OS의 원본 페이지 정보 엔진을 준비하세요')
         if getattr(sys,'frozen',False):
             command=[str(Path(sys.executable).parent/'MaterialMetadata'),str(source)]
         else:
@@ -20,6 +30,9 @@ def main():
         result=subprocess.run(command,capture_output=True,timeout=90,check=True)
         output.write_bytes(result.stdout)
         return
+    if mode=='render'and sys.platform=='win32':
+        from .materials_portable import render_page
+        render_page(source,int(rest[0]),output);return
     if mode=="parse" and kind in ("txt","md"):
         text = source.read_text(encoding="utf-8-sig")
         ref = SourceRef(id=f"{ident}:v{version}:page:1",kind="material",asset_id=ident,version=version,page=1)
@@ -30,6 +43,9 @@ def main():
     from liteparse import LiteParse
     tess = runtime/"tessdata"
     ready = all((tess/f"{language}.traineddata").is_file() for language in ("kor","eng"))
+    if sys.platform=='win32':
+        from .handwriting_windows import ocr_data_ready
+        ready=ocr_data_ready(runtime)
     parser = LiteParse(ocr_enabled=ready,ocr_language="kor+eng",tessdata_path=str(tess),
                        extract_images=True,continue_on_page_error=True,output_format="markdown",keep_headers_footers=True,
                        include_complexity=True,quiet=True,num_workers=1)

@@ -1,5 +1,6 @@
 """Local ink recognition proposals, separate from user notes and approved sources."""
-import hashlib,json,math,tempfile
+import hashlib,json,math,sys,tempfile
+from functools import partial
 from pathlib import Path
 from fastapi import HTTPException
 from .db import data_dir,new_id,now
@@ -90,12 +91,20 @@ def reject_recognition(db,ident):
     return get_recognition(db,ident)
 
 
-async def recognize_ink(snapshot,image_path=None,*,renderer=None,recognizer=None):
+def _platform_adapters(runtime_dir):
+    if sys.platform=='win32':
+        from . import handwriting_windows
+        return handwriting_windows.render_ink,partial(handwriting_windows.recognize_image,runtime_dir=runtime_dir)
+    from . import handwriting_macos
+    return handwriting_macos.render_ink,handwriting_macos.recognize_image
+
+
+async def recognize_ink(snapshot,image_path=None,*,renderer=None,recognizer=None,runtime_dir=None):
     payload=ink_payload(snapshot)
-    if not payload['strokes'] and not snapshot.get('page_source'):return {'engine':'apple-vision-accurate-v3'if renderer is None and recognizer is None else'empty-ink','regions':[]}
+    if not payload['strokes'] and not snapshot.get('page_source'):return {'engine':'apple-vision-accurate-v3'if sys.platform=='darwin' and renderer is None and recognizer is None else'empty-ink','regions':[]}
     if renderer is None or recognizer is None:
-        from . import handwriting_macos
-        renderer=renderer or handwriting_macos.render_ink;recognizer=recognizer or handwriting_macos.recognize_image
+        default_renderer,default_recognizer=_platform_adapters(runtime_dir)
+        renderer=renderer or default_renderer;recognizer=recognizer or default_recognizer
     with tempfile.TemporaryDirectory(prefix='solasi-ink-')as folder:
         image=Path(image_path)if image_path is not None else Path(folder)/'ink.png'
         await renderer(payload,image,page_source=snapshot.get('page_source'),page=snapshot['page'])
@@ -104,14 +113,13 @@ async def recognize_ink(snapshot,image_path=None,*,renderer=None,recognizer=None
     return result
 
 
-async def recognize_local_ink(snapshot,manager,before_local=None,model=LOCAL_MODEL,*,renderer=None,diagnostic_recognizer=None):
+async def recognize_local_ink(snapshot,manager,before_local=None,model=LOCAL_MODEL,*,renderer=None,diagnostic_recognizer=None,runtime_dir=None):
     if model!=LOCAL_MODEL:raise ValueError('현재 로컬 AI는 Qwen3.5 4B를 사용합니다')
     strokes=ink_payload(snapshot)['strokes']
     if not strokes and not snapshot.get('page_source'):return {'engine':model,'regions':[]}
     if renderer is None:
-        from . import handwriting_macos
-        renderer=handwriting_macos.render_ink
-        diagnostic_recognizer=diagnostic_recognizer or handwriting_macos.recognize_image
+        renderer,default_recognizer=_platform_adapters(runtime_dir)
+        diagnostic_recognizer=diagnostic_recognizer or default_recognizer
     with tempfile.TemporaryDirectory(prefix='solasi-ink-') as folder:
         image=Path(folder)/'ink.png'
         await renderer(ink_payload(snapshot),image,page_source=snapshot.get('page_source'),page=snapshot['page'])

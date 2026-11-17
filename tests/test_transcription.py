@@ -242,7 +242,7 @@ class ModelTests(unittest.TestCase):
                 self.assertEqual(row['model'],'base')
                 self.assertEqual(row['prompt'],'이전 명칭')
                 self.assertEqual(row['status'],'done')
-                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],19)
+                self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],20)
             finally: upgraded.close()
 
 class TimestampGapTests(unittest.TestCase):
@@ -287,6 +287,22 @@ class ActivityParserTests(unittest.TestCase):
 
 class OptionalActivityTests(unittest.IsolatedAsyncioTestCase):
     setUp=TranscriptionTests.setUp
+    async def test_windows_activity_uses_verified_exe_and_rejects_tampered_dll(self):
+        import hashlib,json,wave
+        runtime=self.root/'runtime';root=runtime/'asr';files={}
+        for name in ('bin/whisper-vad-speech-segments.exe','bin/ggml.dll'):
+            path=root/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(name.encode())
+            files[name]={'bytes':path.stat().st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+        (root/'receipt.json').write_text(json.dumps({'platform':'win32-x64','files':files}),encoding='utf-8')
+        original=self.root/'source.wav'
+        with wave.open(str(original),'wb')as handle:handle.setnchannels(1);handle.setsampwidth(2);handle.setframerate(16000);handle.writeframes(b'\0\1'*16000)
+        with patch('sys.platform','win32'),patch.object(tr,'engine_paths',return_value=('ffmpeg','whisper','model')),patch.object(tr,'verify_model'),patch.object(tr,'command',new=AsyncMock(return_value=b'Detected 1 speech segments:\nSpeech segment 0: start = 0.00, end = 100.00\n'))as native:
+            self.assertEqual(await tr.speech_activity(original,runtime),[{'start_ms':0,'end_ms':1000}])
+            self.assertEqual(native.call_args.args[0][0],root/'bin/whisper-vad-speech-segments.exe')
+            native.reset_mock();(root/'bin/ggml.dll').write_bytes(b'tampered')
+            with self.assertRaisesRegex(ValueError,'검증 실패'):await tr.speech_activity(original,runtime)
+            native.assert_not_awaited()
+
     async def test_failed_optional_scan_keeps_completed_first_transcript(self):
         audio.append_pcm(self.db,self.rid,0,0,48000,bytes([255,31])*48000);tr.plan_chunks(self.db,self.rid,True)
         with patch.object(tr,'transcribe_range',new=AsyncMock(return_value=[{'start_ms':0,'end_ms':1000,'text':'최초 전사'}])),patch.object(tr,'speech_activity',new=AsyncMock(side_effect=ValueError('진단 불가'))):

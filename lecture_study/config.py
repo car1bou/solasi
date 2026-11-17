@@ -17,6 +17,8 @@ class AppConfig:
 
 def acquire_data_lock(directory):
     import os
+    marker=directory/'.solasi-uninstalling'
+    if marker.exists() or marker.is_symlink():raise ValueError('이 보관함의 설치 삭제가 진행 중입니다')
     directory.mkdir(parents=True,exist_ok=True,mode=0o700)
     handle=(directory/'instance.lock').open('a+b')
     try:
@@ -29,4 +31,6 @@ def acquire_data_lock(directory):
             fcntl.flock(handle.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
     except OSError:
         handle.close();raise ValueError('이 데이터 폴더의 앱이 이미 실행 중입니다') from None
+    if marker.exists() or marker.is_symlink():
+        handle.close();raise ValueError('이 보관함의 설치 삭제가 진행 중입니다')
     return handle

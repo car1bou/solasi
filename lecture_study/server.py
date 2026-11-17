@@ -7,6 +7,7 @@ import asyncio
 import json
 import struct
 import hashlib
+import sys
 import importlib.util
 import httpx
 from typing import Literal
@@ -110,7 +111,10 @@ def create_app(config: AppConfig) -> FastAPI:
     app.state.ollama_url = None
     app.state.local_error = None
     app.state.local_models = OwnedOllama(config.runtime_dir)
-    app.state.direct_models = DirectModels(config.runtime_dir,config.data_dir/'model-cache')
+    if sys.platform=='win32':
+        from .windows_models import WindowsModels
+        app.state.direct_models = WindowsModels(config.runtime_dir,config.data_dir/'model-cache')
+    else:app.state.direct_models = DirectModels(config.runtime_dir,config.data_dir/'model-cache')
     app.state.secrets = Secrets("LectureStudy:"+hashlib.sha256(str(config.data_dir.resolve()).encode()).hexdigest()[:16])
     app.state.generation_lock = asyncio.Semaphore(1)
     app.state.external_generation_lock = asyncio.Semaphore(1)
@@ -570,7 +574,11 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.patch('/api/attempts/{ident}')
     async def patch_attempt(ident:str,body:OverrideInput):
-        return override_attempt(db,ident,body.grade,body.explanation)
+        result=override_attempt(db,ident,body.grade,body.explanation)
+        from .study_memory import sync_quizzes
+        sync_quizzes(db)
+        await app.state.study_cancel_obsolete()
+        return result
 
     @app.get('/api/sessions/{sid}/review')
     async def review(sid:str):
@@ -1000,8 +1008,15 @@ def create_app(config: AppConfig) -> FastAPI:
     async def knowledge_loop():
         last_concept=0
         while not app.state.closing:
+            if getattr(app.state,'uninstall_preparing',False):
+                await asyncio.sleep(.05)
+                continue
             work=None
+            app.state.knowledge_active=True
             try:
+                if await app.state.study_background_tick():
+                    await asyncio.sleep(3)
+                    continue
                 reconcile(db)
                 provider=provider_config()
                 if provider.provider in ('local','ollama'):
@@ -1029,7 +1044,7 @@ def create_app(config: AppConfig) -> FastAPI:
                         elif background_idle(db):
                             async with app.state.generation_lock:
                                 if background_idle(db):
-                                    save_recognition(db,snapshot,await recognize_ink(snapshot))
+                                    save_recognition(db,snapshot,await recognize_ink(snapshot,runtime_dir=config.runtime_dir))
                                     with db:db.execute("UPDATE brain_work SET state='done',error=NULL,updated_at=? WHERE key=?",(now(),work['key']))
                     else:
                         async with app.state.embedding_lock,local_embedding_client(reuse=True,background=True) as client:
@@ -1046,6 +1061,8 @@ def create_app(config: AppConfig) -> FastAPI:
                 if work:
                     with db:db.execute("UPDATE brain_work SET state='failed',error=?,updated_at=? WHERE key=?",(str(exc)[:300],now(),work['key']))
                 await asyncio.sleep(5)
+            finally:
+                app.state.knowledge_active=False
 
     @app.get('/api/knowledge/status')
     async def knowledge_status():
@@ -1138,7 +1155,7 @@ def create_app(config: AppConfig) -> FastAPI:
             await wait_for_transcription(db,job['id'],include_recording=True)
             async with app.state.generation_lock:
                 await wait_for_transcription(db,job['id'],include_recording=True)
-                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True)) if body.engine!='vision' else await recognize_ink(snapshot)
+                result=await recognize_local_ink(snapshot,app.state.direct_models,before_local=lambda:wait_for_transcription(db,job['id'],include_recording=True),runtime_dir=config.runtime_dir) if body.engine!='vision' else await recognize_ink(snapshot,runtime_dir=config.runtime_dir)
                 return save_recognition(db,snapshot,result)
         return launch_job(app,job,operation)
 
@@ -1457,6 +1474,8 @@ def create_app(config: AppConfig) -> FastAPI:
                     try:interrupt_recording(db,recording_id)
                     except KeyError:pass
 
+    from .study_memory_api import attach_study_memory
+    attach_study_memory(app,db,config,provider_config,generation_slot,local_embedding_client)
     frontend = Path(__file__).parent.parent / "frontend" / "dist"
     if frontend.is_dir():
         app.mount("/", StaticFiles(directory=frontend, html=True), name="frontend")

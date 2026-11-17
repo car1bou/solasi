@@ -1,8 +1,15 @@
 """Verified local text tokenizer; other models retain the byte upper bound."""
-import hashlib,json,re
+import hashlib,json,re,sys
 from functools import lru_cache
 from pathlib import Path
 from tokenizers import Tokenizer
+
+
+def effective_context(config):
+    if sys.platform=='win32' and config.provider=='local' and config.model=='qwen3.5:4b':
+        from .windows_models import CONTEXT_LIMIT
+        return min(config.context_limit,CONTEXT_LIMIT)
+    return config.context_limit
 
 
 def local_profile(config,runtime):
@@ -44,6 +51,9 @@ def input_bound(config,messages,schema,profile):
 
 def direct_profile(config,runtime):
     if runtime is None:return None
+    if sys.platform=='win32' and config.model=='qwen3.5:4b':
+        from .windows_models import tokenizer_profile
+        return tokenizer_profile(runtime)
     from .direct_models import model_identity
     from .mlx_direct import SUPPORTED_MODELS
     from .local_models import CATALOG

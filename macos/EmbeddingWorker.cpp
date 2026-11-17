@@ -6,6 +6,9 @@
 #include <iostream>
 #include <locale>
 #include <sstream>
+#ifdef _WIN32
+#include "../windows/NativePlatform.hpp"
+#endif
 
 namespace {
 bool error(const char *code, const char *message, bool fatal) {
@@ -14,13 +17,22 @@ bool error(const char *code, const char *message, bool fatal) {
 }
 }
 
-int main(int argc, char **argv) {
+int worker_main(int argc, char **argv) {
+#ifdef _WIN32
+    solasi::binary_stdio();
+#else
     std::signal(SIGPIPE, SIG_IGN);
+#endif
     std::ios::sync_with_stdio(false);
     if (argc != 3) { error("arguments", "Model and private library paths are required", true); return 2; }
     try {
         ggml_backend_load_all_from_path(argv[2]); llama_backend_init();
-        auto params = llama_model_default_params(); params.n_gpu_layers = 99;
+        auto params = llama_model_default_params();
+#ifdef _WIN32
+        params.n_gpu_layers = 0;
+#else
+        params.n_gpu_layers = 99;
+#endif
         std::unique_ptr<llama_model, decltype(&llama_model_free)> model(solasi::load_embedding(argv[1], params), llama_model_free);
         if (!model) throw std::runtime_error("embedding model load failed");
         auto config = llama_context_default_params();
@@ -73,3 +85,9 @@ int main(int argc, char **argv) {
         std::cerr << exception.what() << '\n'; error("engine", "Embedding engine failed", true); return 3;
     }
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t **argv) { return solasi::utf8_main(argc, argv, worker_main); }
+#else
+int main(int argc, char **argv) { return worker_main(argc, argv); }
+#endif

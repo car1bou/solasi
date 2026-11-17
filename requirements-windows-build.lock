@@ -1,0 +1,2 @@
+-r requirements-windows.lock
+cmake==4.4.4

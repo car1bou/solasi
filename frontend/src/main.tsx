@@ -8,6 +8,10 @@ import {createCloseLifecycle} from './native-lifecycle';
 import {flushPageDrafts,resumePageDrafts} from './page-drafts';
 import {flushNotebookPreferences} from './notebook-preferences';
 import './styles.css';
+import {installWindowsBridge} from './windows-bridge';
+import {installMobileBridge} from './mobile-bridge';
+installMobileBridge();
+installWindowsBridge();
 if(nativeApp())window.solasiLifecycle=createCloseLifecycle(async()=>{await flushPageDrafts();await flushNotebookPreferences();},resumePageDrafts);
 async function start(){
   const state=nativeApp()?await api<{theme:ThemePreference}>('/native/state'):undefined;

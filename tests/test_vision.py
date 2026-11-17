@@ -16,7 +16,7 @@ class VisionTests(unittest.IsolatedAsyncioTestCase):
         response=await self.select('vector.pdf',pdf_fixture());await asyncio.gather(*self.app.state.tasks)
         asset=response.json()[0]['asset']['id'];image_id=f'{asset}:v1:page:3'
         body={'session_id':self.session_id,'kind':'vision','prompt':'이 그림을 설명해 주세요.','image_id':image_id,'scope':{'session_id':self.session_id}}
-        with patch('lecture_study.outputs.model_status',new=AsyncMock(return_value={'vision':False})),patch('lecture_study.materials.render_page',new=AsyncMock()) as render:
+        with patch('lecture_study.outputs.model_status',autospec=True,return_value={'vision':False}),patch('lecture_study.materials.render_page',new=AsyncMock()) as render:
             submitted=await self.client.post('/api/ai/jobs',json=body,headers=self.headers);self.assertEqual(submitted.status_code,202,submitted.text)
             await asyncio.gather(*self.app.state.tasks)
             job=(await self.client.get('/api/jobs/'+submitted.json()['id'])).json()
@@ -24,13 +24,14 @@ class VisionTests(unittest.IsolatedAsyncioTestCase):
         text_query=await self.client.post('/api/sessions/'+self.session_id+'/search',json={'query':'Lecture','scope':{'session_id':self.session_id}},headers=self.headers);self.assertEqual(text_query.status_code,200);self.assertTrue(text_query.json()['evidence'])
         result=ProviderResult(text=json.dumps({'description':'페이지 그림 설명','evidence_ids':[image_id],'limitations':'작은 글자 확인 필요'}),model='vision-test',usage={},elapsed_ms=1)
         self.app.state.ollama_url='http://127.0.0.1:11435'
-        with patch('lecture_study.outputs.model_status',new=AsyncMock(return_value={'vision':True})),patch('lecture_study.outputs.generate',new=AsyncMock(return_value=result)) as generate:
+        with patch('lecture_study.outputs.model_status',autospec=True,return_value={'vision':True}),patch('lecture_study.outputs.generate',new=AsyncMock(return_value=result)) as generate:
             retried=await self.client.post('/api/jobs/'+submitted.json()['id']+'/retry',headers=self.headers);await asyncio.gather(*self.app.state.tasks)
             job=(await self.client.get('/api/jobs/'+submitted.json()['id'])).json();self.assertEqual(job['status'],'done',job)
             saved=(await self.client.get('/api/artifacts/'+job['result']['id'])).json()
             self.assertEqual(saved['kind'],'vision');self.assertEqual(saved['body']['label'],'AI 해석')
             self.assertIn(image_id,{e['ref']['id'] for e in saved['evidence']});self.assertTrue(generate.call_args.args[2][0].read_bytes().startswith(b'\x89PNG'))
             self.assertEqual(saved['metadata']['image_ref']['coord_system'],'pdf_points')
+            self.assertTrue(callable(generate.call_args.kwargs['before_local']))
         forged=body|{'image_id':'/etc/passwd'};self.assertEqual((await self.client.post('/api/ai/jobs',json=forged,headers=self.headers)).status_code,404)
         other=(await self.client.post('/api/sessions',json={'kind':'lecture','title':'다른 과목'},headers=self.headers)).json()['id']
         forged=body|{'session_id':other,'scope':{'session_id':other}}
@@ -55,3 +56,6 @@ class VisionTests(unittest.IsolatedAsyncioTestCase):
                 job=(await self.client.get('/api/jobs/'+submitted.json()['id'])).json();self.assertEqual(job['status'],'done',job)
                 saved=(await self.client.get('/api/artifacts/'+job['result']['id'])).json();self.assertEqual(saved['metadata']['image_ref'],ref)
                 self.assertTrue(generate.call_args.args[2][0].read_bytes().startswith((b'\x89PNG',b'\xff\xd8')))
+                ids=generate.call_args.args[3]['properties']['evidence_ids']
+                self.assertEqual(ids['items']['enum'],[ref['id']])
+                self.assertEqual(ids.get('minItems'),1)

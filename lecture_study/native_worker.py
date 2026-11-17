@@ -22,7 +22,7 @@ MAX_CHUNK = 256 * 1024
 MAX_REQUESTS = 32
 ACK_SECONDS = 30
 SHUTDOWN_SECONDS = 5
-OPS = {'http', 'ack', 'cancel', 'audio_open', 'audio_packet', 'audio_close', 'shutdown'}
+OPS = {'http', 'ack', 'cancel', 'audio_open', 'audio_packet', 'audio_close', 'shutdown', 'uninstall_prepare', 'uninstall_verify', 'uninstall_cancel', 'uninstall_plan'}
 ID = re.compile(r'^[A-Za-z0-9_-]{1,64}$')
 PICKER = re.compile(r'^/api/(?:(?:sessions|courses)/[a-f0-9]{32}/files/select|sessions/[a-f0-9]{32}/recordings)$')
 
@@ -69,6 +69,9 @@ class Worker:
         self.acks = {}
         self.audio = {}
         self.closing = False
+        self.uninstall_receipt = None
+        self.preparing_uninstall = False
+        self.uninstall_directory = None
 
     async def send(self, ident, event, body=b'', **fields):
         header = json.dumps(dict(version=1, id=ident, event=event, body_length=len(body), **fields), ensure_ascii=False, separators=(',', ':')).encode()
@@ -88,6 +91,9 @@ class Worker:
 
     async def http(self, header, body):
         ident = header['id']
+        read_only_status=header.get('method')=='GET' and header.get('path')=='/api/knowledge/status'
+        if (self.preparing_uninstall or self.uninstall_receipt is not None) and not read_only_status:
+            await self.error(ident,'설치 삭제 준비 중입니다. 취소한 뒤 다시 사용하세요','uninstall_busy');return
         path = header.get('path')
         method = header.get('method')
         supplied = header.get('headers', {})
@@ -189,6 +195,63 @@ class Worker:
         await asyncio.gather(stream.task, return_exceptions=True)
         await self.send(header['id'], 'complete')
 
+    async def uninstall_prepare(self, header, body):
+        from .uninstall_export import ExportSelection, prepare_export
+        selected=header.get('selection');destination=header.get('destination')
+        if not isinstance(selected,dict) or set(selected)!={'documents','audio','results'} or not isinstance(destination,str) or not Path(destination).is_absolute():
+            raise ValueError('보존 항목과 저장 위치를 확인하세요')
+        selection=ExportSelection(**selected)
+        if self.preparing_uninstall or self.uninstall_receipt is not None or len(self.requests)>1 or self.audio:
+            raise ValueError('다른 요청을 마친 뒤 다시 시도하세요')
+        for manager in (self.app.state.local_models,self.app.state.direct_models):
+            if getattr(manager,'progress',{}).get('status') in ('queued','running'):raise ValueError('모델 다운로드를 마친 뒤 다시 시도하세요')
+        self.preparing_uninstall=True
+        self.app.state.uninstall_preparing=True
+        try:
+            deadline=asyncio.get_running_loop().time()+30
+            while getattr(self.app.state,'knowledge_active',False):
+                if asyncio.get_running_loop().time()>deadline:raise ValueError('자동 자료 처리가 끝난 뒤 다시 시도하세요')
+                await asyncio.sleep(.05)
+            self.uninstall_receipt=await prepare_export(self.app.state.db,self.app.state.config,Path(destination),selection)
+            receipt=self.uninstall_receipt
+            await self.send(header['id'],'complete',receipt={k:receipt[k] for k in ('id','directory','manifest','manifest_sha256','selection')},files_count=len(receipt['files']))
+        finally:
+            self.preparing_uninstall=False
+            if self.uninstall_receipt is None:self.app.state.uninstall_preparing=False
+
+    async def uninstall_verify(self, header, body):
+        from .uninstall_export import verify_export
+        receipt=self.uninstall_receipt
+        if not receipt or header.get('receipt_id')!=receipt['id']:raise ValueError('유효한 보존 결과가 없습니다. 다시 준비하세요')
+        verify_export(receipt,self.app.state.db)
+        await self.send(header['id'],'complete',verified=True)
+
+    async def uninstall_plan(self, header, body):
+        import tempfile
+        from .uninstall_export import verify_export, json_bytes, regular_file
+        from .uninstall_plan import build_plan
+        receipt=self.uninstall_receipt
+        if not receipt or header.get('receipt_id')!=receipt['id'] or not isinstance(header.get('app_bundle'),str):raise ValueError('보존 결과와 앱을 확인하세요')
+        verify_export(receipt,self.app.state.db)
+        plan=build_plan(self.app.state.db,self.app.state.config,Path(header['app_bundle']),receipt)
+        directory=Path(tempfile.mkdtemp(prefix='solasi-uninstall-')).resolve()
+        self.uninstall_directory=directory
+        path=directory/'plan.json'
+        with path.open('xb') as handle:
+            os.chmod(path,0o600);handle.write(json_bytes(plan));handle.flush();os.fsync(handle.fileno())
+        await self.send(header['id'],'complete',plan_path=str(path),plan_sha256=regular_file(path)['sha256'],bytes=plan['bytes'],preserved=plan['preserved'][:20],preserved_count=len(plan['preserved']))
+
+    async def uninstall_cancel(self, header, body):
+        if self.preparing_uninstall:raise ValueError('보존 파일 준비를 기다려 주세요')
+        if self.uninstall_receipt and header.get('receipt_id')!=self.uninstall_receipt['id']:raise ValueError('보존 결과 식별자가 다릅니다')
+        self.uninstall_receipt=None
+        self.app.state.uninstall_preparing=False
+        if self.uninstall_directory is not None:
+            import shutil
+            shutil.rmtree(self.uninstall_directory)
+            self.uninstall_directory=None
+        await self.send(header['id'],'complete',cancelled=True)
+
     async def run_request(self, header, body):
         ident = header['id']
         try:
@@ -205,6 +268,11 @@ class Worker:
             await self.error(ident, str(exc))
         except TimeoutError:
             await self.error(ident, 'Response acknowledgement timed out', 'timeout')
+        except (ValueError,OSError) as exc:
+            if header['op'].startswith('uninstall_'):await self.error(ident,str(exc))
+            else:
+                logging.exception('Native request failed')
+                await self.error(ident,'Application request failed','internal_error')
         except Exception:
             logging.exception('Native request failed')
             await self.error(ident, 'Application request failed', 'internal_error')
@@ -237,6 +305,8 @@ class Worker:
         if len(self.requests) + len(self.audio) >= MAX_REQUESTS:
             await self.error(ident, 'Too many pending requests', 'busy')
             return
+        if (self.preparing_uninstall or self.uninstall_receipt is not None) and op in ('audio_open','audio_packet','audio_close'):
+            await self.error(ident,'설치 삭제 준비 중입니다','uninstall_busy');return
         self.requests[ident] = asyncio.create_task(self.run_request(header, body))
 
     async def close(self):

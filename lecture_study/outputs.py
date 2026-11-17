@@ -104,11 +104,12 @@ def output_messages(request,evidence,instruction,extra=None,*,compact=False):
 
 
 def check_budget(config,messages,schema,*,output_limit=4096,tokenizer_profile=None):
+    from .token_budget import effective_context
     bound=sum(len(m['content'].encode()) for m in messages)+len(json.dumps(schema).encode())+200
     if tokenizer_profile:
         from .token_budget import input_bound
         bound=input_bound(config,messages,schema,tokenizer_profile)
-    if bound+output_limit>config.context_limit:raise ValueError('모델 입력 예산을 초과합니다. 입력 예산 또는 질문 범위를 조정하세요')
+    if bound+output_limit>effective_context(config):raise ValueError('모델 입력 예산을 초과합니다. 입력 예산 또는 질문 범위를 조정하세요')
     return bound
 
 
@@ -605,7 +606,7 @@ def image_evidence(db,request):
     return evidence,ref,image['id'] if image else None
 
 
-async def explain_image(db,frozen,job_id,*,runtime_dir,**kwargs):
+async def explain_image(db,frozen,job_id,*,runtime_dir,before_local=None,**kwargs):
     from .materials import render_page,render_image,asset_dir,material_sha256,prune_cache
     request,evidence=checked_evidence(db,frozen)
     status=await model_status(request.provider,**kwargs)
@@ -615,8 +616,11 @@ async def explain_image(db,frozen,job_id,*,runtime_dir,**kwargs):
     _,asset=asset_dir(db,ref.asset_id)
     path=await render_image(db,ref.asset_id,image_id,runtime_dir) if image_id is not None else await render_page(db,ref.asset_id,ref.page,runtime_dir,material_sha256(asset,ref))
     try:
-        messages=output_messages(request,evidence,VISION_INSTRUCTION);schema=evidence_schema(VISION_SCHEMA,evidence);check_budget(request.provider,messages,schema)
-        result=await generate(request.provider,messages,[path],schema,**kwargs)
+        messages=output_messages(request,evidence,VISION_INSTRUCTION)
+        schema=evidence_schema(VISION_SCHEMA,[item for item in evidence if item.ref.id==ref.id])
+        schema['properties']['evidence_ids']['minItems']=1
+        check_budget(request.provider,messages,schema)
+        result=await generate(request.provider,messages,[path],schema,before_local=before_local,**kwargs)
         body=parsed(Vision,result.text);check_ids(body['evidence_ids'],evidence)
         if ref.id not in body['evidence_ids']: raise ValueError('선택 이미지의 인용이 없습니다')
         checked_evidence(db,frozen);image_evidence(db,request)

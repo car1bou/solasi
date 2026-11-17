@@ -1,9 +1,17 @@
 #pragma once
 #include "llama.h"
 #include <fcntl.h>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <io.h>
+#else
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#endif
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -14,11 +22,22 @@ namespace solasi {
 // Mapping follows Ollama's MIT-licensed handle_embeddinggemma; see docs/embedding-worker.md.
 struct EmbeddingSource {
     struct Tensor { size_t offset; size_t size; };
+#ifdef _WIN32
+    HANDLE handle = INVALID_HANDLE_VALUE;
+    HANDLE mapped_file = nullptr;
+    void *mapping = nullptr;
+    ~EmbeddingSource() {
+        if (mapping) UnmapViewOfFile(mapping);
+        if (mapped_file) CloseHandle(mapped_file);
+        if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
+    }
+#else
     int fd = -1;
     void *mapping = MAP_FAILED;
+    ~EmbeddingSource() { if (mapping != MAP_FAILED) munmap(mapping, size); if (fd >= 0) close(fd); }
+#endif
     size_t size = 0;
     std::unordered_map<std::string, Tensor> tensors;
-    ~EmbeddingSource() { if (mapping != MAP_FAILED) munmap(mapping, size); if (fd >= 0) close(fd); }
 };
 
 inline void set_embedding_tensor(ggml_tensor *tensor, void *userdata) {
@@ -46,6 +65,31 @@ inline void set_embedding_tensor(ggml_tensor *tensor, void *userdata) {
 
 inline llama_model *load_embedding(const char *path, llama_model_params params) {
     EmbeddingSource source;
+#ifdef _WIN32
+    int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, nullptr, 0);
+    if (count <= 0) throw std::runtime_error("invalid UTF-8 model path");
+    std::wstring wide(size_t(count), L'\0');
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, path, -1, wide.data(), count);
+    source.handle = CreateFileW(wide.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT, nullptr);
+    BY_HANDLE_FILE_INFORMATION info{};
+    LARGE_INTEGER length{};
+    if (source.handle == INVALID_HANDLE_VALUE || !GetFileInformationByHandle(source.handle, &info) ||
+            (info.dwFileAttributes & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT)) ||
+            !GetFileSizeEx(source.handle, &length) || length.QuadPart != 621867104)
+        throw std::runtime_error("unsupported embedding model file");
+    source.size = size_t(length.QuadPart);
+    source.mapped_file = CreateFileMappingW(source.handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    if (!source.mapped_file || !(source.mapping = MapViewOfFile(source.mapped_file, FILE_MAP_READ, 0, 0, 0)))
+        throw std::runtime_error("embedding model mapping failed");
+    HANDLE read_handle = INVALID_HANDLE_VALUE;
+    if (!DuplicateHandle(GetCurrentProcess(), source.handle, GetCurrentProcess(), &read_handle, 0, FALSE, DUPLICATE_SAME_ACCESS))
+        throw std::runtime_error("embedding model read failed");
+    int read_fd = _open_osfhandle(reinterpret_cast<intptr_t>(read_handle), _O_RDONLY | _O_BINARY);
+    if (read_fd < 0) { CloseHandle(read_handle); throw std::runtime_error("embedding model read failed"); }
+    std::unique_ptr<FILE, decltype(&fclose)> file(_fdopen(read_fd, "rb"), fclose);
+    if (!file) { _close(read_fd); throw std::runtime_error("embedding model read failed"); }
+#else
     source.fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     struct stat info{};
     if (source.fd < 0 || fstat(source.fd, &info) || !S_ISREG(info.st_mode) || info.st_size != 621867104)
@@ -57,6 +101,7 @@ inline llama_model *load_embedding(const char *path, llama_model_params params) 
     if (read_fd < 0) throw std::runtime_error("embedding model read failed");
     std::unique_ptr<FILE, decltype(&fclose)> file(fdopen(read_fd, "rb"), fclose);
     if (!file) { close(read_fd); throw std::runtime_error("embedding model read failed"); }
+#endif
     ggml_context *parsed = nullptr;
     std::unique_ptr<gguf_context, decltype(&gguf_free)> original(gguf_init_from_file_ptr(file.get(), {true, &parsed}), gguf_free);
     std::unique_ptr<ggml_context, decltype(&ggml_free)> tensors(parsed, ggml_free);

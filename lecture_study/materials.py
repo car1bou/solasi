@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import sys
+import subprocess
 from pathlib import Path
 from fastapi import HTTPException
 from pydantic import BaseModel, Field
@@ -113,6 +114,10 @@ def register_file(db,session_id,inspected,course_id=None,*,handwritten=False):
 
 
 def source_status(db,asset):
+    if asset['external_path']:
+        from .mobile_documents import status
+        provider=status(asset['external_path'])
+        if provider is not None and provider!='current':return provider
     path = Path(asset["external_path"]) if asset["external_path"] else data_dir(db)/"assets"/asset["id"]/f'original.{asset["kind"]}'
     try:
         info = path.stat()
@@ -197,7 +202,7 @@ def normalize_result(result, ident, folder, ocr_ready, version=1):
 
 async def worker(args, timeout=120):
     process = await asyncio.create_subprocess_exec(*worker_command('material-worker',args),
-                                                   stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL)
+                                                   stdout=asyncio.subprocess.DEVNULL,stderr=asyncio.subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     try:
         code = await asyncio.wait_for(process.wait(),timeout)
         if code:
@@ -223,7 +228,7 @@ async def ingest_asset(db, asset_id, runtime_dir):
         after = await asyncio.to_thread(inspect_file,source)
         if after["sha256"]!=inspected["sha256"]:
             raise ValueError("추출 중 원본이 변경되었습니다. 재추출하세요")
-        result = Extraction.model_validate_json((folder/"extraction.json").read_text())
+        result = Extraction.model_validate_json((folder/"extraction.json").read_text(encoding='utf-8'))
         with db:
             db.execute("UPDATE assets SET status=?,extraction=?,error=NULL,sha256=?,size=?,mtime_ns=?,version=?,kind=?,extraction_sha256=? WHERE id=?",
                        (result.status,result.model_dump_json(),inspected["sha256"],inspected["size"],inspected["mtime_ns"],version,inspected["kind"],inspected['sha256'],asset_id))

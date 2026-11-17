@@ -80,6 +80,21 @@ class NativePDFTests(unittest.TestCase):
         rerun=subprocess.run([str(self.binary),str(original),str(output)],input=json.dumps(pages).encode(),capture_output=True)
         self.assertNotEqual(rerun.returncode,0);self.assertEqual(output.read_bytes(),prior)
 
+    def test_image_notebook_and_verifier_detect_missing_ink(self):
+        from fixtures import png_fixture
+        source=self.root/'image.png';source.write_bytes(png_fixture())
+        output=self.root/'image-notebook.pdf'
+        payload=json.dumps([dict(page=1,ink=[ink()])]).encode()
+        generated=subprocess.run([str(self.binary),str(source),str(output)],input=payload,capture_output=True)
+        self.assertEqual(generated.returncode,0,generated.stderr.decode())
+        verified=subprocess.run([str(self.binary),'--verify',str(source),str(output)],input=payload,capture_output=True)
+        self.assertEqual(verified.returncode,0,verified.stderr.decode())
+        blank=self.root/'image-blank.pdf'
+        generated=subprocess.run([str(self.binary),str(source),str(blank)],input=b'[{"page":1,"ink":[]}]',capture_output=True)
+        self.assertEqual(generated.returncode,0,generated.stderr.decode())
+        checked=subprocess.run([str(self.binary),'--verify',str(source),str(blank)],input=payload,capture_output=True)
+        self.assertNotEqual(checked.returncode,0,'missing ink must never be accepted as preservation success')
+
     def test_crop_rotation_source_annotations_and_overlay_positions(self):
         import pypdfium2 as pdf
         from PIL import ImageChops,ImageStat

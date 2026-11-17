@@ -41,6 +41,11 @@ async def read_result(reader, limit=8*1024*1024):
 
 
 class DirectModels:
+    embedding_architecture = 'arm64'
+    embedding_worker = 'EmbeddingWorker'
+    embedding_format = EMBEDDING_FORMAT
+    generation_timeout = 180
+
     def __init__(self, runtime, cache_dir, *, python=None, engine_dir=None):
         self.runtime = Path(runtime)
         self.cache_dir = Path(cache_dir)
@@ -100,7 +105,8 @@ class DirectModels:
 
     async def _spawn(self, command):
         env = dict(os.environ,HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',TOKENIZERS_PARALLELISM='false')
-        try:process = await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,env=env)
+        options={'creationflags':0x08000000} if sys.platform=='win32' else {}
+        try:process = await asyncio.create_subprocess_exec(*command,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,env=env,**options)
         except OSError:raise ValueError('직접 실행 엔진을 시작할 수 없습니다') from None
         self.processes.add(process)
         return process
@@ -133,7 +139,7 @@ class DirectModels:
                 process.stdin.write(struct.pack('>I',len(encoded))+encoded)
                 await process.stdin.drain()
             process.stdin.close()
-            result = await asyncio.wait_for(read_result(process.stdout),180)
+            result = await asyncio.wait_for(read_result(process.stdout),self.generation_timeout)
             await asyncio.wait_for(process.wait(),5)
             if process.returncode or result.get('ok') is not True: raise ValueError(result.get('error','직접 실행 모델 처리 실패'))
             return result['result']
@@ -145,9 +151,9 @@ class DirectModels:
             receipt=self.engine_dir/'receipt.json'
             if receipt.stat().st_size>65536:raise ValueError('임베딩 엔진 기록 크기 오류')
             record=json.loads(receipt.read_bytes())
-            if record['engine']!=EMBEDDING_ENGINE or record['revision']!='620d2225cc436ab0b001e3200e590e3b286ef9ab' or record['architecture']!='arm64':raise ValueError('검증한 임베딩 엔진이 아닙니다')
+            if record['engine']!=EMBEDDING_ENGINE or record['revision']!='620d2225cc436ab0b001e3200e590e3b286ef9ab' or record['architecture']!=self.embedding_architecture:raise ValueError('검증한 임베딩 엔진이 아닙니다')
             files=record['files']
-            if not isinstance(files,dict) or 'EmbeddingWorker' not in files or len(files)>32:raise ValueError('임베딩 엔진 파일 목록 오류')
+            if not isinstance(files,dict) or self.embedding_worker not in files or len(files)>32:raise ValueError('임베딩 엔진 파일 목록 오류')
             stamp=[]
             for name,expected in files.items():
                 path=self.engine_dir/name
@@ -206,6 +212,9 @@ class DirectModels:
         if self._embedding is None or self._embedding[0] is not owner:return
         async with self.lock:await self._release_embedding(owner)
 
+    def _embedding_command(self, path):
+        return [str(self.engine_dir/self.embedding_worker),str(path),str(self.engine_dir/'lib')]
+
     async def embed(self, model, text, *, before_local=None,timings=None,owner=None):
         if not isinstance(text,str) or not text or len(text.encode())>100000: raise EmbeddingInputTooLong('임베딩 입력 한도')
         started=time.perf_counter()
@@ -231,7 +240,7 @@ class DirectModels:
                     process=self._embedding[1]
                     if process.returncode is not None:raise ValueError('임베딩 엔진이 종료되었습니다. 재색인하세요')
                 else:
-                    process=await self._spawn([str(self.engine_dir/'EmbeddingWorker'),str(path),str(self.engine_dir/'lib')])
+                    process=await self._spawn(self._embedding_command(path))
                     if owner is not None:self._embedding=(owner,process)
                     ready=await asyncio.wait_for(read_result(process.stdout),60)
                     if any(ready.get(key)!=value for key,value in {'ready':True,'dim':768,'pooling':'mean','context_tokens':2048,'engine':EMBEDDING_ENGINE}.items()): raise ValueError('직접 임베딩 엔진 정보가 다릅니다')
@@ -297,7 +306,9 @@ class DirectModels:
         try:
             async with connection() as transport:
                 raw=bytearray()
-                async with transport.stream('GET',base+'/manifests/sha256:'+expected['digest']) as response:
+                # The default tag selects GGUF; MLX manifests are pinned registry blobs.
+                manifest_url=base+('/blobs/sha256:'+expected['digest'] if runner=='mlx' else '/manifests/'+tag)
+                async with transport.stream('GET',manifest_url) as response:
                     response.raise_for_status()
                     async for block in response.aiter_bytes():
                         if len(raw)+len(block)>64*1024*1024:raise ValueError('모델 manifest가 너무 큽니다')
