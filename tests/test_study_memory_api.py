@@ -59,7 +59,7 @@ class StudyAPITests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.wait(first.json()))['status'], 'done')
             second = await self.send('그 분모를 다시 설명해줘', True)
             self.assertEqual((await self.wait(second.json()))['status'], 'done')
-            payload = model.call_args.args[1][-1]['content']
+            payload = model.call_args.args[1][1]['content']
             self.assertIn('20쪽까지', payload)
             self.assertIn('그 분모', payload)
         saved = (await self.client.get('/api/study/threads/'+self.thread['id'], params=self.owned)).json()
@@ -140,7 +140,7 @@ class StudyAPITests(unittest.IsolatedAsyncioTestCase):
             job=(await self.send('어디까지 했지?',True)).json()
             finished=await self.wait(job)
             self.assertEqual(finished['status'],'done',finished['error'])
-            self.assertIn('20쪽까지',model.call_args.args[1][-1]['content'])
+            self.assertIn('20쪽까지',model.call_args.args[1][1]['content'])
 
     async def test_budget_and_citations_are_checked(self):
         from lecture_study.study_memory_api import bounded_input,validate_answer
@@ -152,8 +152,9 @@ class StudyAPITests(unittest.IsolatedAsyncioTestCase):
         owned=memory.owner(self.db,course_id=self.cid)
         original=memory.add_user(self.db,self.thread['id'],owned,'20쪽까지 공부했어',self.owned)
         async def reply(provider,messages,images,schema,**kwargs):
-            payload=json.loads(messages[-1]['content'])
-            self.assertNotIn(original['id'],messages[-1]['content'])
+            self.assertEqual(messages[-1],{'role':'user','content':'어디까지 했지?'})
+            payload=json.loads(messages[1]['content'])
+            self.assertNotIn(original['id'],messages[1]['content'])
             label=payload['history'][0]['id']
             self.assertEqual(label,'이전 대화 1')
             return ProviderResult(text=json.dumps({'answer':'20쪽까지 공부했어요','basis':'conversation','context_ids':[label],'evidence_ids':[],'uncertainty':''}),model='test-model',usage={},elapsed_ms=1)

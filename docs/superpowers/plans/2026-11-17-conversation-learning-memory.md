@@ -30,44 +30,50 @@
 **Files:** `lecture_study/schema.sql`, new `lecture_study/study_memory.py`, new `tests/test_study_memory.py`.
 **Interfaces:** `owner(db, session_id=None, course_id=None)`, `create_thread(db, owner)`, `read_thread(db, id, owner, before=None)`, `memory_list(db, course_id)`, `invalidate(db, owner)`, `delete_thread(db, id, owner)`, `clear_memories(db, course_id)`.
 
-- [ ] Write failing tests for additive persistence/reopen, owner mismatch, partial-turn durability, edits/deletes/cutoff and invalidated snapshots.
-- [ ] Run ` .venv/bin/python -m unittest tests.test_study_memory -v`; observe missing implementation failure.
-- [ ] Add tables and ownership-checked persistence operations; one provenance record per learned item, generation epochs and source deletion cleanup.
-- [ ] Run the same tests; expect all pass and old fixture rows unchanged.
+- [x] Write failing tests for additive persistence/reopen, owner mismatch, partial-turn durability, edits/deletes/cutoff and invalidated snapshots.
+- [x] Run ` .venv/bin/python -m unittest tests.test_study_memory -v`; observe missing implementation failure.
+- [x] Add tables and ownership-checked persistence operations; one provenance record per learned item, generation epochs and source deletion cleanup.
+- [x] Run the same tests; expect all pass and old fixture rows unchanged.
 
 ### Task 2: Conversational generation and idle local learning
 
 **Files:** `lecture_study/study_memory.py`, new `lecture_study/study_memory_api.py`, `lecture_study/server.py`, new `tests/test_study_memory_api.py`.
 **Interfaces:** `attach_study_memory(app, db, config, provider_config, generation_slot, local_embedding_client)` returns `background_tick`; request prefix `/api/study/`.
 
-- [ ] Test with mock providers: follow-up context, no-evidence recall, scoped source citations, external exclusion, cancellation/retry and delete/forget race.
-- [ ] Add explicit `study_chat` jobs and structured answer validation; reserve context for recent/older related history, memory and checked source evidence.
-- [ ] Add idle local-only structured extraction and summaries with verified user quotes, quiz observations and processing cursors.
-- [ ] Run memory/API tests plus answers, retrieval and source-grounding suites.
+- [x] Test with mock providers: follow-up context, no-evidence recall, scoped source citations, external exclusion, cancellation/retry and delete/forget race.
+- [x] Add explicit `study_chat` jobs and structured answer validation; reserve context for recent/older related history, memory and checked source evidence.
+- [x] Add idle local-only structured extraction and summaries with verified user quotes, quiz observations and processing cursors.
+- [x] Run memory/API tests plus answers, retrieval and source-grounding suites.
 
 ### Task 3: Conversation and course-memory UI
 
 **Files:** new `frontend/src/StudyChat.tsx`, `QuestionView.tsx`, `KnowledgeSettings.tsx`, `styles.css`, new `frontend/tests/study-chat.test.ts`.
 **Interfaces:** StudyChat accepts existing session/course/scope props; existing source Q&A remains available.
 
-- [ ] Add failing SSR/interaction-helper tests for history, pending/errors, memory source/edit/delete, external opt-in and accessible controls.
-- [ ] Build using existing cards/buttons/forms; no new UI dependency. Restore last conversation, paginate history, preserve drafts/close guards.
-- [ ] Run frontend tests and production build.
+- [x] Add failing SSR/interaction-helper tests for history, pending/errors, memory source/edit/delete, external opt-in and accessible controls.
+- [x] Build using existing cards/buttons/forms; no new UI dependency. Restore last conversation, paginate history, preserve drafts/close guards.
+- [x] Run frontend tests and production build.
 
 ### Task 4: Lifecycle, portable exports and packaging
 
 **Files:** `lifecycle.py`, `uninstall_export.py`, `mobile_bridge.py`, packaging patch helper, `tests/test_uninstall_export.py`, memory tests, `docs/guide.md`.
 
-- [ ] Add regression tests for source-session deletion, portable result export completeness, pause during reset preparation, and mobile capability boundaries.
-- [ ] Include independent readable conversation/memory exports and content validation. Keep native reset/uninstall code intact.
-- [ ] Run targeted regressions, then full Python/frontend checks. Build candidate engine without reverting deployed security/runtime changes.
+- [x] Add regression tests for source-session deletion, portable result export completeness, pause during reset preparation, and mobile capability boundaries.
+- [x] Include independent readable conversation/memory exports and content validation. Keep native reset/uninstall code intact.
+- [x] Run targeted regressions, then full Python/frontend checks. Build candidate engine without reverting deployed security/runtime changes.
 
 ### Task 5: Real Mac validation and preservation
 
 **Files:** `docs/conversation-learning-memory-macos-validation-20261117.md`, task-specific output directory.
 
-- [ ] Capture existing installed launch settings, per-table old-row baseline, managed file/model hashes and a SQLite-consistent backup.
-- [ ] Use a separate QA app/vault first: real local-model dialogue, restart/resume, new-conversation course recall, correction/forget and export.
-- [ ] Obtain fresh independent code review and fix important findings with regressions.
-- [ ] Install approved feature into actual app with previous bundle retained; verify signatures, actual UI/local generation and existing record/file preservation.
-- [ ] Report exact evidence, limits and untested platforms; do not run actual reset or uninstall.
+- [x] Capture existing installed launch settings, per-table old-row baseline, managed file/model hashes and a SQLite-consistent backup.
+- [x] Use a separate QA app/vault first: real local-model dialogue, restart/resume, new-conversation course recall, manual correction and native JSON export; verify forgetting through scoped regressions.
+- [x] Obtain fresh independent code review and fix important findings with regressions.
+- [x] Install approved feature into actual app with previous bundle retained; verify signatures, actual UI, byte-identical QA-engine local generation and existing record/file preservation.
+- [x] Report exact evidence, limits and untested platforms; do not run actual reset or uninstall.
+
+## Execution record — 2026-11-17
+
+Implementation and independent review corrections are complete. Full Python run: 868 cases; 857 passed, 9 skipped, 2 cold Swift-cache compile timeouts. Both timed-out tests passed in scoped retries. Frontend160/build passed. Final prompt change: memory/API21 passed. Real Qwen restart/resume and new-conversation course recall passed; manual correction/native export passed. See `docs/conversation-learning-memory-macos-validation-20261117.md` for evidence and limitations.
+
+A separate user-authorized reset ran during this task. Its verified1,923-file export and this task's pre-reset SQLite snapshot are retained. Installation preserves the freshly blank live vault rather than restoring records contrary to that reset. This task did not execute reset/uninstall. Source was saved to the approved public GitHub branch through the API, with no new local Git commit.
