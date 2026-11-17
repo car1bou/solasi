@@ -8,7 +8,7 @@ import shutil
 import struct
 import subprocess
 import tempfile
-from scripts.patch_macos_engine import code_shape
+from scripts.patch_macos_engine import code_shape, nested, replace_nested
 from scripts.install_macos_app import verify_engine, clone_copy
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -49,6 +49,15 @@ def patch(source, destination):
         if code_shape(pyz.extract(name))!=code_shape(compile(original_source(name,current),path,'exec')):
             raise ValueError('설치 모듈과 기반 소스가 다릅니다. 덮어쓰지 않습니다: '+name)
         replacements[name]=compile(current,path,'exec')
+    name='lecture_study.direct_models';path=name.replace('.','/')+'.py'
+    current=(ROOT/path).read_text()
+    baseline=current.replace("                manifest_url=base+('/blobs/sha256:'+expected['digest'] if runner=='mlx' else '/manifests/'+tag)\n                async with transport.stream('GET',manifest_url) as response:","                async with transport.stream('GET',base+'/manifests/'+tag) as response:")
+    names=('DirectModels','pull');old=pyz.extract(name)
+    if code_shape(nested(old,names))!=code_shape(nested(compile(baseline,path,'exec'),names)):
+        raise ValueError('설치된 모델 다운로드 함수가 예상 기반과 다릅니다')
+    replacement=nested(compile(current,path,'exec'),names)
+    if replacement.co_freevars!=nested(old,names).co_freevars:raise ValueError('모델 다운로드 클로저가 다릅니다')
+    replacements[name]=replace_nested(old,names,replacement)
     old_schema=(source/'_internal/lecture_study/schema.sql').read_text()
     schema=(ROOT/'lecture_study/schema.sql').read_text()
     baseline=schema[:schema.index('CREATE TABLE IF NOT EXISTS study_threads')]+ 'PRAGMA user_version=19;\n'
@@ -93,13 +102,13 @@ def patch(source, destination):
         if kind==3:continue
         expected=codes[name]
         if code_shape(expected)!=code_shape(rebuilt.extract(name)):raise ValueError('엔진 모듈 검증 실패: '+name)
-        if name not in REPLACE:unchanged+=1
+        if name not in replacements:unchanged+=1
     for name in ('solasi-engine','_internal/lecture_study/schema.sql'):
         path=destination/name
         with path.open('rb') as handle:digest=hashlib.file_digest(handle,'sha256').hexdigest()
         manifest['files'][name]={'bytes':path.stat().st_size,'sha256':digest}
     (destination/'bundle-manifest.json').write_text(json.dumps(manifest,indent=2))
-    proof={'replaced':REPLACE,'added':ADD,'unchanged_modules':unchanged,'schema':20,'all_module_code_objects_verified':True}
+    proof={'replaced':REPLACE,'patched_functions':['lecture_study.direct_models.DirectModels.pull'],'added':ADD,'unchanged_modules':unchanged,'schema':20,'all_module_code_objects_verified':True}
     (destination/'study-memory-patch-proof.json').write_text(json.dumps(proof,indent=2))
     subprocess.run([str(binary),'--self-check'],cwd=destination,check=True)
     verify_engine(destination)

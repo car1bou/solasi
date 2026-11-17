@@ -306,8 +306,9 @@ class DirectModels:
         try:
             async with connection() as transport:
                 raw=bytearray()
-                # The registry resolves tags; the pinned hash below still rejects changed bytes.
-                async with transport.stream('GET',base+'/manifests/'+tag) as response:
+                # The default tag selects GGUF; MLX manifests are pinned registry blobs.
+                manifest_url=base+('/blobs/sha256:'+expected['digest'] if runner=='mlx' else '/manifests/'+tag)
+                async with transport.stream('GET',manifest_url) as response:
                     response.raise_for_status()
                     async for block in response.aiter_bytes():
                         if len(raw)+len(block)>64*1024*1024:raise ValueError('모델 manifest가 너무 큽니다')

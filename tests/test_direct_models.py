@@ -217,6 +217,22 @@ sys.stdout.buffer.write(struct.pack('>I',len(reply))+reply);sys.stdout.buffer.fl
             self.assertEqual(self.manager.progress['status'],'failed')
             self.assertEqual(target.read_bytes(),previous)
 
+    async def test_mlx_download_uses_pinned_manifest_blob_instead_of_default_gguf_tag(self):
+        from lecture_study.local_models import CATALOG
+        config=b'{}'
+        config_sha=hashlib.sha256(config).hexdigest()
+        manifest=json.dumps({'schemaVersion':2,'config':{'digest':'sha256:'+config_sha,'size':len(config)},'layers':[]}).encode()
+        digest=hashlib.sha256(manifest).hexdigest()
+        seen=[]
+        def respond(request):
+            seen.append(request.url.path)
+            return httpx.Response(200,content=manifest if request.url.path.endswith(digest) else config)
+        with patch.dict(CATALOG,{'qwen3.5:4b':{'runners':{'mlx':{'bytes':1,'digest':digest}}}}),patch('lecture_study.direct_models.installed_asset',return_value={'digest':digest}),patch.object(self.manager,'validate_asset'):
+            async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+                await self.manager.pull('qwen3.5:4b','mlx',client=client)
+        self.assertEqual(seen[0],'/v2/library/qwen3.5/blobs/sha256:'+digest)
+        self.assertEqual(self.manager.progress['status'],'done')
+
     async def test_local_frozen_summary_keeps_extract_policy(self):
         from lecture_study.answers import capture_request, freeze_request
         from lecture_study.models import AIRequest
