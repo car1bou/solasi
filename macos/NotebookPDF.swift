@@ -87,14 +87,83 @@ func draw(_ ink: Ink, size: CGSize, in context: CGContext) throws {
     }
 }
 
+func loadDocument(_ source: URL) -> PDFDocument? {
+    if let pdf = PDFDocument(url: source) { return pdf }
+    guard ["png", "jpg", "jpeg"].contains(source.pathExtension.lowercased()),
+          let image = NSImage(contentsOf: source), let page = PDFPage(image: image) else { return nil }
+    let pdf = PDFDocument(); pdf.insert(page, at: 0)
+    guard let data = pdf.dataRepresentation() else { return nil }
+    return PDFDocument(data: data)
+}
+
+func pageSize(_ page: PDFPage) -> CGSize {
+    let crop = page.bounds(for: .cropBox), sideways = [90,270].contains((page.rotation%360+360)%360)
+    return CGSize(width: sideways ? crop.height : crop.width, height: sideways ? crop.width : crop.height)
+}
+
+func paint(_ page: PDFPage, ink: [Ink], in context: CGContext) throws {
+    let size = pageSize(page), bounds = CGRect(origin: .zero, size: size)
+    guard let original = page.pageRef else { throw ExportError.invalid("원본 페이지 읽기 실패") }
+    context.saveGState()
+    context.concatenate(original.getDrawingTransform(.cropBox, rect: bounds, rotate: 0, preserveAspectRatio: true))
+    context.drawPDFPage(original); context.restoreGState()
+    for annotation in page.annotations where annotation.shouldDisplay { annotation.draw(with: .cropBox, in: context) }
+    context.saveGState(); defer { context.restoreGState() }
+    context.translateBy(x: 0, y: size.height); context.scaleBy(x: 1, y: -1)
+    context.clip(to: bounds)
+    for item in ink { try draw(item, size: size, in: context) }
+}
+
+func raster(_ page: PDFPage, ink: [Ink]) throws -> [UInt8] {
+    let size = pageSize(page), scale = min(2, 1200 / max(size.width, size.height))
+    let width = max(1, Int(ceil(size.width * scale))), height = max(1, Int(ceil(size.height * scale)))
+    guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width*4,
+                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+          let bytes = context.data else { throw ExportError.invalid("보존 PDF 검증 메모리 부족") }
+    context.setFillColor(NSColor.white.cgColor); context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    context.scaleBy(x: scale, y: scale); try paint(page, ink: ink, in: context)
+    return Array(UnsafeBufferPointer(start: bytes.assumingMemoryBound(to: UInt8.self), count: width*height*4))
+}
+
+func verify(_ document: PDFDocument, pages: [PageInk], output: URL) throws {
+    guard let saved = PDFDocument(url: output), !saved.isLocked, saved.pageCount == document.pageCount else {
+        throw ExportError.invalid("보존 PDF 다시 열기 또는 페이지 수 검증 실패")
+    }
+    for i in 0..<document.pageCount {
+        try autoreleasepool {
+            guard let source = document.page(at: i), let actual = saved.page(at: i), pageSize(source) == pageSize(actual) else {
+                throw ExportError.invalid("보존 PDF 페이지 크기 검증 실패")
+            }
+            let expected = try raster(source, ink: pages[i].ink), base = try raster(source, ink: []), result = try raster(actual, ink: [])
+            guard expected.count == result.count else { throw ExportError.invalid("보존 PDF 렌더링 크기 불일치") }
+            var error = 0, inkPixels = 0, missing = 0
+            for offset in stride(from: 0, to: expected.count, by: 4) {
+                var difference = 0, changed = 0
+                for channel in 0..<3 {
+                    let delta = abs(Int(expected[offset+channel])-Int(result[offset+channel]))
+                    error += delta; difference = max(difference, delta)
+                    changed = max(changed, abs(Int(expected[offset+channel])-Int(base[offset+channel])))
+                }
+                if changed > 30 { inkPixels += 1; if difference > 60 { missing += 1 } }
+            }
+            guard Double(error)/Double(expected.count/4*3) < 4,
+                  inkPixels == 0 || Double(missing)/Double(inkPixels) < 0.12 else {
+                throw ExportError.invalid("\(i+1)쪽 원본·필기 보존 내용 검증 실패")
+            }
+        }
+    }
+}
+
 do {
-    guard CommandLine.arguments.count == 3 else { throw ExportError.invalid("입력·출력 경로 필요") }
-    let source = URL(fileURLWithPath: CommandLine.arguments[1]), output = URL(fileURLWithPath: CommandLine.arguments[2])
+    let checking = CommandLine.arguments.count == 4 && CommandLine.arguments[1] == "--verify"
+    guard checking || CommandLine.arguments.count == 3 else { throw ExportError.invalid("입력·출력 경로 필요") }
+    let source = URL(fileURLWithPath: CommandLine.arguments[checking ? 2 : 1]), output = URL(fileURLWithPath: CommandLine.arguments[checking ? 3 : 2])
     guard source.standardizedFileURL != output.standardizedFileURL,
-          !FileManager.default.fileExists(atPath: output.path), let document = PDFDocument(url: source), !document.isLocked,
+          (checking || !FileManager.default.fileExists(atPath: output.path)), let document = loadDocument(source), !document.isLocked,
           document.pageCount > 0 else { throw ExportError.invalid("원본 PDF 또는 새 출력 경로 확인 필요") }
     let pages = try JSONDecoder().decode([PageInk].self, from: FileHandle.standardInput.readDataToEndOfFile())
     guard pages.count == document.pageCount, pages.enumerated().allSatisfy({ $0.element.page == $0.offset+1 }) else { throw ExportError.invalid("PDF 페이지 수 불일치") }
+    if checking { try verify(document, pages: pages, output: output); exit(0) }
     // Reserve the private output exclusively; the app also commits the final destination exclusively.
     let sink = try PDFSink(output)
     var complete = false
@@ -113,24 +182,14 @@ do {
     for i in 0..<document.pageCount {
         try autoreleasepool {
             guard let page = document.page(at: i) else { throw ExportError.invalid("원본 페이지 없음") }
-            let crop = page.bounds(for: .cropBox), sideways = [90,270].contains((page.rotation%360+360)%360)
-            let size = CGSize(width: sideways ? crop.height : crop.width, height: sideways ? crop.width : crop.height)
+            let size = pageSize(page)
             guard size.width > 0, size.height > 0 else { throw ExportError.invalid("페이지 크기 오류") }
             var bounds = CGRect(origin: .zero, size: size)
             context.beginPDFPage([kCGPDFContextMediaBox as String: Data(bytes: &bounds, count: MemoryLayout<CGRect>.size)] as CFDictionary)
-            guard let original = page.pageRef else { throw ExportError.invalid("원본 PDF 페이지 읽기 실패") }
-            context.saveGState()
-            context.concatenate(original.getDrawingTransform(.cropBox, rect: bounds, rotate: 0, preserveAspectRatio: true))
-            context.drawPDFPage(original)
-            context.restoreGState()
-            for annotation in page.annotations where annotation.shouldDisplay { annotation.draw(with: .cropBox, in: context) }
-            context.saveGState(); context.translateBy(x: 0, y: size.height); context.scaleBy(x: 1, y: -1)
-            context.clip(to: CGRect(origin: .zero, size: size))
-            for ink in pages[i].ink { try draw(ink, size: size, in: context) }
-            context.restoreGState(); context.endPDFPage()
+            try paint(page, ink: pages[i].ink, in: context); context.endPDFPage()
         }
     }
-    context.closePDF(); try sink.finish(); complete = true
+    context.closePDF(); try sink.finish(); try verify(document, pages: pages, output: output); complete = true
 } catch {
     FileHandle.standardError.write(Data("\(error)".utf8)); exit(1)
 }

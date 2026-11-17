@@ -1,3 +1,5 @@
+import {androidApp,mobileCommand} from './mobile-bridge.ts';
+
 export class ApiError extends Error {
   status:number;
   constructor(message:string,status:number){super(message);this.name='ApiError';this.status=status;}
@@ -7,10 +9,13 @@ let connection: Promise<void> | null = null;
 type NativeReply={status:number;text:string};
 type NativeHandler={postMessage(message:unknown):Promise<unknown>};
 declare global {interface Window {webkit?:{messageHandlers?:{solasi?:NativeHandler}};}}
-export function nativeApp():boolean{return typeof location!=='undefined'&&location.protocol==='solasi-app:';}
+export function nativeApp():boolean{return typeof location!=='undefined'&&(location.protocol==='solasi-app:'||androidApp()||location.origin==='https://solasi.invalid'&&typeof window!=='undefined'&&!!window.solasiWindows);}
 export async function nativeCommand<T>(message:unknown):Promise<T>{
+  if(!nativeApp())throw new Error('앱 연결을 준비하지 못했습니다. Solasi를 다시 실행하세요.');
+  if(androidApp())return await mobileCommand(message) as T;
+  if(location.origin==='https://solasi.invalid'&&window.solasiWindows)return await window.solasiWindows.command(message as Record<string,unknown>) as T;
   const bridge=typeof window!=='undefined'?window.webkit?.messageHandlers?.solasi:undefined;
-  if(!nativeApp()||!bridge)throw new Error('앱 연결을 준비하지 못했습니다. Solasi를 다시 실행하세요.');
+  if(!bridge)throw new Error('앱 연결을 준비하지 못했습니다. Solasi를 다시 실행하세요.');
   return await bridge.postMessage(message) as T;
 }
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {

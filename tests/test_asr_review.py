@@ -131,7 +131,7 @@ class ReviewTests(unittest.IsolatedAsyncioTestCase):
         legacy_fixture(self.db,14)
         upgraded=open_db(self.root/'data')
         try:
-            self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],19)
+            self.assertEqual(upgraded.execute('PRAGMA user_version').fetchone()[0],20)
             self.assertEqual(tr.list_transcripts(upgraded,self.sid),before)
         finally:upgraded.close()
 

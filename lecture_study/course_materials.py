@@ -47,7 +47,7 @@ async def document_metadata(db,asset_id,runtime_dir):
         output=folder/('metadata-'+new_id()+'.json')
         try:
             await worker(['metadata',source,output,runtime_dir,asset_id,asset['version'],inspected['kind']])
-            pages=json.loads(output.read_text())
+            pages=json.loads(output.read_text(encoding='utf-8'))
         finally:output.unlink(missing_ok=True)
         if not pages or any(p['page']!=i+1 or p['width']<=0 or p['height']<=0 for i,p in enumerate(pages)):
             raise ValueError('원본 페이지 정보를 읽을 수 없습니다')

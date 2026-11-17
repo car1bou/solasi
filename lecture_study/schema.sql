@@ -116,4 +116,31 @@ CREATE TABLE IF NOT EXISTS attempt_revisions(attempt_id TEXT NOT NULL REFERENCES
 CREATE TABLE IF NOT EXISTS participants(id TEXT PRIMARY KEY,session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,name TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,UNIQUE(session_id,name));
 CREATE TABLE IF NOT EXISTS artifact_revisions(artifact_id TEXT NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,revision INTEGER NOT NULL,body TEXT NOT NULL,confirmed INTEGER NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(artifact_id,revision));
 CREATE TABLE IF NOT EXISTS question_card_preferences(session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,card_id TEXT NOT NULL,state TEXT NOT NULL,PRIMARY KEY(session_id,card_id));
-PRAGMA user_version=19;
+CREATE TABLE IF NOT EXISTS study_threads (
+ id TEXT PRIMARY KEY,course_id TEXT REFERENCES courses(id) ON DELETE CASCADE,
+ session_id TEXT REFERENCES sessions(id) ON DELETE CASCADE,origin_session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+ title TEXT NOT NULL,summary TEXT NOT NULL DEFAULT '',summary_through INTEGER NOT NULL DEFAULT 0,
+ summary_error TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
+ CHECK((course_id IS NULL)!=(session_id IS NULL))
+);
+CREATE TABLE IF NOT EXISTS study_messages (
+ id TEXT PRIMARY KEY,thread_id TEXT NOT NULL REFERENCES study_threads(id) ON DELETE CASCADE,
+ ordinal INTEGER NOT NULL,role TEXT NOT NULL CHECK(role IN ('user','assistant')),text TEXT NOT NULL,
+ scope TEXT NOT NULL,job_id TEXT REFERENCES jobs(id) ON DELETE SET NULL,
+ artifact_id TEXT REFERENCES artifacts(id) ON DELETE SET NULL,processed INTEGER NOT NULL DEFAULT 0,
+ created_at TEXT NOT NULL,UNIQUE(thread_id,ordinal)
+);
+CREATE TABLE IF NOT EXISTS study_memories (
+ id TEXT PRIMARY KEY,course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+ kind TEXT NOT NULL,text TEXT NOT NULL,quote TEXT NOT NULL,
+ source_message_id TEXT REFERENCES study_messages(id) ON DELETE CASCADE,
+ source_attempt_id TEXT REFERENCES attempts(id) ON DELETE CASCADE,
+ status TEXT NOT NULL DEFAULT 'active',manual INTEGER NOT NULL DEFAULT 0,revision INTEGER NOT NULL DEFAULT 1,
+ created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
+ UNIQUE(source_message_id,kind,quote),UNIQUE(source_attempt_id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS study_assistant_job ON study_messages(job_id) WHERE role='assistant' AND job_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS study_controls (
+ owner_key TEXT PRIMARY KEY,epoch INTEGER NOT NULL DEFAULT 0,cutoff TEXT NOT NULL DEFAULT ''
+);
+PRAGMA user_version=20;

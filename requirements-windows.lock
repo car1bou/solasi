@@ -1,0 +1,8 @@
+# Build on Windows x64 / Python 3.12. Models and native engines are separate verified assets.
+-r requirements.lock
+Pillow==12.3.0
+pypdfium2==5.8.0
+pywebview==6.2.1
+pythonnet==3.2.1
+sounddevice==0.5.6
+pyinstaller==6.22.3

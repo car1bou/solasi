@@ -19,7 +19,7 @@ _verified=set()
 
 
 def manifest():
-    return json.loads(MANIFEST.read_text())
+    return json.loads(MANIFEST.read_text(encoding='utf-8'))
 
 
 def matches(path,item):
@@ -43,6 +43,9 @@ def asr_root(destination):
 def asr_binary(destination, name):
     if name not in ('ffmpeg','ffprobe','whisper-cli','whisper-vad-speech-segments'):
         raise ValueError('지원하지 않는 오디오 도구입니다')
+    if sys.platform=='win32':
+        from .windows_runtime import asr_binary as windows_asr_binary
+        return windows_asr_binary(destination,name)
     root=asr_root(destination);receipt=root/'receipt.json'
     if receipt.is_file():
         try:
@@ -54,6 +57,12 @@ def asr_binary(destination, name):
     path=Path(destination)/('ffmpeg/bin' if name in ('ffmpeg','ffprobe') else 'build/whisper/bin')/name
     if not path.is_file():raise ValueError('오디오 엔진을 준비하세요')
     return path
+
+
+def ocr_binary(destination):
+    from .windows_runtime import verified_engine
+    root,_=verified_engine(destination,'ocr',['bin/tesseract.exe'])
+    return root/'bin/tesseract.exe'
 
 
 def download_verified(item,target,progress=None,cancel=None):
@@ -76,6 +85,9 @@ def download_verified(item,target,progress=None,cancel=None):
 
 
 def component_status(component,destination):
+    if sys.platform=='win32':
+        from .windows_runtime import status
+        return status(component,destination)
     spec=manifest();item=spec['components'][component];root=Path(destination)
     checks=[];activity_ready=False;activity_name='bin/whisper-vad-speech-segments'
     if component=='ocr': checks=[matches(root/spec['assets'][key]['path'],spec['assets'][key]) for key in item['assets']]
@@ -148,6 +160,9 @@ def publish_directory(stage,target):
 
 
 def prepare_runtime(component,destination,progress=None,cancel=None):
+    if sys.platform=='win32':
+        from .windows_runtime import prepare
+        return prepare(component,destination,progress,cancel)
     spec=manifest()
     if component not in spec['components']: raise ValueError('준비할 엔진을 선택하세요')
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)

@@ -6,6 +6,10 @@ frontend/dist/
 .local-state/
 vendor/
 *.log
+output/
+deliverables/
+.vite/
+.DS_Store
 
 # Local recordings, model files and credentials are not public source.
 .env

@@ -19,6 +19,18 @@ import uuid
 BUNDLE_ID = "local.solasi.launcher"
 
 
+def clone_copy(source, destination):
+    """Use APFS copy-on-write so a candidate does not duplicate installed engines."""
+    if platform.system() == 'Darwin':
+        clone = ctypes.CDLL(None, use_errno=True).clonefile
+        clone.argtypes = [ctypes.c_char_p,ctypes.c_char_p,ctypes.c_int]
+        clone.restype = ctypes.c_int
+        if clone(os.fsencode(source),os.fsencode(destination),0) == 0:return str(destination)
+    if shutil.disk_usage(Path(destination).parent).free < Path(source).stat().st_size+256*1024**2:
+        raise OSError('후보 파일 복사에 필요한 저장 공간이 부족합니다')
+    return shutil.copy2(source,destination)
+
+
 def rename_exclusive(source: Path, destination: Path):
     """Rename on the same volume without replacing a path created concurrently."""
     rename = ctypes.CDLL(None, use_errno=True).renamex_np
@@ -142,13 +154,16 @@ def main():
         binary.parent.mkdir()
         (resources / "launch.json").write_text(json.dumps(settings, ensure_ascii=False), encoding="utf-8")
         shutil.copyfile(source / "macos/Solasi.icns", resources / "Solasi.icns")
-        shutil.copytree(engine,resources/'engine',symlinks=True)
+        shutil.copytree(engine,resources/'engine',symlinks=True,copy_function=clone_copy)
         shutil.copytree(source/'frontend/dist',resources/'frontend')
         with (contents / "Info.plist").open("wb") as handle:
             name='Solasi Internal Validation' if args.validation else 'Solasi'
-            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": 'local.solasi.internal-validation' if args.validation else BUNDLE_ID, "CFBundleName": name, "CFBundleDisplayName": name, "CFBundlePackageType": "APPL", "CFBundleIconFile": "Solasi.icns", "CFBundleShortVersionString": "0.3.40", "CFBundleVersion": "50", "LSMinimumSystemVersion": minimum_macos, "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.","CFBundleURLTypes":[{"CFBundleURLName":"Solasi 원음","CFBundleURLSchemes":["solasi"]}]}, handle)
-        swift=['WorkerBridge.swift','AppResources.swift','AudioCapture.swift','AudioPlayback.swift','Solasi.swift']
-        subprocess.run(["/usr/bin/xcrun", "swiftc", "-O", "-target", f"{architecture}-apple-macosx{minimum_macos}", "-module-cache-path", str(Path(folder) / "module-cache"), *[str(source/'macos'/name) for name in swift], "-o", str(binary)], check=True)
+            plistlib.dump({"CFBundleExecutable": "Solasi", "CFBundleIdentifier": 'local.solasi.internal-validation' if args.validation else BUNDLE_ID, "CFBundleName": name, "CFBundleDisplayName": name, "CFBundlePackageType": "APPL", "CFBundleIconFile": "Solasi.icns", "CFBundleShortVersionString": "0.3.44", "CFBundleVersion": "54", "LSMinimumSystemVersion": minimum_macos, "NSHighResolutionCapable": True, "NSMicrophoneUsageDescription": "수업과 회의를 녹음하여 이 Mac에 원음과 전사를 저장합니다.","CFBundleURLTypes":[{"CFBundleURLName":"Solasi 원음","CFBundleURLSchemes":["solasi"]}]}, handle)
+        swift=['WorkerBridge.swift','AppResources.swift','AudioCapture.swift','AudioPlayback.swift','UninstallPlan.swift','UninstallChoice.swift','Solasi.swift']
+        subprocess.run(["/usr/bin/xcrun", "swiftc", "-O", "-target", f"{architecture}-apple-macosx{minimum_macos}", "-module-cache-path", str(source / ".local-state/swift-cache"), *[str(source/'macos'/name) for name in swift], "-o", str(binary)], check=True)
+        helper = resources/'UninstallHelper'
+        subprocess.run(["/usr/bin/xcrun","swiftc","-O","-target",f"{architecture}-apple-macosx{minimum_macos}","-module-cache-path",str(source/".local-state/swift-cache"),str(source/'macos/UninstallPlan.swift'),str(source/'macos/UninstallHelper.swift'),"-o",str(helper)],check=True)
+        subprocess.run(["/usr/bin/codesign","--force","--sign","-",str(helper)],check=True)
         subprocess.run(["/usr/bin/codesign", "--force", "--sign", "-", str(bundle)], check=True)
         subprocess.run(["/usr/bin/codesign", "--verify", "--strict", "--verbose=2", str(bundle)], check=True)
         if existing_identity is not None:

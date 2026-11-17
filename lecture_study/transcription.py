@@ -5,6 +5,7 @@ import math
 import re
 import logging
 import sys
+import subprocess
 import tempfile
 import time
 import wave
@@ -169,7 +170,7 @@ async def stop_process(process):
 
 
 async def command(argv,timeout=120,*,timings=None):
-    process=await asyncio.create_subprocess_exec(*map(str,argv),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    process=await asyncio.create_subprocess_exec(*map(str,argv),stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     try:
         stdout,stderr=await asyncio.wait_for(process.communicate(),timeout)
         if process.returncode: raise ValueError("음성 처리 실패: 엔진 또는 입력 형식을 확인하세요")
@@ -265,13 +266,14 @@ def parse_activity(output,duration_ms):
 
 async def speech_activity(input_wav,runtime_dir):
     from .runtime import asr_root,asr_binary
-    runtime=Path(runtime_dir);receipt=asr_root(runtime)/'receipt.json';name='bin/whisper-vad-speech-segments'
+    runtime=Path(runtime_dir);receipt=asr_root(runtime)/'receipt.json';name='bin/whisper-vad-speech-segments'+('.exe'if sys.platform=='win32'else'')
     utility=runtime/('asr/'+name if receipt.is_file()else'build/whisper/'+name)
     if getattr(sys,'frozen',False):utility=asr_root(runtime)/name
     if not utility.is_file():return None
-    if receipt.is_file():
+    if sys.platform=='win32':utility=asr_binary(runtime,'whisper-vad-speech-segments')
+    elif receipt.is_file():
         from .runtime import matches
-        expected=json.loads(receipt.read_text())['files'].get(name)
+        expected=json.loads(receipt.read_text(encoding='utf-8'))['files'].get(name)
         if not expected:return None
         if not matches(utility,expected):raise ValueError('음성 활동 검사 파일 검증 실패')
     ffmpeg,_,_=await asyncio.to_thread(engine_paths,runtime)
@@ -487,7 +489,7 @@ async def register_audio(db,sid,path,runtime_dir):
 async def file_boundaries(path,frames,rate,runtime):
     from .runtime import asr_binary
     ffmpeg=await asyncio.to_thread(asr_binary,runtime,'ffmpeg')
-    process=await asyncio.create_subprocess_exec(str(ffmpeg),'-nostdin','-v','error','-protocol_whitelist','file','-i',str(path),'-map','0:a:0','-ac','1','-ar','16000','-f','s16le','pipe:1',stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
+    process=await asyncio.create_subprocess_exec(str(ffmpeg),'-nostdin','-v','error','-protocol_whitelist','file','-i',str(path),'-map','0:a:0','-ac','1','-ar','16000','-f','s16le','pipe:1',stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     buffer=b'';cursor=0;boundaries=[];capacity=16000*CHUNK_SECONDS*2
     try:
         while True:

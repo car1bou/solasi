@@ -95,6 +95,9 @@ def capture_request(db,request):
 
 
 async def freeze_request(db,request,embedding_client=None,snapshot=None,runtime_dir=None):
+    from .token_budget import effective_context
+    limit=effective_context(request.provider)
+    if limit!=request.provider.context_limit:request=request.model_copy(update={'provider':request.provider.model_copy(update={'context_limit':limit})})
     snapshot=snapshot or capture_request(db,request);cutoff=snapshot['cutoff_ms']
     owner=request_owner(db,request);session_kind=owner['kind'] if request.session_id else 'lecture'
     if request.kind=='vision':

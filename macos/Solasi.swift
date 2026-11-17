@@ -125,6 +125,9 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     private var cancelledDownloads: Set<ObjectIdentifier> = []
     private var downloadTargets: [ObjectIdentifier: (destination: URL, staging: URL)] = [:]
     private let clickWorld = WKContentWorld.world(name: "SolasiUserInput")
+    private var uninstalling = false
+    private var uninstallFrozen = false
+    private var uninstallAuthorized = false
     private var quitting = false
     private var preparingQuit = false
     private var preparingWindows = Set<ObjectIdentifier>()
@@ -296,6 +299,7 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if uninstalling { return false }
         if sender === mainWindow?.window { sender.orderOut(nil); return false }
         let key=ObjectIdentifier(sender)
         if approvedWindows.remove(key) != nil { return true }
@@ -320,6 +324,8 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if uninstallAuthorized { finishQuit(); return .terminateLater }
+        if uninstalling { mainWindow?.showStatus("설치 삭제 준비·확인을 마치거나 취소한 뒤 종료하세요."); return .terminateCancel }
         if preparingQuit || quitting { return .terminateLater }
         guard preparingWindows.isEmpty else { mainWindow?.showStatus("창의 초안 저장을 마친 뒤 다시 종료해 주세요.");return .terminateCancel }
         preparingQuit=true
@@ -392,6 +398,21 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
               let body = message.body as? [String: Any], let op = body["op"] as? String else {
             replyHandler(nil, "허용하지 않은 앱 요청입니다."); return
         }
+        if op == "uninstall_info" {
+            let helper = Bundle.main.resourceURL?.appendingPathComponent("UninstallHelper")
+            replyHandler(["available": helper.map { FileManager.default.isExecutableFile(atPath:$0.path) } ?? false],nil); return
+        }
+        if op == "uninstall_begin" || op == "reset_begin" {
+            guard webView === mainWindow?.webView, consumeClick(page), !uninstalling, !quitting, !preparingQuit,
+                  preparingWindows.isEmpty, captures.isEmpty, workerReady,
+                  let selection = body["selection"] as? [String:Any], Set(selection.keys) == Set(["documents","audio","results"]),
+                  selection.values.allSatisfy({ value in guard let number = value as? NSNumber else { return false }; return CFGetTypeID(number) == CFBooleanGetTypeID() }) else {
+                replyHandler(nil,"녹음·창 저장을 마친 뒤 초기화·설치 삭제 버튼을 다시 눌러 주세요."); return
+            }
+            chooseUninstall(page:page,selection:selection,reset:op == "reset_begin",reply:replyHandler); return
+        }
+        let readOnlyStatus = op == "http" && body["method"] as? String == "GET" && body["path"] as? String == "/api/knowledge/status"
+        if uninstallFrozen && !readOnlyStatus { replyHandler(nil,"초기화·설치 삭제 준비 중입니다. 마지막 확인에서 취소한 뒤 다시 사용하세요."); return }
         let owner = ObjectIdentifier(webView)
         if op == "ui_ready" {
             page.uiReady=true;replyHandler(["ready":true],nil)
@@ -504,6 +525,137 @@ final class SolasiApp: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNavi
             }
         }
         requests[owner, default: [:]][clientID] = request
+    }
+
+    private func uninstallRequest(_ fields: [String:Any], completion: @escaping (Result<[String:Any],Error>) -> Void) {
+        var finished = false
+        worker.request(fields) { event,_ in
+            guard !finished else { return }
+            if event["event"] as? String == "complete" { finished = true; completion(.success(event)) }
+            if event["event"] as? String == "error" { finished = true; completion(.failure(BridgeFailure.invalid(event["message"] as? String ?? "설치 삭제 준비 실패"))) }
+        }
+    }
+
+    private func chooseUninstall(page: AppWindow, selection: [String:Any], reset: Bool = false, reply: @escaping (Any?,String?) -> Void) {
+        uninstalling = true
+        let choice = UninstallChoiceView(selection:selection.mapValues { $0 as? Bool ?? true })
+        let alert = NSAlert(); alert.messageText = reset ? "초기화 전에 보존할 기록을 선택하세요" : "삭제할 항목을 선택하세요"
+        alert.informativeText = reset ? "앱은 유지하고 원래 보관함·수정 이력, 설정·저장된 API 키, 전용 모델·추가 엔진·캐시·로그를 초기화합니다. 보존할 기록을 선택하세요. 모델과 추가 엔진은 이후 다시 준비해야 합니다." : "앱·솔라시 전용 모델과 엔진·설정은 함께 삭제합니다. 아래 사용자 기록은 각각 보존하거나 삭제하도록 선택하세요."
+        alert.accessoryView = choice; alert.addButton(withTitle:"취소"); alert.addButton(withTitle:"선택한 항목으로 계속")
+        alert.beginSheetModal(for:page.window) { answer in
+            guard answer == .alertSecondButtonReturn else { self.uninstalling = false; reply(["cancelled":true],nil); return }
+            self.beginUninstall(page:page,selection:choice.selection.mapValues { $0 as Any },reset:reset,reply:reply)
+        }
+    }
+
+    private func beginUninstall(page: AppWindow, selection: [String:Any], reset: Bool = false, reply: @escaping (Any?,String?) -> Void) {
+        guard let helper = Bundle.main.resourceURL?.appendingPathComponent("UninstallHelper"), FileManager.default.isExecutableFile(atPath:helper.path) else { uninstalling = false; reply(nil,"설치 삭제 도우미가 없습니다. 앱을 다시 설치하세요."); return }
+        uninstalling = true
+        let panel = NSOpenPanel(); panel.title = "솔라시 보존 자료 저장 위치"
+        panel.message = "선택한 폴더 안에 새 보관 폴더를 만듭니다. 기존 파일은 덮어쓰지 않습니다."
+        panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true; panel.allowsMultipleSelection = false
+        panel.directoryURL = FileManager.default.urls(for:.documentDirectory,in:.userDomainMask).first
+        panel.beginSheetModal(for:page.window) { answer in
+            guard answer == .OK, let directory = panel.url?.resolvingSymlinksInPath() else { self.uninstalling = false; reply(["cancelled":true],nil); return }
+            let bundle = Bundle.main.bundleURL.resolvingSymlinksInPath()
+            guard !directory.path.hasPrefix(bundle.path+"/"), directory != bundle else { self.uninstalling = false; reply(nil,"앱 밖의 보존 위치를 선택하세요."); return }
+            let pages = [self.mainWindow].compactMap{$0}+self.extraWindows
+            self.prepareClose(pages) { result in
+                switch result {
+                case .failure(let error): self.uninstalling = false; reply(nil,error.localizedDescription)
+                case .success:
+                    self.uninstallFrozen = true
+                    page.showStatus("1/3 · 보존 파일 생성·검증 중입니다. 원래 기록은 유지하고 있습니다.")
+                    self.uninstallRequest(["op":"uninstall_prepare","destination":directory.path,"selection":selection]) { prepared in
+                        do {
+                            let value = try prepared.get()
+                            guard let receipt = value["receipt"] as? [String:Any], let receiptID = receipt["id"] as? String else { throw BridgeFailure.invalid("보존 결과를 확인할 수 없습니다.") }
+                            page.showStatus("2/3 · 삭제 대상과 보존 결과를 다시 확인하고 있습니다.")
+                            self.uninstallRequest(["op":"uninstall_plan","receipt_id":receiptID,"app_bundle":bundle.path]) { planned in
+                                do {
+                                    let summary = try planned.get()
+                                    guard let path = summary["plan_path"] as? String, let originalDigest = summary["plan_sha256"] as? String else { throw BridgeFailure.invalid("삭제 대상 계획이 없습니다.") }
+                                    let planURL = URL(fileURLWithPath:path), stagedHelper = planURL.deletingLastPathComponent().appendingPathComponent("UninstallHelper")
+                                    try FileManager.default.copyItem(at:helper,to:stagedHelper)
+                                    DispatchQueue.global(qos:.userInitiated).async {
+                                        let checked = Result {
+                                            let digest = reset ? try RemovalPlan.prepareReset(planURL,digest:originalDigest) : originalDigest
+                                            let plan = try RemovalPlan.load(planURL,digest:digest); try plan.validate(); return (plan,digest)
+                                        }
+                                        DispatchQueue.main.async {
+                                            do {
+                                                let (plan,digest) = try checked.get()
+                                                page.showStatus("3/3 · 보존 검증을 마쳤습니다. 마지막 확인을 기다리고 있습니다.")
+                                                self.confirmUninstall(page:page,plan:plan,planURL:planURL,digest:digest,helper:stagedHelper,receiptID:receiptID,reply:reply)
+                                            } catch { self.cancelUninstall(receiptID:receiptID,error:error,reply:reply) }
+                                        }
+                                    }
+                                } catch { self.cancelUninstall(receiptID:receiptID,error:error,reply:reply) }
+                            }
+                        } catch { self.cancelUninstall(receiptID:nil,error:error,reply:reply) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func cancelUninstall(receiptID: String?, error: Error?, reply: @escaping (Any?,String?) -> Void) {
+        var request: [String:Any] = ["op":"uninstall_cancel"]
+        if let receiptID { request["receipt_id"] = receiptID }
+        uninstallRequest(request) { result in
+            self.uninstallFrozen = false; self.uninstalling = false
+            for page in [self.mainWindow].compactMap({$0})+self.extraWindows {
+                page.webView.callAsyncJavaScript("window.solasiLifecycle?.resume()",arguments:[:],in:nil,in:.page,completionHandler:nil)
+            }
+            var failure = error
+            if case .failure(let cancelError) = result, failure == nil { failure = cancelError }
+            self.mainWindow?.showStatus(failure?.localizedDescription ?? "작업을 취소했습니다. 앱과 원래 기록을 유지했습니다.")
+            reply(failure == nil ? ["cancelled":true] : nil,failure?.localizedDescription)
+        }
+    }
+
+    private func confirmUninstall(page: AppWindow, plan: RemovalPlan, planURL: URL, digest: String, helper: URL, receiptID: String, reply: @escaping (Any?,String?) -> Void) {
+        let reset = plan.isReset
+        let alert = NSAlert(); alert.alertStyle = .warning; alert.messageText = reset ? "솔라시를 초기화할까요?" : "솔라시를 실제 삭제할까요?"
+        let count = plan.receipt.files.count
+        alert.informativeText = removalSelectionSummary(plan.receipt.selection) + "\n" + (count == 0 ? "보존할 기록이 없습니다. 원래 기록을 모두 삭제합니다." : "보존 파일 \(count)개를 검증했습니다.\n위치: \(plan.receipt.directory)") +
+            (reset ? "\n초기화: 원래 보관함·수정 이력, 전용 모델·추가 엔진, 앱 설정·저장된 API 키·캐시·로그\n앱과 내장 기본 엔진은 유지합니다. AI 기능은 모델·추가 엔진을 다시 준비한 뒤 사용할 수 있습니다.\n" : "\n삭제: 원래 보관함·수정 이력, 앱, 전용 모델·엔진, 앱 설정·저장된 API 키·캐시·로그\n") + "예상 확보 용량: \(ByteCountFormatter.string(fromByteCount:plan.bytes,countStyle:.file))\n" +
+            (plan.preserved.isEmpty ? "" : "별도 백업·실험 자료 등 \(plan.preserved.count)개 항목은 남깁니다.\n") +
+            "PDF는 열람용이며 원래 필기 편집·이력 복원을 보장하지 않습니다. 삭제한 원래 기록은 되돌릴 수 없습니다."
+        alert.addButton(withTitle:"취소"); let execute = alert.addButton(withTitle:reset ? "초기화 실행" : "삭제 실행"); alert.addButton(withTitle:"선택 변경"); alert.addButton(withTitle:"보존 폴더 열기")
+        let field = NSTextField(frame:NSRect(x:0,y:0,width:360,height:26)); field.placeholderString = reset ? "솔라시 초기화" : "솔라시 삭제"; field.setAccessibilityLabel(reset ? "초기화 확인 문구" : "삭제 확인 문구")
+        let label = NSTextField(wrappingLabelWithString:"계속하려면 ‘\(reset ? "솔라시 초기화" : "솔라시 삭제")’를 입력하세요.")
+        let accessory = NSStackView(views:[label,field]); accessory.orientation = .vertical; accessory.alignment = .leading; accessory.spacing = 8
+        accessory.frame = NSRect(x:0,y:0,width:360,height:60); alert.accessoryView = accessory; execute.isEnabled = false
+        let observer = NotificationCenter.default.addObserver(forName:NSControl.textDidChangeNotification,object:field,queue:.main) { _ in execute.isEnabled = removalConsent(verified:true,confirmed:true,phrase:field.stringValue,reset:reset) }
+        alert.beginSheetModal(for:page.window) { response in
+            NotificationCenter.default.removeObserver(observer)
+            if response == .alertThirdButtonReturn {
+                self.cancelUninstall(receiptID:receiptID,error:nil) { _,error in
+                    if let error { reply(nil,error); return }
+                    self.chooseUninstall(page:page,selection:plan.receipt.selection.mapValues { $0 as Any },reset:reset,reply:reply)
+                }; return
+            }
+            if response.rawValue == NSApplication.ModalResponse.alertFirstButtonReturn.rawValue+3 {
+                NSWorkspace.shared.open(URL(fileURLWithPath:plan.receipt.directory))
+                self.confirmUninstall(page:page,plan:plan,planURL:planURL,digest:digest,helper:helper,receiptID:receiptID,reply:reply); return
+            }
+            guard removalConsent(verified:true,confirmed:response == .alertSecondButtonReturn,phrase:field.stringValue,reset:reset) else { self.cancelUninstall(receiptID:receiptID,error:nil,reply:reply); return }
+            page.showStatus("보존 파일을 마지막으로 검증하고 앱을 종료합니다…")
+            self.uninstallRequest(["op":"uninstall_verify","receipt_id":receiptID]) { result in
+                do {
+                    guard try result.get()["verified"] as? Bool == true else { throw BridgeFailure.invalid("보존 검증이 완료되지 않았습니다.") }
+                    let process = Process(); process.executableURL = helper
+                    process.arguments = ["--execute",planURL.path,digest,String(getpid()),String(self.worker.process.processIdentifier)]
+                    process.standardInput = FileHandle.nullDevice; process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
+                    try process.run()
+                    self.uninstallAuthorized = true
+                    reply(["accepted":true],nil)
+                    NSApp.terminate(nil)
+                } catch { self.cancelUninstall(receiptID:receiptID,error:error,reply:reply) }
+            }
+        }
+        alert.window.initialFirstResponder = field
     }
 
     private func consumeClick(_ page: AppWindow) -> Bool {

@@ -193,7 +193,8 @@ sys.stdout.buffer.write(struct.pack('>I',len(reply))+reply);sys.stdout.buffer.fl
         def respond(request):
             seen.append(str(request.url))
             self.assertEqual(request.url.host,'registry.ollama.ai')
-            if '/manifests/' in request.url.path:return httpx.Response(200,content=manifest)
+            if '/manifests/' in request.url.path:
+                return httpx.Response(200,content=manifest) if request.url.path.endswith('/manifests/latest') else httpx.Response(404)
             return httpx.Response(200,content=config if request.url.path.endswith(config_sha) else weights)
         with patch.dict(CATALOG,{'embeddinggemma':{'license':'Gemma Terms','runners':{'ggml':{'bytes':10,'digest':digest}}}}),patch.object(direct,'EMBEDDING_WEIGHT',weight_sha):
             async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:

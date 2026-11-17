@@ -42,6 +42,8 @@ def delete_session(db,sid,confirmed):
     if not db.execute("SELECT 1 FROM sessions WHERE id=?",(sid,)).fetchone(): raise KeyError("기록을 찾을 수 없습니다")
     with db:
         db.execute("UPDATE sessions SET deleted=1 WHERE id=?",(sid,))
+        from .study_memory import remove_session_context
+        remove_session_context(db,sid)
         assets=[r[0] for r in db.execute("SELECT asset_id FROM session_assets WHERE session_id=?",(sid,))]
         recordings=[r["id"] for r in db.execute("SELECT id FROM recordings WHERE session_id=?",(sid,))]
         for rid in recordings:

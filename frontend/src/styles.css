@@ -900,3 +900,14 @@ form > fieldset,.settings-view .card > fieldset{border:0;padding:0;margin:0;min-
 @media(any-pointer:coarse){.material-recovery .actions button{min-height:44px}}
 
 .material-error-details{font-size:13px;margin:8px 0;overflow-wrap:anywhere}.material-error-details summary{cursor:pointer;min-height:32px;align-content:center}.material-error-details p{white-space:pre-wrap;color:var(--muted)}
+.study-chat{display:grid;gap:var(--space-4,1rem)}
+.study-transcript{display:grid;gap:1rem;margin-block:1rem;max-height:60vh;overflow:auto;overscroll-behavior:contain}
+.study-message{padding:1rem;border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}
+.study-message.user{background:var(--surface-alt,var(--surface))}
+.study-message time{font-size:.8rem;color:var(--muted)}
+.study-message .source-text{white-space:pre-wrap;margin-block:.6rem}
+.study-memory-item{padding-block:1rem;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
+.study-memory-item blockquote{white-space:pre-wrap;margin-inline:0;padding-inline-start:1rem;border-inline-start:3px solid var(--line)}
+.study-composer{border-top:1px solid var(--line);padding-block:1rem}
+.study-confirm{border:2px solid var(--line)}
+@media(max-width:640px){.study-message .subheading{align-items:flex-start;flex-direction:column}.study-transcript{max-height:50vh}}

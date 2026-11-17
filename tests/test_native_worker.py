@@ -59,6 +59,53 @@ class FramingTests(unittest.IsolatedAsyncioTestCase):
 
 
 class WorkerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_uninstall_prepare_freezes_mutations_and_cancel_restores_app(self):
+        destination=self.directory.parent/('export-'+self.directory.name);destination.mkdir();self.addCleanup(lambda:__import__('shutil').rmtree(destination))
+        ident=await self.send('uninstall_prepare',destination=str(destination),selection={'documents':True,'audio':True,'results':True})
+        _,_,header=await self.receive(ident)
+        self.assertEqual(header['event'],'complete',header)
+        receipt=header['receipt'];self.assertTrue(Path(receipt['directory']).is_dir())
+        status,_,_=await self.http('GET','/api/knowledge/status');self.assertEqual(status,200)
+        _,_,blocked=await self.http('POST','/api/courses',{'title':'must not be created'})
+        self.assertEqual(blocked['event'],'error');self.assertEqual(blocked['code'],'uninstall_busy')
+        ident=await self.send('uninstall_verify',receipt_id=receipt['id'])
+        _,_,checked=await self.receive(ident);self.assertTrue(checked['verified'])
+        ident=await self.send('uninstall_cancel',receipt_id=receipt['id'])
+        _,_,cancelled=await self.receive(ident);self.assertEqual(cancelled['event'],'complete')
+        status,_,_=await self.http('POST','/api/courses',{'title':'after cancel'})
+        self.assertEqual(status,201)
+
+    async def test_uninstall_receipt_stays_valid_while_automatic_work_is_pending(self):
+        from lecture_study.server import create_app
+        from lecture_study.config import AppConfig
+        from lecture_study.native_worker import Worker
+        from lecture_study.db import create_session
+        from lecture_study.materials import save_note
+        class Sink:
+            def write(self,data):pass
+            async def drain(self):pass
+        directory=self.directory/'maintenance-test'
+        app=create_app(AppConfig(directory,directory/'runtime',embedded=True))
+        async with app.router.lifespan_context(app):
+            sid=create_session(app.state.db,'meeting','자동 처리',None,None).id
+            save_note(app.state.db,sid,'자동 처리 중에도 보존할 메모')
+            worker=Worker(app,Sink())
+            await worker.uninstall_prepare({'id':'prep','destination':str(self.directory.parent),'selection':{'documents':True,'audio':False,'results':True}},b'')
+            exported=worker.uninstall_receipt['directory']
+            self.addCleanup(lambda:__import__('shutil').rmtree(exported))
+            await asyncio.sleep(3.2)
+            await worker.uninstall_verify({'id':'verify','receipt_id':worker.uninstall_receipt['id']},b'')
+            await worker.uninstall_cancel({'id':'cancel','receipt_id':worker.uninstall_receipt['id']},b'')
+            self.assertFalse(getattr(app.state,'uninstall_preparing',False))
+
+    async def test_uninstall_refuses_bad_selection_and_no_delete_opcode_exists(self):
+        ident=await self.send('uninstall_prepare',destination=str(self.directory.parent),selection={'documents':1,'audio':True,'results':True})
+        _,_,header=await self.receive(ident);self.assertEqual(header['event'],'error')
+        status,_,_=await self.http('GET','/api/health');self.assertEqual(status,200)
+        self.assertTrue((self.directory/'app.sqlite3').is_file())
+        from lecture_study.native_worker import OPS
+        self.assertNotIn('uninstall_delete',OPS)
+
     async def test_draft_transfer_is_durable_through_pipe_restart(self):
         import base64
         status, body, _ = await self.http('GET', '/api/native/state')
