@@ -26,3 +26,4 @@ async function refreshRelease() {
 }
 
 if (document.documentElement.dataset.platform === "android") void refreshRelease();
+else window.addEventListener("solasi:platformchange", refreshRelease, { once: true });
