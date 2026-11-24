@@ -7,6 +7,7 @@
 <p align="center"><strong>듣고, 적고, 다시 찾는 수업·회의 노트.</strong></p>
 
 <p align="center">
+  <a href="#android-태블릿-설치">Android 태블릿 설치</a> ·
   <a href="docs/guide.md">사용 가이드</a> ·
   <a href="docs/development.md#mac-앱-빌드">Mac 앱 빌드</a> ·
   <a href="https://github.com/car1bou/solasi/issues">문제 제보</a>
@@ -16,7 +17,15 @@ Solasi는 녹음, 전사, PDF 자료와 필기를 한 기록으로 연결하는 
 
 > **Mac Preview · Apple Silicon · macOS 27.0 이상**
 >
-> 현재는 소스 빌드로 제공됩니다. 다운로드할 수 있는 설치 파일과 공증된 배포판은 아직 제공하지 않습니다.
+> Mac 프리뷰는 [소스 빌드](docs/development.md#mac-앱-빌드)로 설치할 수 있습니다.
+
+## Android 태블릿 설치
+
+**[Solasi Android v3 APK 다운로드](https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk)**
+
+Android 9 이상 ARM64 태블릿용 개발 프리뷰입니다. 태블릿에서 내려받은 APK를 열고 Android 설치 화면의 안내에 따르세요. 기존 v2 사용자는 **설정 → Android 업데이트**에서 내려받은 v3를 설치할 수 있습니다.
+
+[Android 릴리스와 체크섬](https://github.com/car1bou/solasi/releases/tag/android-updates)
 
 ## 한 흐름으로 이어지는 기록
 
@@ -68,8 +77,9 @@ Solasi는 녹음, 전사, PDF 자료와 필기를 한 기록으로 연결하는 
 | --- | --- |
 | Apple Silicon Mac · macOS 27.0 이상 | 현재 개발·검증 대상 |
 | Intel Mac | 지원하지 않음 |
-| Windows · Android · iPadOS | 후속 개발 대상, 앱 미제공 |
-| 서명·공증된 설치 파일 | 미제공, 현재 로컬 빌드는 ad-hoc 서명 |
+| Android ARM64 태블릿 · Android 9 이상 | [개발 프리뷰 APK](https://github.com/car1bou/solasi/releases/tag/android-updates) |
+| Windows · iPadOS | 후속 개발 대상, 앱 미제공 |
+| 서명·공증된 Mac 설치 파일 | 미제공, 현재 로컬 Mac 빌드는 ad-hoc 서명 |
 
 깨끗한 Mac에서의 설치와 다른 하드웨어에서의 동작은 별도 검증이 필요합니다. 모델별 메모리·디스크 요구량은 준비 화면에서 확인하세요.
 
