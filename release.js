@@ -25,4 +25,4 @@ async function refreshRelease() {
   }
 }
 
-void refreshRelease();
+if (document.documentElement.dataset.platform === "android") void refreshRelease();

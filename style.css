@@ -77,14 +77,23 @@ nav a:hover { color: var(--green); text-decoration: underline; }
   gap: clamp(2rem, 5vw, 5rem);
   padding-block: clamp(3.5rem, 7vw, 6.5rem);
 }
-.platform {
-  display: inline-block;
-  padding: .34rem .8rem;
-  border-radius: 2rem;
+[data-platform="android"] [data-view="mac"],
+[data-platform="mac"] [data-view="android"] { display: none; }
+
+.platform-switch {
+  display: inline-flex;
+  gap: .25rem;
+  padding: .25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--paper);
+}
+.platform-switch a { padding: .15rem .8rem; border-radius: .7rem; }
+[data-platform="android"] [data-choice="android"],
+[data-platform="mac"] [data-choice="mac"] {
   background: var(--marker);
   color: var(--green);
-  font-size: .9rem;
-  font-weight: 720;
+  text-decoration: none;
 }
 h1 {
   margin-block: 1.1rem 1.15rem;
@@ -99,7 +108,7 @@ h1 {
   color: var(--muted);
   line-height: 1.65;
 }
-.download, .secondary {
+.download {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -141,6 +150,7 @@ h1 {
   background: var(--bezel);
   box-shadow: 0 1.15rem 2rem #08191165;
 }
+.mac-window { border-width: .2rem; }
 .tablet img { width: 100%; height: auto; }
 figcaption { margin-top: .95rem; color: var(--stage-text); font-size: .88rem; text-align: right; }
 
@@ -166,20 +176,6 @@ h2 { font-size: clamp(1.38rem, 2.65vw, 2rem); letter-spacing: -.06em; line-heigh
 .steps h3 { margin-bottom: .5rem; font-size: 1.1rem; letter-spacing: -.035em; }
 .steps p, .mac p { color: var(--muted); line-height: 1.65; }
 .steps p strong { color: var(--ink); }
-.mac {
-  margin-top: 3.2rem;
-  background: var(--marker);
-  border-radius: 1.05rem;
-  padding: 1.35rem 1.65rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: .9rem 1.5rem;
-}
-.mac h2 { font-size: 1.45rem; margin-bottom: .3rem; }
-.secondary { padding: .55rem .95rem; border: 1px solid var(--green); color: var(--green); }
-.secondary:hover { color: var(--paper); background: var(--green); }
 .footer {
   margin-block: 2.45rem 1.15rem;
   min-height: 3.5rem;
@@ -209,6 +205,4 @@ h2 { font-size: clamp(1.38rem, 2.65vw, 2rem); letter-spacing: -.06em; line-heigh
   .showcase { border-radius: 1.1rem; }
   .steps { grid-template-columns: minmax(0, 1fr); gap: .65rem; }
   .steps li { padding: 1.1rem; }
-  .mac { margin-top: 2.1rem; padding: 1.25rem; }
-  .mac .secondary { width: 100%; }
 }
