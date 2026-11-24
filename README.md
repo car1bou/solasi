@@ -7,6 +7,7 @@
 <p align="center"><strong>듣고, 적고, 다시 찾는 수업·회의 노트.</strong></p>
 
 <p align="center">
+  <a href="https://car1bou.github.io/solasi/">Solasi 홈페이지</a> ·
   <a href="#android-태블릿-설치">Android 태블릿 설치</a> ·
   <a href="docs/guide.md">사용 가이드</a> ·
   <a href="docs/development.md#mac-앱-빌드">Mac 앱 빌드</a> ·
