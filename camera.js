@@ -32,8 +32,8 @@
       {file: "macbook-studio-tall.webp", width: 1024, height: 1536, screen: [[185.5,261],[839.4,261],[837.4,648.5],[186.2,648.5]], body: [128,234,907,887]}
     ],
     windows: [
-      {file: "windows-studio-wide.webp", width: 1536, height: 1024, screen: [[519,79],[1327,77],[1325,551],[523,552]], body: [446,51,1406,938]},
-      {file: "windows-studio-tall.webp", width: 1024, height: 1536, screen: [[139,170],[891,170],[889,619],[138,618]], body: [64,145,962,953]}
+      {file: "windows-desktop-wide.webp", width: 1536, height: 1024, screen: [[507.5,156.5],[1276,156.5],[1275.5,560.5],[507.5,560.5]], body: [501,149,1494,889]},
+      {file: "windows-desktop-tall.webp", width: 1024, height: 1536, screen: [[75,207.5],[786.5,207.5],[785.5,592],[77,592.5]], body: [69,201,977,897]}
     ]
   };
   const [desktopPhoto, mobilePhoto] = scenes[device] || scenes.tablet;
@@ -123,10 +123,12 @@
     const verticalAim = photo.body ? (portrait ? h*.35 : h*.50 + header.offsetHeight*.25) : (portrait ? h*.40 : h*.47 + header.offsetHeight*.26);
     const panorama = photo.body && photo.width * scale < w + 2 * roomX;
     world.classList.toggle("wide-desk", Boolean(panorama));
-    const x = panorama ? w + roomX - photo.width * scale : pan(w, photo.width, horizontalAim, subjectX, roomX);
+    // The tower sits near the edge of the Windows photograph; keep its right side in frame.
+    const overscan = device === "windows" ? Math.min(roomX, 8) : roomX;
+    const x = panorama ? w + overscan - photo.width * scale : pan(w, photo.width, horizontalAim, subjectX, roomX);
     const y = pan(h, photo.height, verticalAim, subjectY, roomY);
     if (photo.body) {
-      const mask = device === "mac" ? "macbook" : device;
+      const mask = {mac: "macbook", ipad: "ipad", windows: "windows-desktop"}[device];
       const silhouette = `url("assets/${mask}${portrait ? "-tall" : ""}-mask.svg")`;
       wood.style.maskImage = panorama ? silhouette + ",linear-gradient(90deg,transparent,#000 10%)" : silhouette;
       wood.style.maskComposite = "intersect";
