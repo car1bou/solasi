@@ -1,8 +1,7 @@
 (() => {
   const header = document.querySelector(".masthead");
   const desk = document.querySelector(".desk-surface");
-  const grain = desk.querySelector("img");
-  const cameraSurfaces = [desk, document.querySelector(".film-stage")];
+  const stage = document.querySelector(".film-stage");
   const menu = header.querySelector(".fold-nav");
   const inlineNav = header.querySelector(".wide-nav");
   const narrowNav = matchMedia("(max-width: 58rem)");
@@ -27,10 +26,8 @@
     lookY = Math.max(-1, Math.min(1, y));
     if (lookFrame) return;
     lookFrame = requestAnimationFrame(() => {
-      for (const surface of cameraSurfaces) {
-        surface.style.setProperty("--look-x", lookX.toFixed(3));
-        surface.style.setProperty("--look-y", lookY.toFixed(3));
-      }
+      stage.style.setProperty("--look-x", lookX.toFixed(3));
+      stage.style.setProperty("--look-y", lookY.toFixed(3));
       lookFrame = 0;
     });
   }
@@ -72,9 +69,7 @@
     if (!reduced.matches) {
       const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
       const progress = Math.max(0, Math.min(1, scrollY / travel));
-      const drift = Math.min(travel * .18, grain.clientHeight - innerHeight * 1.37);
-      desk.style.setProperty("--desk-drift", (-.18 * innerHeight - progress * drift).toFixed(2) + "px");
-      desk.style.setProperty("--desk-play", document.hidden || tops[1] >= innerHeight ? "paused" : "running");
+      desk.style.setProperty("--desk-drift", ((.08 - .16 * progress) * innerHeight).toFixed(2) + "px");
       const index = Math.max(0, tops.filter(top => top < innerHeight).length - 1);
       const from = daylight[sections[Math.max(0, index - 1)].id];
       const to = daylight[sections[index].id];

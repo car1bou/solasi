@@ -73,6 +73,9 @@
     const y = pan(h, photo.height, portrait ? h * .40 : h * .47 + header.offsetHeight * .26,
       screenMiddle.y / screenMiddle.w, roomY);
     const opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
+    // Anchor the moving light to this crop even when the page opens mid-zoom.
+    world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
+      w / (photo.width * scale), h / (photo.height * scale)].join(" ");
 
     // Cross the bezel. On a phone the left margin of the actual lecture page guides the framing.
     const endScale = Math.max((w + 4) / appWidth, (h + 4) / appHeight);

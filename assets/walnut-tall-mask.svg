@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1005 2642">
+  <filter id="contact"><feGaussianBlur stdDeviation="3"/></filter>
+  <path fill="white" fill-rule="evenodd" filter="url(#contact)" d="
+    M-30-30H1035V2672H-30Z
+    M112 723L888 720Q928 720 928 761L930 1262Q930 1304 886 1306H117Q73 1306 73 1260L72 770Q72 726 112 723Z
+    M209 1343L280 1325H748Q774 1325 775 1347Q775 1370 750 1371H278L209 1360Z"/>
+</svg>
