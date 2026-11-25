@@ -153,7 +153,7 @@ img { display: block; max-width: 100%; height: auto; }
   [data-device="mac"] .camera-framed .has-capture .film-scenery { mask-image: linear-gradient(#000 96%, transparent); }
 }
 .film-photo { width: 100%; height: 100%; object-fit: cover; object-position: 50% 48%; }
-.film-glass { display: none; }
+.glass-plane { display: none; }
 .field-overlay {
   z-index: -2;
   background: linear-gradient(90deg, #1d160e66, transparent 38%), linear-gradient(0deg, #20191080, transparent 34%);
@@ -189,11 +189,11 @@ img { display: block; max-width: 100%; height: auto; }
 @media (max-height: 36rem) and (min-aspect-ratio: 3/2) {
   [data-device="mac"] .film-source { bottom: 0; }
 }
-.film.camera-ready { height: 249svh; }
+.film.camera-ready { height: 194svh; z-index: 1; pointer-events: none; }
 .camera-ready .film-stage { position: sticky; top: 0; }
-.camera-ready .revealing-chapter {
-  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--cover-feather)), transparent);
-}
+.camera-ready .film-source { pointer-events: auto; }
+.camera-ready + .study-walkthrough { margin-top: -100svh; }
+.camera-ready.docked .film-stage { visibility: hidden; }
 @media (prefers-reduced-motion: no-preference) {
   .camera-ready .film-rig {
     --sway-x: calc(clamp(2px, .37vw, 6px) * var(--room-presence, 1));
@@ -202,23 +202,16 @@ img { display: block; max-width: 100%; height: auto; }
     transition: translate .45s ease-out;
   }
   .camera-ready .inside-screen .film-rig { transition: none; translate: none; }
-  .masthead:not(:focus-within):not(:has(.fold-nav[open])) { transform: translateY(var(--into-app, 0%)); }
 }
 .camera-framed .film-world { inset: 0 auto auto 0; width: var(--photo-w); height: var(--photo-h); transform-origin: 0 0; }
 .camera-framed .film-world { opacity: var(--desk-opacity, 1); }
-.camera-framed .film-glass {
-  display: block; position: absolute; inset: 0 auto auto 0; width: var(--capture-w); height: var(--capture-h); max-width: none;
-  z-index: -2; pointer-events: none; opacity: var(--screen-mix, 0);
-  transform-origin: 0 0; filter: brightness(var(--glass-light, 1));
+.camera-framed .glass-plane {
+  display: block; position: absolute; inset: 0 auto auto 0; width: 1600px; height: 1000px;
+  overflow: hidden; z-index: -2; transform-origin: 0 0; opacity: var(--screen-mix, 0);
 }
-.camera-framed .film-glass.is-front {
-  left: var(--front-x);
-  top: var(--front-y);
-  width: var(--front-w);
-  height: var(--front-h);
-  filter: none;
-  /* Hold the app in place as the stage's lower edge uncovers the next chapter. */
-  translate: 0 var(--cover-y, 0px);
+.glass-plane img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; }
+.course-glass {
+  mask-image: linear-gradient(90deg, #000 calc(var(--course-edge, -6%) - 5%), transparent calc(var(--course-edge, -6%) + 5%));
 }
 .footer { color: var(--cream); }
 .footer-inner { width: min(73rem, calc(100% - 2 * var(--edge))); margin: auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; padding: clamp(2rem,5vw,4.25rem) var(--study-gap) clamp(1.75rem,3.4vw,3.5rem); }

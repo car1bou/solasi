@@ -13,8 +13,8 @@
   const deskPointer = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
   // Side-light position and shadow depth as each chapter comes into view.
   const daylight = {
-    home: [-.12, .31], preview: [-.12, .31], solutions: [.21, .08],
-    process: [-.20, .72], work: [.22, .35], install: [-.06, .16]
+    home: [-.12, .31], process: [-.12, .31], preview: [-.15, .49],
+    solutions: [.21, .08], results: [-.20, .72], work: [.22, .35], install: [-.06, .16]
   };
   let scheduled = false;
   let current = "";
@@ -85,9 +85,9 @@
     const limit = header.offsetHeight + 2;
     const next = tops.findIndex(top => top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
-    const active = visible === "preview" ? "home" : visible;
+    const active = visible === "preview" || visible === "results" ? "solutions" : visible;
     highlightSolution();
-    const compact = sections[0].classList.contains("camera-ready") ? tops[1] <= stage.clientHeight : scrollY > limit;
+    const compact = tops[1] <= limit;
     const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
     header.classList.toggle("compact", compact);
     header.classList.toggle("folded", folded);

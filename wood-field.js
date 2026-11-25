@@ -190,7 +190,7 @@
     const bottom = film.getBoundingClientRect().bottom;
     let active = false;
     for (const surface of surfaces) {
-      if (surface.hero ? bottom <= 0 || stage.classList.contains("inside-screen") : bottom >= innerHeight) continue;
+      if (surface.hero ? bottom <= 0 || stage.classList.contains("inside-screen") : bottom >= innerHeight && !stage.classList.contains("dissolving-desk")) continue;
       const {canvas, img, hero} = surface;
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) continue;

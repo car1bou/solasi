@@ -7,6 +7,11 @@
   const world = film.querySelector(".film-world");
   const wood = world.querySelector(".wood-field");
   const glass = film.querySelector(".film-glass");
+  const plane = film.querySelector(".glass-plane");
+  const lesson = document.getElementById("process");
+  const list = lesson.querySelector(".process-list");
+  const seat = list.querySelector(".step-screen");
+  const openingStill = plane.querySelector(".course-glass");
   const intro = document.querySelector(".problem-heading");
   const paper = intro.querySelector(".lecture-page");
   const paperImage = paper.querySelector("img");
@@ -64,28 +69,15 @@
     ]);
   }
 
-  let poses, deskFromGlass, appToGlass, previous = -1, previousCover = -1, frame = 0;
+  let opening, landing, deskFromGlass, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
-    const pageLeft = Number(getComputedStyle(paper).getPropertyValue("--pdf-x"));
     const portrait = narrow.matches;
     const photo = portrait ? mobilePhoto : desktopPhoto;
     const glassOnDesk = project(photo.screen);
     deskFromGlass = glassOnDesk.inverse();
-    const appWidth = glass.naturalWidth || Number(glass.getAttribute("width"));
-    const appHeight = glass.naturalHeight || Number(glass.getAttribute("height"));
-    if (!(appWidth > 0 && appHeight > 0)) return;
-    // Fill the Mac glass with the window's top 16:10 crop. The lower margin is outside the display.
-    const fit = mac ? 1600 / appWidth : Math.min(1600 / appWidth, 1000 / appHeight);
-    const insetX = (1600 - appWidth * fit) / 2;
-    const insetY = mac ? 0 : (1000 - appHeight * fit) / 2;
-    const shownHeight = Math.min(appHeight, 1000 / fit);
-    if (mac) glass.style.clipPath = `inset(0 0 ${100 * (1 - shownHeight / appHeight)}% 0)`;
-    appToGlass = new DOMMatrix().translate(insetX, insetY).scale(fit);
-    glass.style.setProperty("--capture-w", appWidth + "px");
-    glass.style.setProperty("--capture-h", appHeight + "px");
     world.style.setProperty("--photo-w", photo.width + "px");
     world.style.setProperty("--photo-h", photo.height + "px");
 
@@ -127,96 +119,59 @@
       world.style.maskImage = y > -roomY || y + photo.height * scale < h + roomY
         ? "linear-gradient(transparent,#000 9%,#000 93%,transparent)" : "none";
     }
-    const opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
+    opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
     // Anchor the moving light to this crop even when the page opens mid-zoom.
     world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
       w / (photo.width * scale), h / (photo.height * scale)].join(" ");
 
-    // Cross the bezel. On a phone the left margin of the actual lecture page guides the framing.
-    const endScale = Math.max((w + 4) / appWidth, (h + 4) / shownHeight);
-    const fullW = appWidth * endScale, fullH = appHeight * endScale;
-    const centered = (w - fullW) / 2;
-    const appLeft = Math.min(-2, Math.max(centered, w * .045 - pageLeft * endScale));
-    const appTop = (h - shownHeight * endScale) / 2;
-    glass.style.setProperty("--front-x", appLeft + "px");
-    glass.style.setProperty("--front-y", appTop + "px");
-    glass.style.setProperty("--front-w", appWidth * endScale + "px");
-    glass.style.setProperty("--front-h", appHeight * endScale + "px");
-    const planeScale = endScale / fit;
-    const left = appLeft - insetX * planeScale, upper = appTop - insetY * planeScale;
-    const closeWidth = 1600 * planeScale, closeHeight = 1000 * planeScale;
-    const landing = [[left, upper], [left + closeWidth, upper],
-      [left + closeWidth, upper + closeHeight], [left, upper + closeHeight]];
-
-    const openWidth = Math.hypot(opening[1][0] - opening[0][0], opening[1][1] - opening[0][1]);
-    const focus = glassOnDesk.transformPoint({
-      x: (w / 2 - left) / planeScale, y: (h / 2 - upper) / planeScale,
-    });
-    const aim = [x + scale * focus.x / focus.w, y + scale * focus.y / focus.w];
-    const center = [w / 2, h / 2];
-    const directions = (corners, origin, span) => corners.map(point =>
-      point.map((value, axis) => (value - origin[axis]) / span));
-    poses = { near: directions(opening, aim, openWidth), far: directions(landing, center, closeWidth),
-      aim, center, openWidth, zoom: closeWidth / openWidth };
-    previous = previousCover = -1;
+    // Measure the first real video in its pinned position, even on a deep link or after rotation.
+    const target = seat.getBoundingClientRect();
+    const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
+    const top = target.top - list.getBoundingClientRect().top + stickyTop;
+    landing = [[target.left, top], [target.right, top],
+      [target.right, top + target.height], [target.left, top + target.height]];
+    previous = -1;
   }
 
   function paint() {
     frame = 0;
-    if (!poses) return;
-    const box = film.getBoundingClientRect();
-    const height = stage.clientHeight;
-    const captureReady = glass.naturalWidth > 0;
-    const moving = captureReady && !motion.matches;
-    const scroll = moving ? clamp(-box.top / Math.max(1, box.height - height)) : 0;
-    // Hold the photograph for the first scroll beat, then settle inside the app before the page turns.
-    const progress = clamp((scroll - .13) / .75);
-    const cover = moving ? Math.min(height, Math.max(0, height - box.bottom)) : 0;
-    if (cover !== previousCover) {
-      stage.classList.toggle("revealing-chapter", cover > 0 && cover < height);
-      stage.style.setProperty("--cover-y", cover + "px");
-      stage.style.setProperty("--cover-feather", Math.min(height * .12, cover * .75, 96) + "px");
-    }
-    if (progress === previous && cover === previousCover) return;
-    previousCover = cover;
-    const immersion = ease(clamp((progress - .30) / .36)) * (1 - ease(clamp((cover / height - .18) / .44)));
-    header.style.setProperty("--into-app", (-101 * immersion).toFixed(2) + "%");
-    if (progress === previous) return;
-    previous = progress;
-    const t = ease(progress);
-    const level = ease(clamp(t / .88));
-    const { near, far, aim, center, openWidth, zoom } = poses;
-    const span = openWidth * zoom ** t;
-    const shot = near.map((point, i) => point.map((from, axis) =>
-      aim[axis] + (center[axis] - aim[axis]) * level + span * (from + (far[i][axis] - from) * level)));
+    if (!landing) return;
+    const moving = film.classList.contains("camera-ready");
+    const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
+    const travel = Math.max(1, film.offsetHeight - stage.clientHeight - stickyTop);
+    const offset = -film.getBoundingClientRect().top;
+    const scroll = moving ? clamp(offset / travel) : 0;
+    if (scroll === previous) return;
+    previous = scroll;
+    const t = ease(clamp((scroll - .12) / .87));
+    const docked = moving && offset >= travel - .75;
+    const shot = opening.map((corner, i) => corner.map((n, axis) =>
+      n + (landing[i][axis] - n) * t));
     const view = project(shot);
     world.style.transform = view.multiply(deskFromGlass).toString();
-    stage.classList.toggle("has-capture", captureReady);
-    // At rest, let the browser downsample text like a regular image without a 3D texture.
-    const front = t === 1 && captureReady;
-    glass.classList.toggle("is-front", front);
-    // Prefilter small, tilted screens before projection so fine strokes survive minification.
-    const screenPixels = span * window.devicePixelRatio;
-    const small = captureReady && !front && screenPixels < glass.naturalWidth * .30;
-    const sampleWidth = small ? 2 ** Math.ceil(Math.log2(screenPixels)) : glass.naturalWidth;
-    glass.style.width = small ? sampleWidth + "px" : "";
-    glass.style.height = small ? sampleWidth * glass.naturalHeight / glass.naturalWidth + "px" : "";
-    const texture = view.multiply(appToGlass);
-    glass.style.transform = front ? "none" : (small ? texture.scale(glass.naturalWidth / sampleWidth) : texture).toString();
-    stage.style.setProperty("--screen-mix", String(captureReady ? .8 + .2 * ease(clamp(progress / .24)) : 0));
-    const crosshair = view.transformPoint({ x: 800, y: 500 });
-    stage.style.setProperty("--axis-x", crosshair.x / crosshair.w + "px");
-    stage.style.setProperty("--axis-y", crosshair.y / crosshair.w + "px");
+    plane.style.transform = view.toString();
+    stage.classList.toggle("has-capture", glass.naturalWidth > 0);
+    const copy = 1 - ease(clamp((scroll - .12) / .32));
+    const room = 1 - ease(clamp((scroll - .25) / .57));
+    stage.style.setProperty("--copy-opacity", copy);
+    stage.style.setProperty("--opening-link-visibility", copy > .05 ? "visible" : "hidden");
+    stage.style.setProperty("--room-presence", room);
+    stage.style.setProperty("--desk-opacity", room);
+    stage.style.setProperty("--screen-mix", glass.naturalWidth ? .94 + .06 * t : 0);
+    const course = ease(clamp((scroll - .44) / .39));
+    plane.style.setProperty("--course-edge", (-6 + 112 * course) + "%");
+    stage.classList.toggle("inside-screen", room === 0);
+    stage.classList.toggle("dissolving-desk", room < 1);
+    film.classList.toggle("docked", docked);
+    lesson.style.setProperty("--lesson-copy", moving ? ease(clamp((scroll - .42) / .48)) : 1);
+    lesson.style.setProperty("--lesson-controls", scroll > .50 ? "visible" : "hidden");
+    lesson.style.setProperty("--approach-y", moving ? -Math.max(0, travel - offset) + "px" : "0px");
+    const center = view.transformPoint({ x: 800, y: 500 });
+    const span = Math.hypot(shot[1][0] - shot[0][0], shot[1][1] - shot[0][1]);
+    stage.style.setProperty("--axis-x", center.x / center.w + "px");
+    stage.style.setProperty("--axis-y", center.y / center.w + "px");
     stage.style.setProperty("--axis-hole-x", (span * (mac ? .70 : .56) + 32) + "px");
     stage.style.setProperty("--axis-hole-y", (span * (mac ? .80 : .49) + 20) + "px");
-    const reveal = ease(clamp((progress - .49) / .39));
-    stage.style.setProperty("--glass-light", String(.88 + .12 * reveal));
-    stage.style.setProperty("--copy-opacity", String(1 - ease(clamp(progress / .25))));
-    stage.style.setProperty("--opening-link-visibility", progress >= .24 ? "hidden" : "visible");
-    const room = 1 - ease(clamp(progress / .76));
-    stage.style.setProperty("--room-presence", room.toFixed(4));
-    stage.classList.toggle("inside-screen", room === 0);
-    stage.style.setProperty("--desk-opacity", front ? "0" : "1");
   }
 
   function schedule() {
@@ -224,7 +179,7 @@
   }
 
   function refresh() {
-    film.classList.toggle("camera-ready", !motion.matches && !(glass.complete && !glass.naturalWidth));
+    film.classList.toggle("camera-ready", !motion.matches && glass.naturalWidth > 0 && openingStill.naturalWidth > 0 && plate.naturalWidth > 0);
     compose();
     paint();
   }
@@ -232,13 +187,19 @@
   film.classList.add("camera-framed");
   refresh();
   window.addEventListener("load", refresh, { once: true });
-  glass.addEventListener("load", refresh, { once: true });
-  glass.addEventListener("error", refresh, { once: true });
+  for (const image of [glass, openingStill, plate]) {
+    image.addEventListener("load", refresh);
+    image.addEventListener("error", refresh);
+  }
   if (paperImage.complete && !paperImage.naturalWidth) intro.classList.add("page-missing");
   paperImage.addEventListener("error", () => intro.classList.add("page-missing"), { once: true });
   window.addEventListener("scroll", schedule, { passive: true });
-  if (window.ResizeObserver) new ResizeObserver(refresh).observe(stage);
-  else window.addEventListener("resize", refresh);
+  if (window.ResizeObserver) {
+    const sizes = new ResizeObserver(refresh);
+    sizes.observe(stage);
+    sizes.observe(seat);
+    sizes.observe(list);
+  } else window.addEventListener("resize", refresh);
   motion.addEventListener("change", refresh);
   narrow.addEventListener("change", refresh);
 })();

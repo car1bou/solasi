@@ -52,15 +52,15 @@
       }, { once: true });
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=20">
-  <link rel="stylesheet" href="chapters.css?v=11">
+  <link rel="stylesheet" href="style.css?v=21">
+  <link rel="stylesheet" href="chapters.css?v=12">
   <link rel="stylesheet" href="diagram-motion.css?v=3">
   <link rel="stylesheet" href="chapter-exchange.css?v=2">
-  <script src="camera.js?v=10" defer></script>
-  <script src="process.js?v=4" defer></script>
-  <script src="experience.js?v=12" defer></script>
-  <script src="wood-field.js?v=1" defer></script>
-  <script src="chapter-exchange.js?v=3" defer></script>
+  <script src="camera.js?v=11" defer></script>
+  <script src="process.js?v=5" defer></script>
+  <script src="experience.js?v=13" defer></script>
+  <script src="wood-field.js?v=2" defer></script>
+  <script src="chapter-exchange.js?v=4" defer></script>
   <script src="release.js?v=5" defer></script>
   <title>Solasi | 강의 필기와 녹음을 한곳에</title>
 </head>
@@ -97,22 +97,22 @@
     </picture>
     <canvas class="wood-field" data-wood="desk" aria-hidden="true"></canvas>
   </div>
-  <a class="skip-link" href="#preview">본문으로 건너뛰기</a>
+  <a class="skip-link" href="#process">본문으로 건너뛰기</a>
   <header class="masthead">
     <div class="masthead-inner">
       <a href="#home" class="brand" aria-label="Solasi 홈"><img src="assets/solasi-icon.png" width="26" height="26" alt="">Solasi</a>
       <nav class="wide-nav" aria-label="주 메뉴">
           <a href="#home">홈</a>
-          <a href="#solutions">주요 기능</a>
           <a href="#process">사용 순서</a>
+          <a href="#solutions">주요 기능</a>
           <a href="#work">앱 화면</a>
         </nav>
       <details class="fold-nav">
         <summary aria-label="탐색 메뉴"><span aria-hidden="true"></span></summary>
         <nav aria-label="전체 메뉴">
           <a href="#home">홈</a>
-          <a href="#solutions">주요 기능</a>
           <a href="#process">사용 순서</a>
+          <a href="#solutions">주요 기능</a>
           <a href="#work">앱 화면</a>
         </nav>
       </details>
@@ -137,7 +137,10 @@
               </noscript>
               <canvas class="wood-field" data-wood="hero" aria-hidden="true"></canvas>
             </div>
-            <img class="film-glass" width="2560" height="1600" alt="" decoding="async">
+            <div class="glass-plane">
+              <img class="film-glass" width="2560" height="1600" alt="" decoding="async">
+              <img class="course-glass" src="assets/process-course-opening.webp" width="1280" height="800" alt="" decoding="async">
+            </div>
           </div>
           <div class="field-overlay"></div>
           <div class="field-axes"></div>
@@ -154,12 +157,72 @@
         <a class="film-source" href="https://github.com/car1bou/solasi">GitHub 프로젝트 <span aria-hidden="true">↗</span></a>
       </div>
     </section>
+    <section class="study-process study-walkthrough field" id="process" data-scene-surface="dark" aria-labelledby="process-heading">
+      <div class="field-frame">
+        <div class="process-run" id="walkthrough">
+          <h2 class="motion-title process-heading" id="process-heading"><span>수업 준비부터</span><br><span>다시 듣기까지.</span></h2>
+          <ol class="process-list" aria-labelledby="process-heading">
+            <li>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 만들기</h3><p>이번 학기에 들을 과목을 만듭니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-course-opening.webp" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=dark1" aria-label="과목 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+            <li>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>자료 열기</h3><p>과목에서 강의 PDF를 열고 오늘 볼 페이지를 펼칩니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-material.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 자료 열기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=dark1" aria-label="자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+            <li>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>PDF의 중요한 문장에 형광펜을 긋고, 펜으로 표시합니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-ink.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=dark1" aria-label="필기하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+            <li>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">04</span><h3>대본 만들기</h3><p>Mac에서 강의 녹음을 대본으로 옮깁니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-transcript.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 대본 만들기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=dark1" aria-label="대본 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+            <li>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 문장을 골라 그 구간의 원음을 다시 듣습니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-replay.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=dark1" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
     <section class="study-problems field" id="preview" data-scene-surface="dark" aria-labelledby="preview-heading">
       <div class="field-frame">
         <header class="problem-heading">
           <div class="problem-lede">
             <p class="section-label">복습할 때</p>
-            <h2 id="preview-heading" class="motion-title"><span>수업은 한 번인데,</span><br><span>기록은 흩어집니다.</span></h2>
+            <h2 id="preview-heading" class="motion-title"><span>수업이 끝나면</span><br><span>어떤 기록을 찾게 될까요?</span></h2>
           </div>
           <figure class="lecture-page">
             <div class="lecture-window">
@@ -222,83 +285,22 @@
       </div>
     </section>
 
-    <section class="study-process field" id="process" data-scene-surface="dark" aria-labelledby="results-heading">
-      <div class="study-results">
-        <div class="field-frame">
-          <header class="section-head result-head">
-            <div class="result-story">
-              <h2 id="results-heading" class="motion-title"><span>복습할 때</span><br><span>다시 꺼낼 수 있는 것.</span></h2>
-              <p>시험을 앞두고 ‘계열 위치 효과’가 헷갈린다면, 인지심리학 자료에서 밑줄을 그은 페이지를 펼쳐 보세요. 그래프 옆에 적은 질문을 읽고, Mac으로 녹음한 수업은 대본에서 한 문장을 골라 그때의 설명을 다시 들을 수 있습니다.</p>
-              <a class="field-link" href="#work">앱 화면 보기 <span aria-hidden="true">↘</span></a>
-            </div>
-            <img class="result-example" src="assets/process-ink.webp?v=dark1" width="1280" height="800" loading="lazy" alt="초두 효과에 형광펜 표시와 손글씨를 남긴 인지심리학 강의 자료">
-          </header>
-          <ul class="result-list">
-            <li><h3>표시해 둔 줄</h3><p>‘초두 효과’에 그은 형광펜과 그래프 위의 손글씨를 같은 PDF에서 봅니다. 어느 부분을 강조했는지 바로 짚을 수 있습니다.</p></li>
-            <li><h3>쪽마다 남긴 생각</h3><p>“가운데 항목은 왜 덜 떠오를까?” 수업 중 적은 질문은 해당 페이지의 메모에 남습니다. 다음에 자료를 펼쳐 같은 자리에서 답을 이어 씁니다.</p></li>
-            <li><h3>그날의 목소리</h3><p>Mac 대본에서 확인할 문장을 고르고 ‘선택 구간 듣기’를 누르세요. 그 구간의 원음을 들으며 잘못 옮겨 적힌 용어를 고칠 수 있습니다.</p></li>
-            <li><h3>이어지는 수업 기록</h3><p>다음 주에도 같은 과목을 열면 지난 자료와 회차별 녹음을 찾을 수 있습니다. 앞 시간의 예시를 확인한 뒤 새 수업을 기록하세요.</p></li>
-          </ul>
-        </div>
-      </div>
-      <div class="study-walkthrough">
-        <div class="field-frame">
-          <h2 class="motion-title process-heading" id="process-heading"><span>수업 준비부터</span><br><span>다시 듣기까지.</span></h2>
-          <div class="process-run" id="walkthrough">
-            <ol class="process-list" aria-labelledby="process-heading">
-              <li>
-                <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 만들기</h3><p>이번 학기에 들을 과목을 만듭니다.</p></div>
-                <figure class="step-film">
-                  <div class="step-screen">
-                    <img src="assets/process-course.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
-                    <video muted playsinline preload="none" aria-hidden="true"></video>
-                  </div>
-                  <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=dark1" aria-label="과목 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-                </figure>
-              </li>
-              <li>
-                <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>자료 열기</h3><p>과목에서 강의 PDF를 열고 오늘 볼 페이지를 펼칩니다.</p></div>
-                <figure class="step-film">
-                  <div class="step-screen">
-                    <img src="assets/process-material.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 자료 열기 시연 중인 Solasi 화면">
-                    <video muted playsinline preload="none" aria-hidden="true"></video>
-                  </div>
-                  <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=dark1" aria-label="자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-                </figure>
-              </li>
-              <li>
-                <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>PDF의 중요한 문장에 형광펜을 긋고, 펜으로 표시합니다.</p></div>
-                <figure class="step-film">
-                  <div class="step-screen">
-                    <img src="assets/process-ink.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
-                    <video muted playsinline preload="none" aria-hidden="true"></video>
-                  </div>
-                  <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=dark1" aria-label="필기하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-                </figure>
-              </li>
-              <li>
-                <div class="step-copy"><span class="step-number" aria-hidden="true">04</span><h3>대본 만들기</h3><p>Mac에서 강의 녹음을 대본으로 옮깁니다.</p></div>
-                <figure class="step-film">
-                  <div class="step-screen">
-                    <img src="assets/process-transcript.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 대본 만들기 시연 중인 Solasi 화면">
-                    <video muted playsinline preload="none" aria-hidden="true"></video>
-                  </div>
-                  <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=dark1" aria-label="대본 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-                </figure>
-              </li>
-              <li>
-                <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 문장을 골라 그 구간의 원음을 다시 듣습니다.</p></div>
-                <figure class="step-film">
-                  <div class="step-screen">
-                    <img src="assets/process-replay.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
-                    <video muted playsinline preload="none" aria-hidden="true"></video>
-                  </div>
-                  <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=dark1" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-                </figure>
-              </li>
-            </ol>
+    <section class="study-results field" id="results" data-scene-surface="dark" aria-labelledby="results-heading">
+      <div class="field-frame">
+        <header class="section-head result-head">
+          <div class="result-story">
+            <h2 id="results-heading" class="motion-title"><span>복습할 때</span><br><span>다시 꺼낼 수 있는 것.</span></h2>
+            <p>시험을 앞두고 ‘계열 위치 효과’가 헷갈린다면, 인지심리학 자료에서 밑줄을 그은 페이지를 펼쳐 보세요. 그래프 옆에 적은 질문을 읽고, Mac으로 녹음한 수업은 대본에서 한 문장을 골라 그때의 설명을 다시 들을 수 있습니다.</p>
+            <a class="field-link" href="#work">앱 화면 보기 <span aria-hidden="true">↘</span></a>
           </div>
-        </div>
+          <img class="result-example" src="assets/process-ink.webp?v=dark1" width="1280" height="800" loading="lazy" alt="초두 효과에 형광펜 표시와 손글씨를 남긴 인지심리학 강의 자료">
+        </header>
+        <ul class="result-list">
+          <li><h3>표시해 둔 줄</h3><p>‘초두 효과’에 그은 형광펜과 그래프 위의 손글씨를 같은 PDF에서 봅니다. 어느 부분을 강조했는지 바로 짚을 수 있습니다.</p></li>
+          <li><h3>쪽마다 남긴 생각</h3><p>“가운데 항목은 왜 덜 떠오를까?” 수업 중 적은 질문은 해당 페이지의 메모에 남습니다. 다음에 자료를 펼쳐 같은 자리에서 답을 이어 씁니다.</p></li>
+          <li><h3>그날의 목소리</h3><p>Mac 대본에서 확인할 문장을 고르고 ‘선택 구간 듣기’를 누르세요. 그 구간의 원음을 들으며 잘못 옮겨 적힌 용어를 고칠 수 있습니다.</p></li>
+          <li><h3>이어지는 수업 기록</h3><p>다음 주에도 같은 과목을 열면 지난 자료와 회차별 녹음을 찾을 수 있습니다. 앞 시간의 예시를 확인한 뒤 새 수업을 기록하세요.</p></li>
+        </ul>
       </div>
     </section>
 
@@ -377,10 +379,12 @@
         <p>PDF 필기와 강의 녹음을 위한 학습 앱.</p>
         <a href="#install" class="install-link">설치하기 <span aria-hidden="true">↘</span></a>
       </div>
-      <nav aria-label="페이지 바로가기">          <a href="#home">홈</a>
-          <a href="#solutions">주요 기능</a>
-          <a href="#process">사용 순서</a>
-          <a href="#work">앱 화면</a></nav>
+      <nav aria-label="페이지 바로가기">
+        <a href="#home">홈</a>
+        <a href="#process">사용 순서</a>
+        <a href="#solutions">주요 기능</a>
+        <a href="#work">앱 화면</a>
+      </nav>
       <nav aria-label="프로젝트 링크">
         <a href="https://github.com/car1bou/solasi">GitHub ↗</a>
         <a href="https://github.com/car1bou/solasi/issues">문제 제보 ↗</a>

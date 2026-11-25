@@ -26,10 +26,11 @@
     mark.className = "chapter-origin-mark";
     label.prepend(mark);
   });
+  dock(".work-heading", "assets/mac-transcript.png?v=dark1", "screen");
   const routes = [
+    [".process-list li:last-child .step-screen", find(".lecture-window")],
     [".week-sketch span:last-child", find(".course-map b")],
     [".solution-list li:last-child .solution-code", find(".result-example")],
-    [".process-list li:last-child .step-screen", dock(".work-heading", "assets/mac-transcript.png?v=dark1", "screen")],
     [".chapter-origin-mark", dock(".install-heading", "assets/solasi-icon.png", "mark")],
   ];
   const carrier = document.createElement("div");
@@ -74,6 +75,15 @@
       still.className = "";
       still.alt = "";
       still.loading = "eager";
+      if (element.classList.contains("lecture-window")) {
+        // The next chapter shows a detail from the capture; land on the same crop.
+        const frame = element.getBoundingClientRect(), crop = image.getBoundingClientRect();
+        still.style.position = "absolute";
+        still.style.width = 100 * crop.width / frame.width + "%";
+        still.style.height = 100 * crop.height / frame.height + "%";
+        still.style.left = 100 * (crop.left - frame.left) / frame.width + "%";
+        still.style.top = 100 * (crop.top - frame.top) / frame.height + "%";
+      }
       surface.append(still);
       const video = element.querySelector("video");
       if (video) followVideo(video, surface);

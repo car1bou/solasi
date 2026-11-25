@@ -1,6 +1,7 @@
 (() => {
   const runway = document.querySelector(".process-run");
   if (!runway) return;
+  const film = document.querySelector(".film");
   const stage = runway.querySelector(".process-list");
   const steps = [...stage.children];
   const clips = steps.map(step => step.querySelector("video"));
@@ -69,7 +70,9 @@
     const rect = runway.getBoundingClientRect();
     const travel = Math.max(1, rect.height - stage.offsetHeight);
     const threshold = Math.min(stage.offsetHeight, innerHeight) * .48;
-    inView = rect.top <= innerHeight - threshold && rect.bottom >= top + threshold;
+    const seated = !film.classList.contains("camera-ready") || rect.top <= top + 1;
+    if (!seated && inView && current === 0 && clips[0].readyState >= 1) clips[0].currentTime = 0;
+    inView = seated && rect.top <= innerHeight - threshold && rect.bottom >= top + threshold;
     const progress = Math.max(0, Math.min(1, (top - rect.top) / travel));
     if (progress === lastProgress) { syncPlayback(); return; }
     lastProgress = progress;
