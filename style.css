@@ -24,6 +24,9 @@
   --stage-control: #283476;
   --stage-line: #7787c5;
   --shadow: #04103d75;
+  --ambient-light: #d4e0ffb3;
+  --stage-light: #86b9ff78;
+  --ripple-light: #bad8ffad;
   --font: "Solasi Web", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --ease: cubic-bezier(.19, 1, .22, 1);
   --wrap: 82rem;
@@ -36,7 +39,7 @@
 
 * { box-sizing: border-box; }
 html, body { overflow-x: clip; }
-body { margin: 0; font-size: 1rem; }
+body { margin: 0; font-size: 1rem; isolation: isolate; }
 h1, h2, h3, p, figure { margin: 0; }
 p, h1, h2, h3 { word-break: keep-all; overflow-wrap: break-word; }
 h1, h2, h3 { min-width: 0; }
@@ -162,11 +165,12 @@ h1 {
 .preview::before {
   content: "";
   position: absolute;
-  z-index: -1;
+  z-index: -3;
   inset: 0;
   background: url("assets/study-paper.jpg") 42% center / cover no-repeat;
   pointer-events: none;
 }
+.preview-ripple { display: none; }
 .preview-copy { min-width: 0; }
 .platform-switch {
   position: relative;
@@ -276,16 +280,51 @@ h1 {
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
-  .preview::before { animation: unfold 1050ms var(--ease) both; }
+  body::before {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    inset: -11rem -15rem auto auto;
+    width: min(62rem, 115%);
+    aspect-ratio: 1;
+    background: radial-gradient(closest-side, var(--ambient-light), transparent);
+    transform: translate3d(var(--ambient-x, 0px), var(--ambient-y, 0px), 0);
+    pointer-events: none;
+  }
+  .preview::before {
+    inset: -12% -5%;
+    transform: translate3d(var(--paper-x, 0px), var(--paper-y, 0px), 0);
+  }
+  .preview::after {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    inset: 0 auto auto 0;
+    width: clamp(15rem, 45%, 34rem);
+    aspect-ratio: 1;
+    background: radial-gradient(closest-side, var(--stage-light), transparent);
+    transform: translate3d(var(--light-x, 0px), var(--light-y, 0px), 0) translate(-50%, -50%);
+    opacity: 0;
+    transition: opacity 180ms ease-out;
+    pointer-events: none;
+  }
+  .preview[data-pointing]::after { opacity: 1; }
+  .preview-ripple {
+    display: block;
+    position: absolute;
+    z-index: -1;
+    inset: 0 auto auto 0;
+    width: clamp(23rem, 62%, 42rem);
+    aspect-ratio: 1;
+    background: radial-gradient(closest-side, transparent 95%, var(--ripple-light) 98%, transparent);
+    opacity: 0;
+    pointer-events: none;
+  }
   .preview-shot img { animation: turn 620ms var(--ease) both; }
   .preview-detail { animation: turn 520ms var(--ease) both; }
   .platform-switch::before { transition: transform 340ms var(--ease); }
   .download { transition: background-color 140ms, transform 170ms var(--ease); }
   .download:active { transform: scale(.98); }
-  @keyframes unfold {
-    from { transform: scale(1.09) translateX(1.5%); }
-    to { transform: none; }
-  }
   @keyframes turn {
     from { opacity: .52; transform: translateX(.85rem); }
     to { opacity: 1; transform: none; }
