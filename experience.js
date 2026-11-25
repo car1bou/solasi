@@ -9,8 +9,10 @@
   const installLink = document.querySelector(".install-link");
   const scenes = document.querySelectorAll(".chapter-media");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const canPan = matchMedia("(hover: hover) and (pointer: fine) and (width > 62rem) and (aspect-ratio > 7/5)");
   let callback = 0;
   let activeLink;
+  let pointer = null;
 
   function updateScene() {
     callback = 0;
@@ -33,6 +35,8 @@
     const heroBox = hero.getBoundingClientRect();
     const drift = Math.min(heroBox.height, Math.max(0, -heroBox.top)) * .23;
     hero.style.setProperty("--hero-drift", `${drift}px`);
+    hero.style.setProperty("--hero-pan-x", `${(pointer?.x ?? 0) * -24}px`);
+    hero.style.setProperty("--hero-pan-y", `${(pointer?.y ?? 0) * -16}px`);
 
     for (const scene of scenes) {
       const top = scene.parentElement.getBoundingClientRect().top;
@@ -49,7 +53,18 @@
 
   window.addEventListener("scroll", schedule, { passive: true });
   window.addEventListener("resize", schedule);
-  reduced.addEventListener("change", schedule);
+  function resetPan() {
+    pointer = null;
+    schedule();
+  }
+  hero.addEventListener("pointermove", (event) => {
+    if (event.pointerType === "touch" || reduced.matches || !canPan.matches) return;
+    pointer = { x: event.clientX / innerWidth - .5, y: event.clientY / innerHeight - .5 };
+    schedule();
+  }, { passive: true });
+  hero.addEventListener("pointerleave", resetPan);
+  reduced.addEventListener("change", resetPan);
+  canPan.addEventListener("change", resetPan);
   const platform = new URLSearchParams(location.search).get("platform");
   if (!location.hash || location.hash === "#preview") {
     if (platform === "mac") transcript.scrollIntoView({ behavior: "instant" });
