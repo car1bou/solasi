@@ -8,16 +8,17 @@
   <link rel="canonical" href="https://car1bou.github.io/solasi/">
   <link rel="icon" href="assets/solasi-icon.png" type="image/png">
   <link rel="preload" href="assets/suit-solasi.woff2?v=8" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=13">
-  <link rel="stylesheet" href="chapters.css?v=5">
-  <link rel="stylesheet" href="diagram-motion.css?v=2">
-  <script src="camera.js?v=3" defer></script>
+  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="chapters.css?v=6">
+  <link rel="stylesheet" href="diagram-motion.css?v=3">
+  <script src="camera.js?v=4" defer></script>
   <script src="process.js?v=3" defer></script>
-  <script src="experience.js?v=6" defer></script>
+  <script src="experience.js?v=7" defer></script>
   <script src="release.js?v=4" defer></script>
   <title>Solasi | 강의 필기와 녹음을 한곳에</title>
 </head>
 <body>
+  <div class="desk-surface" aria-hidden="true"></div>
   <a class="skip-link" href="#preview">본문으로 건너뛰기</a>
   <header class="masthead">
     <div class="masthead-inner">
@@ -43,15 +44,17 @@
   <main id="main">
     <section class="film" id="home" aria-labelledby="heading">
       <div class="film-stage">
-        <div class="film-world" aria-hidden="true">
-          <picture>
-            <source media="(max-aspect-ratio: 59/50)" srcset="assets/study-field-upright.jpg?v=2">
-            <img class="film-photo" src="assets/study-field.jpg?v=2" width="1672" height="941" alt="" fetchpriority="high">
-          </picture>
+        <div class="film-scenery" aria-hidden="true">
+          <div class="film-world">
+            <picture>
+              <source media="(max-aspect-ratio: 59/50)" srcset="assets/study-field-upright.jpg?v=2">
+              <img class="film-photo" src="assets/study-field.jpg?v=2" width="1672" height="941" alt="" fetchpriority="high">
+            </picture>
+          </div>
+          <img class="film-glass" src="assets/tablet-notebook.png" width="2560" height="1600" alt="" decoding="async">
+          <div class="field-overlay"></div>
+          <div class="field-axes"></div>
         </div>
-        <img class="film-glass" src="assets/tablet-notebook.png" width="2560" height="1600" alt="" decoding="async">
-        <div class="field-overlay" aria-hidden="true"></div>
-        <div class="field-axes" aria-hidden="true"></div>
         <header class="film-copy">
           <p>Android 태블릿 · Mac</p>
           <h1 id="heading" class="motion-title"><span>강의 필기와 녹음을</span><br><span>한곳에.</span></h1>

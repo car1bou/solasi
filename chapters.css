@@ -9,14 +9,12 @@
   --study-line: rgb(255 232 195 / 18%);
   --study-fine: rgb(255 232 195 / 9%);
   --study-tick: rgb(255 232 195 / 55%);
-  --study-walnut: #795b40;
-  --study-step-base: #604731;
   --study-corners: linear-gradient(var(--study-tick),var(--study-tick)) top left / 9px 1px,
     linear-gradient(var(--study-tick),var(--study-tick)) bottom right / 9px 1px;
   --study-gap: clamp(1.1rem, 2.4vw, 2rem);
   --study-head: clamp(2.45rem, 4.1vw, 4.15rem);
 }
-.field { color: var(--study-text); background-color: var(--study-base); }
+.field { color: var(--study-text); }
 .field, .field [id] { scroll-margin-top: var(--header); }
 .field-frame {
   width: min(73rem, calc(100% - 2 * var(--edge, 1.25rem)));
@@ -51,7 +49,6 @@
 .field-link, .device-download { gap: 1rem; text-decoration: none; }
 .field-link:is(:hover, :active), .device-download:is(:hover, :active) { text-decoration: underline; }
 .field :is(a, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-.study-problems { background: radial-gradient(ellipse at 50% 45%, var(--study-raised), var(--study-base) 77%); }
 .study-problems .field-frame { padding-bottom: clamp(5rem, 11vw, 11rem); }
 .problem-heading { display: grid; place-content: center; justify-items: center; gap: clamp(2rem, 4vw, 3.7rem); padding: 2rem .9rem; min-height: clamp(22rem, 53svh, 35rem); text-align: center; }
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
@@ -133,7 +130,6 @@
   .solution-list .is-current::after { transform: scaleY(1); }
   .solution-list .is-current h3 { color: var(--study-oak); transform: translateX(.28em); }
 }
-.study-process { background: radial-gradient(ellipse at 42% 3%, var(--study-walnut), var(--study-step-base) 32%, var(--study-panel) 88%); }
 .study-process .field-frame { padding-top: clamp(4rem, 8vw, 8rem); }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
 .result-head h2 { align-self: start; }
@@ -198,7 +194,6 @@
   background-repeat: repeat-x;
   border-bottom: 1px solid var(--study-line);
 }
-.study-work { background: linear-gradient(to bottom, var(--study-panel), var(--study-base) 35%); }
 .work-grid { display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.35fr); border-bottom: 1px solid var(--study-line); }
 .work-index { align-self: center; padding: var(--study-gap); }
 .work-index details { border-block-start: 1px solid var(--study-line); }
@@ -242,7 +237,6 @@
     .work-index details p::after { height: 1.65rem; }
   }
 }
-.study-install { background: linear-gradient(176deg, var(--study-base) 0, var(--study-walnut) 80%); }
 .install-heading { min-height: clamp(24rem, 57svh, 40rem); padding: clamp(4rem, 9vw, 8rem) .8rem; display: grid; align-content: center; justify-items: center; gap: clamp(2rem, 4.5vw, 4.5rem); text-align: center; }
 .install-heading h2 { font-size: clamp(3rem, 6.6vw, 6.35rem); }
 .install-heading .field-link { font-size: clamp(1rem, 1.4vw, 1.32rem); }

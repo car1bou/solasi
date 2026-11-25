@@ -1,5 +1,6 @@
 (() => {
   const header = document.querySelector(".masthead");
+  const desk = document.querySelector(".desk-surface");
   const menu = header.querySelector(".fold-nav");
   const sections = Array.from(document.querySelectorAll("main > section"));
   const navLinks = header.querySelectorAll("a[href^='#']");
@@ -9,19 +10,14 @@
   let scheduled = false;
   let current = "";
   let highlighted;
-  let litField, lightFrame, pointerX;
+  let lightFrame, pointerX;
 
   document.addEventListener("pointermove", event => {
     if (!pointerLight.matches || event.pointerType !== "mouse") return;
-    const field = event.target.closest?.(".field");
-    if (field !== litField) {
-      litField?.style.removeProperty("--light-follow");
-      litField = field;
-    }
     pointerX = event.clientX;
-    if (!litField || lightFrame) return;
+    if (lightFrame) return;
     lightFrame = requestAnimationFrame(() => {
-      litField?.style.setProperty("--light-follow", ((pointerX - innerWidth / 2) * .016).toFixed(1) + "px");
+      desk.style.setProperty("--light-follow", ((pointerX - innerWidth / 2) * .025).toFixed(1) + "px");
       lightFrame = 0;
     });
   }, { passive: true });
@@ -51,6 +47,11 @@
 
   function updateNavigation() {
     scheduled = false;
+    if (!reduced.matches) {
+      const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+      const progress = Math.max(0, Math.min(1, scrollY / travel));
+      desk.style.setProperty("--desk-drift", ((.5 - progress) * innerHeight * .28).toFixed(2) + "px");
+    }
     const limit = header.offsetHeight + 2;
     const next = sections.findIndex(section => section.getBoundingClientRect().top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
@@ -122,7 +123,7 @@
   if (!window.IntersectionObserver) return;
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const diagrams = document.querySelectorAll(".problem-visual, .course-map, .field, .result-list");
+  const diagrams = document.querySelectorAll(".problem-visual, .course-map, .result-list");
   const visible = new Set();
   let frame = 0;
   function paint() {

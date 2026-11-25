@@ -28,6 +28,26 @@
 }
 * { box-sizing: border-box; }
 html, body { overflow-x: clip; }
+body { isolation: isolate; }
+.desk-surface {
+  position: fixed; inset: -16vh 0; z-index: -1; pointer-events: none;
+  /* The left edge of the opening photograph contains only long, quiet lines of grain. */
+  background: linear-gradient(107deg, #38291db3, #4a352892 48%, #2b2119b8),
+    url("assets/study-field.jpg?v=2") left 65% / max(278vw, 248vh) auto no-repeat, #38291f;
+}
+.desk-surface::after {
+  content: ""; position: absolute; inset: 0 -3%;
+  background: radial-gradient(ellipse at 67% 29%, rgb(255 212 154 / 9%), transparent 70%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .desk-surface { transform: translateY(var(--desk-drift, 0px)); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .desk-surface::after {
+    translate: var(--light-follow, 0px) 0;
+    transition: translate .55s cubic-bezier(.2,.64,.24,1);
+  }
+}
 body, h1, h2, h3, p, figure { margin: 0; }
 h1, h2, h3, p, li { min-width: 0; word-break: keep-all; overflow-wrap: break-word; }
 a { color: inherit; text-underline-offset: .23em; }
@@ -82,15 +102,19 @@ img { display: block; max-width: 100%; height: auto; }
   border: 1px solid #c8ad862e;
 }
 .fold-nav nav a { padding: .8rem 0; border-bottom: 1px solid var(--rule-night); font-size: 1.35rem; }
-.film { position: relative; isolation: isolate; color: var(--cream); background: var(--night-deep); }
+.film { position: relative; isolation: isolate; color: var(--cream); }
 .film-stage {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   height: 100svh;
   min-height: 22rem;
-  background: var(--night-deep);
 }
+.film-scenery {
+  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  mask-image: linear-gradient(#000 68%, transparent);
+}
+.camera-ready .has-capture .film-scenery { mask-image: none; }
 .film-world, .field-overlay, .field-axes { position: absolute; inset: 0; pointer-events: none; }
 .film-world { z-index: -3; }
 .film-world picture { display: contents; }
@@ -132,7 +156,7 @@ img { display: block; max-width: 100%; height: auto; }
   height: var(--front-h);
   filter: none;
 }
-.footer { background: #292017; color: var(--cream); border-top: 1px solid var(--rule-night); }
+.footer { color: var(--cream); }
 .footer-inner { width: min(78%, 73rem); margin: auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2rem; padding-block: clamp(3rem, 8vw, 7rem); }
 .footer-brand p { color: var(--night-muted); margin: .8rem 0 1.1rem; }
 .footer nav { display: flex; align-items: flex-start; flex-direction: column; }

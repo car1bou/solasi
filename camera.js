@@ -100,6 +100,7 @@
     const view = project(shot);
     world.style.transform = view.multiply(deskFromGlass).toString();
     const captureReady = glass.naturalWidth > 0;
+    stage.classList.toggle("has-capture", captureReady);
     // At rest, let the browser downsample text like a regular image without a 3D texture.
     const front = t === 1 && captureReady;
     glass.classList.toggle("is-front", front);
