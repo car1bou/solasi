@@ -6,7 +6,9 @@
   const world = film.querySelector(".film-world");
   const glass = film.querySelector(".film-glass");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  const screen = [[957, 216], [1594, 271], [1563, 694], [912, 639]];
+  const narrow = matchMedia("(max-aspect-ratio: 59/50)");
+  const desktopPhoto = { width: 1672, height: 941, screen: [[693.3, 360], [989.1, 387], [970.7, 575.4], [671.5, 547.8]] };
+  const mobilePhoto = { width: 852, height: 1846, screen: [[327.4, 640.9], [541.1, 658], [528.4, 799.1], [312.3, 782.1]] };
   const clamp = value => Math.max(0, Math.min(1, value));
   const ease = value => value * value * (3 - 2 * value);
 
@@ -26,19 +28,27 @@
     ]);
   }
 
-  const glassOnDesk = project(screen);
-  const deskFromGlass = glassOnDesk.inverse();
-  let poses, previous = -1, frame = 0;
+  let poses, deskFromGlass, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
-    const portrait = w / h < 1.18;
-    const scale = portrait ? Math.min(w / 815, h / 1310) : Math.max(w / 1817, h / 866) * 1.06;
-    const subject = Math.min(w * .73, w * .97 - (1613 - 1253) * scale);
-    const x = portrait ? w / 2 - 1253 * scale : Math.min(0, subject - 1253 * scale);
-    const y = portrait ? h * .34 - 455 * scale : (h - 866 * scale) / 2;
-    const opening = screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
+    const portrait = narrow.matches;
+    const photo = portrait ? mobilePhoto : desktopPhoto;
+    const glassOnDesk = project(photo.screen);
+    deskFromGlass = glassOnDesk.inverse();
+    glass.style.transform = glassOnDesk.toString();
+    world.style.setProperty("--photo-w", photo.width + "px");
+    world.style.setProperty("--photo-h", photo.height + "px");
+
+    // Overscan leaves room for the opening bank to keep the tabletop edge off camera.
+    const scale = 1.20 * Math.max(w / photo.width, h / photo.height);
+    const screenMiddle = glassOnDesk.transformPoint({ x: 800, y: 500 });
+    const pan = (viewport, size, aim, subject) =>
+      Math.min(0, Math.max(viewport - size * scale, aim - subject * scale));
+    const x = pan(w, photo.width, w / 2, screenMiddle.x / screenMiddle.w);
+    const y = pan(h, photo.height, h * (portrait ? .40 : .50), screenMiddle.y / screenMiddle.w);
+    const opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
 
     const bottom = Math.min(98, h * .13);
     const top = Math.min(76, h * .105);
@@ -55,7 +65,7 @@
     const cx = w * (portrait ? .57 : .55), cy = h * (portrait ? .436 : .455);
     const bank = [[-.52, -.19], [.39, -.415], [.57, .237], [-.425, .349]]
       .map(([sx, sy]) => [cx + sx * span, cy + sy * span]);
-    poses = { opening, bank, landing };
+    poses = { opening, bank, landing, bankStrength: Math.min(1, (2.4 * h / w) ** 3) };
     previous = -1;
   }
 
@@ -67,20 +77,22 @@
     if (progress === previous) return;
     previous = progress;
     const t = ease(clamp(progress / .94));
-    const arc = Math.sin(Math.PI * t);
+    const arc = Math.sin(Math.PI * t) * poses.bankStrength;
     const { opening, bank, landing } = poses;
     const shot = opening.map((point, i) => point.map((from, axis) => {
       const to = landing[i][axis];
       return from + (to - from) * t + arc * (bank[i][axis] - (from + to) / 2);
     }));
-    world.style.transform = project(shot).multiply(deskFromGlass).toString();
+    const view = project(shot);
+    world.style.transform = view.multiply(deskFromGlass).toString();
+    const center = view.transformPoint({ x: 800, y: 500 });
+    stage.style.setProperty("--axis-x", center.x / center.w + "px");
+    stage.style.setProperty("--axis-y", center.y / center.w + "px");
     const reveal = ease(clamp((progress - .49) / .39));
     stage.style.setProperty("--glass-light", String(.74 + .26 * reveal));
-    stage.style.setProperty("--glass-opacity", String(.96 + .04 * reveal));
     stage.style.setProperty("--copy-opacity", String(1 - ease(clamp(progress / .25))));
-    stage.style.setProperty("--credit-opacity", String(ease(clamp((progress - .77) / .16))));
+    stage.style.setProperty("--opening-link-visibility", progress >= .24 ? "hidden" : "visible");
     stage.style.setProperty("--desk-opacity", String(1 - ease(clamp((progress - .67) / .22))));
-    stage.style.setProperty("--film-progress", String(progress));
   }
 
   function schedule() {
@@ -94,10 +106,10 @@
   }
 
   film.classList.add("camera-framed");
-  glass.style.transform = glassOnDesk.toString();
   refresh();
   window.addEventListener("scroll", schedule, { passive: true });
   if (window.ResizeObserver) new ResizeObserver(refresh).observe(stage);
   else window.addEventListener("resize", refresh);
   motion.addEventListener("change", refresh);
+  narrow.addEventListener("change", refresh);
 })();
