@@ -11,9 +11,9 @@
   const paperWindow = paper.querySelector(".lecture-window");
   const paperImage = paper.querySelector("img");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
-  const narrow = matchMedia("(max-aspect-ratio: 59/50)");
-  const desktopPhoto = { width: 1672, height: 941, screen: [[693.3, 360], [989.1, 387], [970.7, 575.4], [671.5, 547.8]] };
-  const mobilePhoto = { width: 852, height: 1846, screen: [[327.4, 640.9], [541.1, 658], [528.4, 799.1], [312.3, 782.1]] };
+  const narrow = matchMedia("(max-aspect-ratio: 9/10)");
+  const desktopPhoto = { width: 3372, height: 1641, screen: [[1608.9, 459.28], [2595.98, 444.26], [2600.57, 1051.74], [1611.74, 1058.21]] };
+  const mobilePhoto = { width: 1005, height: 2642, screen: [[108.17, 756.3], [894.75, 755.82], [894.95, 1266.72], [108.02, 1267.06]] };
   const clamp = value => Math.max(0, Math.min(1, value));
   const ease = value => value * value * (3 - 2 * value);
 
@@ -58,14 +58,20 @@
     world.style.setProperty("--photo-h", photo.height + "px");
 
     // Leave enough photographed wood around the frame for both the pointer and idle camera.
-    const scale = 1.20 * Math.max(w / photo.width, h / photo.height);
+    const roomX = Math.min(portrait ? 27 : 48, w * (portrait ? .031 : .042));
+    const roomY = Math.min(24, h * .034);
+    const cover = Math.max((w + 2 * roomX) / photo.width, (h + 2 * roomY) / photo.height);
+    // In the wide master the glass spans 988 pixels; the case and pen together stand 755 pixels tall.
+    const scale = portrait ? cover : Math.max(cover, Math.min(w * .56 / 988, (h - header.offsetHeight * .55) * .86 / 755));
     const screenMiddle = glassOnDesk.transformPoint({ x: 800, y: 500 });
-    const pan = (viewport, size, aim, subject) => {
-      const margin = Math.min(52, (size * scale - viewport) / 2);
+    const pan = (viewport, size, aim, subject, room) => {
+      const margin = Math.min(room, (size * scale - viewport) / 2);
       return Math.min(-margin, Math.max(viewport + margin - size * scale, aim - subject * scale));
     };
-    const x = pan(w, photo.width, w / 2, screenMiddle.x / screenMiddle.w);
-    const y = pan(h, photo.height, h * (portrait ? .40 : .50), screenMiddle.y / screenMiddle.w);
+    const horizontalAim = portrait ? w / 2 : Math.min(w * .655, w - scale * 530 - roomX);
+    const x = pan(w, photo.width, horizontalAim, screenMiddle.x / screenMiddle.w, roomX);
+    const y = pan(h, photo.height, portrait ? h * .40 : h * .47 + header.offsetHeight * .26,
+      screenMiddle.y / screenMiddle.w, roomY);
     const opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
 
     // Cross the bezel. On a phone the left margin of the actual lecture page guides the framing.
@@ -162,11 +168,20 @@
     // At rest, let the browser downsample text like a regular image without a 3D texture.
     const front = t === 1 && captureReady;
     glass.classList.toggle("is-front", front);
-    glass.style.transform = front ? "none" : view.multiply(appToGlass).toString();
+    // Prefilter small, tilted screens before projection so fine strokes survive minification.
+    const screenPixels = span * window.devicePixelRatio;
+    const small = captureReady && !front && screenPixels < glass.naturalWidth * .30;
+    const sampleWidth = small ? 2 ** Math.ceil(Math.log2(screenPixels)) : glass.naturalWidth;
+    glass.style.width = small ? sampleWidth + "px" : "";
+    glass.style.height = small ? sampleWidth * glass.naturalHeight / glass.naturalWidth + "px" : "";
+    const texture = view.multiply(appToGlass);
+    glass.style.transform = front ? "none" : (small ? texture.scale(glass.naturalWidth / sampleWidth) : texture).toString();
     stage.style.setProperty("--screen-mix", String(captureReady ? .8 + .2 * ease(clamp(progress / .24)) : 0));
     const crosshair = view.transformPoint({ x: 800, y: 500 });
     stage.style.setProperty("--axis-x", crosshair.x / crosshair.w + "px");
     stage.style.setProperty("--axis-y", crosshair.y / crosshair.w + "px");
+    stage.style.setProperty("--axis-hole-x", (span * .56 + 32) + "px");
+    stage.style.setProperty("--axis-hole-y", (span * .49 + 20) + "px");
     const reveal = ease(clamp((progress - .49) / .39));
     stage.style.setProperty("--glass-light", String(.88 + .12 * reveal));
     stage.style.setProperty("--copy-opacity", String(1 - ease(clamp(progress / .25))));
