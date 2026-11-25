@@ -153,6 +153,10 @@ img { display: block; max-width: 100%; height: auto; }
   :is([data-device="mac"], [data-device="windows"], [data-device="ipad"]) .camera-framed .has-capture .film-scenery { mask-image: linear-gradient(#000 96%, transparent); }
 }
 .film-photo { width: 100%; height: 100%; object-fit: cover; object-position: 50% 48%; }
+/* This extension is mirrored; its local left edge meets the monitor photograph. */
+[data-device="windows"] .wide-desk::before {
+  mask-image: linear-gradient(90deg, transparent, #000 min(78%, 18rem));
+}
 .film-world.wide-desk .film-photo {
   mask-image: linear-gradient(90deg, transparent, #000 19%);
 }
