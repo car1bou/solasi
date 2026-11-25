@@ -5,9 +5,26 @@
   const navLinks = header.querySelectorAll("a[href^='#']");
   const solutions = Array.from(document.querySelectorAll(".solution-list li"));
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const pointerLight = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
   let scheduled = false;
   let current = "";
   let highlighted;
+  let litField, lightFrame, pointerX;
+
+  document.addEventListener("pointermove", event => {
+    if (!pointerLight.matches || event.pointerType !== "mouse") return;
+    const field = event.target.closest?.(".field");
+    if (field !== litField) {
+      litField?.style.removeProperty("--light-follow");
+      litField = field;
+    }
+    pointerX = event.clientX;
+    if (!litField || lightFrame) return;
+    lightFrame = requestAnimationFrame(() => {
+      litField?.style.setProperty("--light-follow", ((pointerX - innerWidth / 2) * .016).toFixed(1) + "px");
+      lightFrame = 0;
+    });
+  }, { passive: true });
 
   if ("IntersectionObserver" in window) {
     const arrivals = new IntersectionObserver(entries => {
@@ -105,7 +122,7 @@
   if (!window.IntersectionObserver) return;
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const diagrams = document.querySelectorAll(".problem-visual, .course-map");
+  const diagrams = document.querySelectorAll(".problem-visual, .course-map, .field, .result-list");
   const visible = new Set();
   let frame = 0;
   function paint() {

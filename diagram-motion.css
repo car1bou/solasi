@@ -1,14 +1,59 @@
 @media (prefers-reduced-motion: no-preference) {
+  .diagram-motion .field {
+    position: relative;
+    isolation: isolate;
+    overflow: clip;
+    view-timeline: --chapter block;
+  }
+  .diagram-motion .field::before {
+    content: "";
+    position: sticky;
+    top: 0;
+    z-index: -1;
+    display: block;
+    width: 116%;
+    height: 100svh;
+    margin-inline: -8%;
+    margin-bottom: -100svh;
+    pointer-events: none;
+    /* The device and pencil are in the center. Only the rightmost wood grain is in frame. */
+    background-image: linear-gradient(108deg, #321f0c77 9%, #ffdd9e91 25%, #58433466 49%, #ffe7b85e 64%, #412b1d66 96%),
+      url("assets/study-field.jpg?v=2");
+    background-size: cover, max(385vw, 225svh) auto;
+    background-position: center, right var(--grain-band, 24%);
+    background-repeat: no-repeat;
+    background-blend-mode: soft-light;
+    mask-image: linear-gradient(107deg, #0008, #000 28%, #0009 56%, #000e 78%, #0006);
+    animation: desk-daylight auto linear both;
+    animation-timeline: --chapter;
+  }
+  .study-solutions { --grain-band: 42%; }
+  .study-process { --grain-band: 57%; --grain-strength: .4; }
+  .study-work { --grain-band: 73%; }
+  .study-install { --grain-band: 90%; }
+
+  .result-list { view-timeline: --records block; }
+  .diagram-motion .result-list li {
+    --start: .1;
+    --end: .57;
+    animation: align-record auto cubic-bezier(.2,.69,.24,1) both;
+    animation-timeline: --records;
+    animation-range: cover calc(var(--start) * 100%) cover calc(var(--end) * 100%);
+  }
+  .diagram-motion .result-list li:nth-child(2) { --start: .14; --end: .61; --lift: 1.8rem; }
+  .diagram-motion .result-list li:nth-child(3) { --start: .18; --end: .65; --lift: 2.25rem; }
+  .diagram-motion .result-list li:nth-child(4) { --start: .22; --end: .69; --lift: 2.7rem; }
+
   .problem-visual, .course-map { view-timeline: --diagram block; }
 
   .diagram-motion :is(.file-sketch, .week-sketch, .course-map) span {
     animation: open-record 1s cubic-bezier(.36, .08, .3, 1) both;
   }
-  .file-sketch span:first-child { --from-x: 4%; --from-y: 86%; --from-angle: 3deg; }
+  .file-sketch span:first-child { --from-x: 4%; --from-y: 86%; --from-angle: 3deg; --arc-x: -.75rem; --arc-y: -.55rem; }
   .file-sketch span:nth-child(2) { --from-x: -5%; --from-angle: -3deg; }
-  .file-sketch span:last-child { --from-y: -86%; --start: .14; }
-  .week-sketch span:first-child { --from-x: 41%; --from-y: 89%; }
-  .week-sketch span:last-child { --from-x: -41%; --from-y: -89%; --start: .18; }
+  .file-sketch span:last-child { --from-y: -86%; --start: .14; --arc-x: .5rem; --arc-y: .42rem; }
+  .week-sketch span:first-child { --from-x: 41%; --from-y: 89%; --arc-x: -.45rem; --arc-y: -.35rem; }
+  .week-sketch span:last-child { --from-x: -41%; --from-y: -89%; --start: .18; --arc-x: .45rem; --arc-y: .4rem; }
 
   .diagram-motion .sound-line {
     position: relative;
@@ -36,8 +81,8 @@
   .diagram-motion .course-map { container-type: inline-size; }
   .diagram-motion .course-map b { z-index: 1; }
   .course-map span:nth-child(2) { --from-y: calc(22.73cqw - 50%); }
-  .course-map span:nth-child(3) { --from-x: calc(46cqw - 50%); --start: .14; }
-  .course-map span:nth-child(4) { --from-x: calc(50% - 46cqw); --start: .18; }
+  .course-map span:nth-child(3) { --from-x: calc(46cqw - 50%); --start: .14; --arc-y: -.58rem; }
+  .course-map span:nth-child(4) { --from-x: calc(50% - 46cqw); --start: .18; --arc-y: .58rem; }
   .course-map span:nth-child(5) { --from-y: calc(50% - 22.73cqw); --start: .22; }
   .diagram-motion .course-map::before { animation: open-orbit 1s ease-out both; }
 
@@ -49,6 +94,8 @@
     animation-range: cover calc(var(--start, .10) * 100%) cover calc(var(--end, .62) * 100%);
     animation-duration: auto;
   }
+  .diagram-manual .field::before { --start: 0; --end: 1; }
+  .diagram-manual .field::before, .diagram-manual .result-list li,
   .diagram-manual :is(.file-sketch, .week-sketch, .course-map) span,
   .diagram-manual :is(.sound-line, .sound-sketch)::after,
   .diagram-manual .course-map::before {
@@ -60,8 +107,23 @@
 }
 
 @keyframes open-record {
-  from { transform: translate(var(--from-x, 0%), var(--from-y, 0%)) rotate(var(--from-angle, 0deg)); }
+  from { transform: translate(var(--from-x, 0%), var(--from-y, 0%)) rotate(var(--from-angle, 0deg)); translate: 0 0; }
+  56% { translate: var(--arc-x, 0rem) var(--arc-y, 0rem); }
+  to { translate: 0 0; }
 }
+@keyframes desk-daylight {
+  from { opacity: 0; transform: translateX(-5.5%); }
+  23%, 77% { opacity: var(--grain-strength, .34); }
+  to { opacity: 0; transform: translateX(5.5%); }
+}
+@keyframes align-record { from { transform: translateY(var(--lift, 1.35rem)); } to { transform: none; } }
 @keyframes read-wave { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes scan-wave { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes open-orbit { from { transform: scale(.16); opacity: .15; } }
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .diagram-motion .field::before {
+    translate: var(--light-follow, 0px) 0;
+    transition: translate .55s cubic-bezier(.2,.64,.24,1);
+  }
+}
