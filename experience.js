@@ -50,7 +50,8 @@
     if (!reduced.matches) {
       const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
       const progress = Math.max(0, Math.min(1, scrollY / travel));
-      desk.style.setProperty("--desk-drift", ((.5 - progress) * innerHeight * .28).toFixed(2) + "px");
+      desk.style.setProperty("--desk-drift", (-(.15 + progress * 1.65) * innerHeight).toFixed(2) + "px");
+      desk.style.setProperty("--desk-light", ((progress - .5) * innerWidth * .32).toFixed(2) + "px");
     }
     const limit = header.offsetHeight + 2;
     const next = sections.findIndex(section => section.getBoundingClientRect().top > limit);

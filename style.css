@@ -30,17 +30,25 @@
 html, body { overflow-x: clip; }
 body { isolation: isolate; }
 .desk-surface {
-  position: fixed; inset: -16vh 0; z-index: -1; pointer-events: none;
-  /* The left edge of the opening photograph contains only long, quiet lines of grain. */
-  background: linear-gradient(107deg, #38291db3, #4a352892 48%, #2b2119b8),
-    url("assets/study-field.jpg?v=2") left 65% / max(278vw, 248vh) auto no-repeat, #38291f;
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  background: #3a2b20;
+}
+.desk-surface img {
+  /* Only the left part of the photograph is uninterrupted walnut. */
+  position: absolute; inset: 0 auto auto 0; width: 100%; height: max(290vh, 158vw);
+  object-fit: cover; object-position: left center; opacity: .52;
+  transform: translateY(-68vh);
+}
+@media (max-aspect-ratio: 3/5) {
+  .desk-surface img { height: max(290vh, 625vw); }
 }
 .desk-surface::after {
-  content: ""; position: absolute; inset: 0 -3%;
-  background: radial-gradient(ellipse at 67% 29%, rgb(255 212 154 / 9%), transparent 70%);
+  content: ""; position: absolute; inset: 0 -19%;
+  background: linear-gradient(108deg, #241a1242 9%, transparent 28%, #f4d09d20 47%, transparent 66%, #241a1242 90%);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .desk-surface { transform: translateY(var(--desk-drift, 0px)); }
+  .desk-surface img { transform: translate3d(0, var(--desk-drift, -68vh), 0); }
+  .desk-surface::after { transform: translate3d(var(--desk-light, 0px), 0, 0); }
 }
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .desk-surface::after {

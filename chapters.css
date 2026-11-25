@@ -50,8 +50,38 @@
 .field-link:is(:hover, :active), .device-download:is(:hover, :active) { text-decoration: underline; }
 .field :is(a, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 .study-problems .field-frame { padding-bottom: clamp(5rem, 11vw, 11rem); }
-.problem-heading { display: grid; place-content: center; justify-items: center; gap: clamp(2rem, 4vw, 3.7rem); padding: 2rem .9rem; min-height: clamp(22rem, 53svh, 35rem); text-align: center; }
+.problem-heading {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); align-items: center;
+  gap: clamp(1.5rem,4vw,4rem); min-height: clamp(26rem,73svh,46rem);
+  padding: clamp(2rem,6vw,5rem) clamp(1.2rem,5vw,4.8rem);
+}
+.problem-lede { display: grid; justify-items: start; gap: clamp(1.2rem,3.4vw,3.2rem); }
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
+/* Exact PDF bounds in the released 2560 × 1600 notebook capture. */
+.lecture-page {
+  --pdf-x: 538; --pdf-y: 487; --pdf-w: 1340; --pdf-h: 1004;
+  position: relative; width: min(100%,29rem); justify-self: center;
+  aspect-ratio: var(--pdf-w) / var(--pdf-h);
+}
+.lecture-window { position: absolute; inset: 0; overflow: hidden; background: #fffefa; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
+.lecture-window img {
+  width: calc(2560 / var(--pdf-w) * 100%); max-width: none; height: auto;
+  transform: translate(calc(-100% * var(--pdf-x) / 2560), calc(-100% * var(--pdf-y) / 1600));
+}
+.lecture-page.in-flight .lecture-window {
+  position: fixed; inset: 0 auto auto 0; z-index: 3; transform-origin: 0 0;
+  width: var(--flight-width); aspect-ratio: 16 / 10; pointer-events: none; box-shadow: none;
+}
+.lecture-page.in-flight img { width: 100%; transform: none; }
+.film.passes-page .film-glass { visibility: hidden; }
+.problem-heading.page-missing { grid-template-columns: 1fr; }
+.problem-heading.page-missing .lecture-page { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .camera-ready + .study-problems .problem-lede {
+    transform: translateY(var(--lede-lift,0px)); opacity: var(--lede-ink,1);
+  }
+  .camera-ready + .study-problems .problem-lede .motion-title > span { animation: none; }
+}
 .problem-list, .solution-list, .result-list, .process-list { list-style: none; padding: 0; }
 .problem-list { display: grid; gap: 1.2rem; border-top: 1px solid var(--study-line); }
 .problem-list > li {
@@ -253,7 +283,12 @@
 .install-options li + li { margin-top: .4rem; }
 
 @media (max-width: 47.99rem) {
-  .problem-heading { min-height: 23rem; }
+  .problem-heading {
+    grid-template-columns: minmax(0,1fr); align-content: center; gap: 1.8rem;
+    min-height: clamp(25rem,77svh,44rem); padding: 2.5rem clamp(1.15rem,5.5vw,2.4rem);
+  }
+  .lecture-page { grid-row: 1; width: min(89%,22rem); }
+  .problem-lede { gap: .8rem; }
   .problem-list > li { grid-template-columns: 1fr; min-height: auto; }
   .problem-list li:nth-child(2) :is(.problem-copy,.problem-visual) { grid-column: auto; grid-row: auto; }
   .problem-copy h3 { margin-top: 1.25rem; }
@@ -296,6 +331,12 @@
   .is-scrubbed .step-film { width: min(100%, 76svh); justify-self: center; }
 }
 @media (max-height: 32.99rem) and (min-aspect-ratio: 1/1) {
+  .problem-heading {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-content: center;
+    min-height: 77svh; gap: 1rem; padding: 1.25rem 1rem;
+  }
+  .problem-heading h2 { font-size: clamp(1.45rem,4.5vw,2.1rem); }
+  .lecture-page { grid-area: 1 / 2; width: min(100%,16rem); }
   .process-list li { grid-template-columns: minmax(0,.8fr) minmax(0,1.3fr); gap: .8rem; }
   .step-copy { gap: .3rem; }
   .step-number { font-size: 2.1rem; }
