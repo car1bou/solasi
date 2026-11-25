@@ -15,14 +15,20 @@
   --study-head: clamp(2.45rem, 4.1vw, 4.15rem);
 }
 .field { color: var(--study-text); }
-/* Each exposure scrolls with its chapter; the moving grain is shared beneath them. */
-.study-problems { background-color: rgb(21 15 13 / 54%); }
-.study-solutions { background-color: rgb(180 110 64 / 58%); }
-.study-results { background-color: rgb(18 13 11 / 63%); }
-.study-walkthrough { background-color: rgb(144 88 49 / 51%); }
-.study-work { background-color: rgb(29 20 17 / 58%); }
-.study-install { background-color: rgb(192 115 62 / 61%); }
-.footer { background-color: rgb(16 12 10 / 70%); }
+/* Both sides of a chapter boundary meet at the same exposure over the shared wood. */
+.study-problems { --wash: rgb(25 18 15 / 46%); --wash-in: transparent; }
+.study-solutions { --wash: rgb(161 99 58 / 49%); }
+.study-results { --wash: rgb(26 19 16 / 53%); }
+.study-walkthrough { --wash: rgb(138 85 49 / 46%); }
+.study-work { --wash: rgb(32 23 18 / 50%); }
+.study-install { --wash: rgb(172 105 59 / 53%); }
+.footer { --wash: rgb(21 16 13 / 62%); --wash-out: var(--wash); }
+:is(.study-problems, .study-solutions, .study-results, .study-walkthrough, .study-work, .study-install, .footer) {
+  --seam: rgb(87 55 35 / 48%);
+  --fade: min(32%, clamp(5rem, 19svh, 12rem));
+  background-image: linear-gradient(to bottom, var(--wash-in, var(--seam)),
+    var(--wash) var(--fade), var(--wash) calc(100% - var(--fade)), var(--wash-out, var(--seam)));
+}
 .study-solutions, .study-walkthrough, .study-install {
   --study-muted: #fff0de;
   --study-oak: #ffe3b9;
@@ -70,20 +76,21 @@
 }
 .problem-lede { display: grid; justify-items: start; gap: clamp(1.2rem,3.4vw,3.2rem); }
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
-/* Exact PDF bounds in the released 2560 × 1600 notebook capture. */
+/* Camera registration uses the same crop for the in-flight and settled image. */
 .lecture-page {
+  --app-w: 2560; --app-h: 1600;
   --pdf-x: 538; --pdf-y: 439; --pdf-w: 1340; --pdf-h: 1004;
   position: relative; width: min(100%,29rem); justify-self: center;
   aspect-ratio: var(--pdf-w) / var(--pdf-h);
 }
 .lecture-window { position: absolute; inset: 0; overflow: hidden; background: #23251f; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
 .lecture-window img {
-  width: calc(2560 / var(--pdf-w) * 100%); max-width: none; height: auto;
-  transform: translate(calc(-100% * var(--pdf-x) / 2560), calc(-100% * var(--pdf-y) / 1600));
+  width: calc(var(--app-w) / var(--pdf-w) * 100%); max-width: none; height: auto;
+  transform: translate(calc(-100% * var(--pdf-x) / var(--app-w)), calc(-100% * var(--pdf-y) / var(--app-h)));
 }
 .lecture-page.in-flight .lecture-window {
   position: fixed; inset: 0 auto auto 0; z-index: 3; transform-origin: 0 0;
-  width: var(--flight-width); aspect-ratio: 16 / 10; pointer-events: none; box-shadow: none;
+  width: var(--flight-width); aspect-ratio: var(--app-w) / var(--app-h); pointer-events: none; box-shadow: none;
 }
 .lecture-page.in-flight img { width: 100%; transform: none; }
 .film.passes-page .film-glass { visibility: hidden; }
@@ -174,8 +181,16 @@
   .solution-list .is-current h3 { color: var(--study-oak); transform: translateX(.28em); }
 }
 .study-results .field-frame { padding-top: clamp(4rem, 8vw, 8rem); }
-.result-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
-.result-head h2 { align-self: start; }
+.result-head {
+  display: grid; grid-template-columns: minmax(0,1fr) minmax(12rem,.72fr);
+  align-items: center; gap: 1rem clamp(1.5rem,4vw,4rem);
+}
+.result-example {
+  width: min(100%,25rem); height: auto; justify-self: end; border-radius: .35rem;
+  box-shadow: 0 .65rem 1.6rem -.8rem #1e150eab;
+}
+.result-story { display: grid; justify-items: start; gap: clamp(1rem, 2vw, 1.6rem); }
+.result-story p { max-width: 35rem; color: var(--study-muted); font-size: clamp(1rem, 1.24vw, 1.13rem); text-wrap: pretty; }
 .result-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(.75rem, 1.5vw, 1.5rem); padding: var(--study-gap); border-bottom: 1px solid var(--study-line); }
 .result-list li { display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; min-height: clamp(11rem, 16vw, 16rem); padding: clamp(.8rem, 1.45vw, 1.4rem); background: var(--study-fine); }
 .result-list h3 { font-size: clamp(1.14rem, 1.5vw, 1.6rem); }
@@ -315,7 +330,8 @@
   .solution-list li > div { gap: .85rem; padding: 1.25rem 1rem; }
   .solution-code { display: none; }
   .result-list { grid-template-columns: repeat(2,minmax(0,1fr)); padding: .7rem; gap: .6rem; }
-  .result-head { align-items: flex-start; flex-direction: column; }
+  .result-head { grid-template-columns: 1fr; }
+  .result-example { width: min(82%,19rem); }
   .result-list li { min-height: 10rem; }
   .process-run.is-scrubbed { height: 350svh; }
   .work-grid, .install-options { grid-template-columns: 1fr; }

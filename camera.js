@@ -1,10 +1,11 @@
 (() => {
   const film = document.querySelector(".film");
-  if (!film || !window.DOMMatrix) return;
+  if (!film) return;
 
   const stage = film.querySelector(".film-stage");
   const header = document.querySelector(".masthead");
   const world = film.querySelector(".film-world");
+  const wood = world.querySelector(".wood-field");
   const glass = film.querySelector(".film-glass");
   const intro = document.querySelector(".problem-heading");
   const paper = intro.querySelector(".lecture-page");
@@ -12,8 +13,39 @@
   const paperImage = paper.querySelector("img");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   const narrow = matchMedia("(max-aspect-ratio: 9/10)");
-  const desktopPhoto = { width: 3372, height: 1641, screen: [[1608.9, 459.28], [2595.98, 444.26], [2600.57, 1051.74], [1611.74, 1058.21]] };
-  const mobilePhoto = { width: 1005, height: 2642, screen: [[108.17, 756.3], [894.75, 755.82], [894.95, 1266.72], [108.02, 1267.06]] };
+  const mac = document.documentElement.dataset.device === "mac";
+  // The Mac display starts just below its photographed camera notch.
+  const desktopPhoto = mac
+    ? {file: "macbook-studio.webp", width: 1254, height: 1254, screen: [[484.5,330],[1105,330],[1103.3,701.5],[485.8,702.6]], body: [431,305,1169,929]}
+    : {file: "tablet-studio-wide.webp", width: 3372, height: 1641, screen: [[1608.9,459.28],[2595.98,444.26],[2600.57,1051.74],[1611.74,1058.21]]};
+  const mobilePhoto = mac
+    ? {file: "macbook-studio-tall.webp", width: 1024, height: 1536, screen: [[185.5,261],[839.4,261],[837.4,648.5],[186.2,648.5]], body: [128,234,907,887]}
+    : {file: "tablet-studio-tall.webp", width: 1005, height: 2642, screen: [[108.17,756.3],[894.75,755.82],[894.95,1266.72],[108.02,1267.06]]};
+  const plate = world.querySelector(".film-photo");
+  const portraitSource = document.createElement("source");
+  portraitSource.media = narrow.media;
+  portraitSource.width = mobilePhoto.width;
+  portraitSource.height = mobilePhoto.height;
+  portraitSource.srcset = "assets/" + mobilePhoto.file;
+  plate.before(portraitSource);
+  plate.width = desktopPhoto.width;
+  plate.height = desktopPhoto.height;
+  plate.src = "assets/" + desktopPhoto.file;
+  const capture = mac ? "assets/mac-transcript.png?v=dark1" : "assets/tablet-notebook.png?v=dark1";
+  for (const image of [glass, paperImage]) {
+    image.width = mac ? 1160 : 2560;
+    image.height = mac ? 792 : 1600;
+    image.src = capture;
+  }
+  if (mac) {
+    paperImage.alt = "Mac에서 기억과 학습 강의의 대본을 열어 작업 기억에 관한 문장을 확인하는 화면";
+    for (const [key, value] of Object.entries({x: 228, y: 53, w: 902, h: 441})) {
+      paper.style.setProperty("--pdf-" + key, value);
+    }
+    paper.style.setProperty("--app-w", glass.width);
+    paper.style.setProperty("--app-h", glass.height);
+  }
+  if (!window.DOMMatrix) return;
   const clamp = value => Math.max(0, Math.min(1, value));
   const ease = value => value * value * (3 - 2 * value);
 
@@ -48,9 +80,12 @@
     const appWidth = glass.naturalWidth || Number(glass.getAttribute("width"));
     const appHeight = glass.naturalHeight || Number(glass.getAttribute("height"));
     if (!(appWidth > 0 && appHeight > 0)) return;
-    const fit = Math.min(1600 / appWidth, 1000 / appHeight);
+    // Fill the Mac glass with the window's top 16:10 crop. The lower margin is outside the display.
+    const fit = mac ? 1600 / appWidth : Math.min(1600 / appWidth, 1000 / appHeight);
     const insetX = (1600 - appWidth * fit) / 2;
-    const insetY = (1000 - appHeight * fit) / 2;
+    const insetY = mac ? 0 : (1000 - appHeight * fit) / 2;
+    const shownHeight = Math.min(appHeight, 1000 / fit);
+    if (mac) glass.style.clipPath = `inset(0 0 ${100 * (1 - shownHeight / appHeight)}% 0)`;
     appToGlass = new DOMMatrix().translate(insetX, insetY).scale(fit);
     glass.style.setProperty("--capture-w", appWidth + "px");
     glass.style.setProperty("--capture-h", appHeight + "px");
@@ -62,27 +97,50 @@
     const roomY = Math.min(24, h * .034);
     const cover = Math.max((w + 2 * roomX) / photo.width, (h + 2 * roomY) / photo.height);
     // In the wide master the glass spans 988 pixels; the case and pen together stand 755 pixels tall.
-    const scale = portrait ? cover : Math.max(cover, Math.min(w * .56 / 988, (h - header.offsetHeight * .55) * .86 / 755));
+    let scale = portrait ? cover : Math.max(cover, Math.min(w * .56 / 988, (h - header.offsetHeight * .55) * .86 / 755));
     const screenMiddle = glassOnDesk.transformPoint({ x: 800, y: 500 });
+    let subjectX = screenMiddle.x / screenMiddle.w, subjectY = screenMiddle.y / screenMiddle.w;
+    if (mac) {
+      const [left, top, right, bottom] = photo.body;
+      subjectX = (left + right) / 2; subjectY = (top + bottom) / 2;
+      // Keep the keyboard in shot, even in a panoramic window or a narrow Split View.
+      const limit = Math.min(w * (portrait ? .94 : .65) / (right - left),
+        (h - header.offsetHeight * .55) * (portrait ? .50 : .89) / (bottom - top));
+      scale = Math.min(Math.max(cover, w * (portrait ? .91 : .57) / (right - left)), limit);
+    }
     const pan = (viewport, size, aim, subject, room) => {
+      if (mac && size * scale < viewport + 2 * room) return aim - subject * scale;
       const margin = Math.min(room, (size * scale - viewport) / 2);
       return Math.min(-margin, Math.max(viewport + margin - size * scale, aim - subject * scale));
     };
-    const horizontalAim = portrait ? w / 2 : Math.min(w * .655, w - scale * 530 - roomX);
-    const x = pan(w, photo.width, horizontalAim, screenMiddle.x / screenMiddle.w, roomX);
-    const y = pan(h, photo.height, portrait ? h * .40 : h * .47 + header.offsetHeight * .26,
-      screenMiddle.y / screenMiddle.w, roomY);
+    const horizontalAim = portrait ? w / 2 : mac ? w * .68 : Math.min(w * .655, w - scale * 530 - roomX);
+    const verticalAim = mac ? (portrait ? h*.35 : h*.50 + header.offsetHeight*.25) : (portrait ? h*.40 : h*.47 + header.offsetHeight*.26);
+    const panorama = mac && photo.width * scale < w + 2 * roomX;
+    const x = panorama ? w + roomX - photo.width * scale : pan(w, photo.width, horizontalAim, subjectX, roomX);
+    const y = pan(h, photo.height, verticalAim, subjectY, roomY);
+    if (mac) {
+      const silhouette = `url("assets/${portrait ? "macbook-tall-mask.svg" : "macbook-mask.svg"}")`;
+      wood.style.maskImage = panorama ? silhouette + ",linear-gradient(90deg,transparent,#000 10%)" : silhouette;
+      wood.style.maskComposite = "intersect";
+      // Bookmatch the empty left edge of the same photograph for extra-wide windows.
+      const wing = panorama ? Math.max(0, (x + roomX) / scale) : 0;
+      world.style.setProperty("--wood-wing", wing + "px");
+      world.style.setProperty("--wing-photo", `url("assets/${photo.file}")`);
+      world.style.setProperty("--wing-size", Math.max(photo.width, wing / .30) + "px");
+      world.style.maskImage = y > -roomY || y + photo.height * scale < h + roomY
+        ? "linear-gradient(transparent,#000 9%,#000 93%,transparent)" : "none";
+    }
     const opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
     // Anchor the moving light to this crop even when the page opens mid-zoom.
     world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
       w / (photo.width * scale), h / (photo.height * scale)].join(" ");
 
     // Cross the bezel. On a phone the left margin of the actual lecture page guides the framing.
-    const endScale = Math.max((w + 4) / appWidth, (h + 4) / appHeight);
+    const endScale = Math.max((w + 4) / appWidth, (h + 4) / shownHeight);
     const fullW = appWidth * endScale, fullH = appHeight * endScale;
     const centered = (w - fullW) / 2;
     const appLeft = Math.min(-2, Math.max(centered, w * .045 - pdf[0] * endScale));
-    const appTop = (h - fullH) / 2;
+    const appTop = (h - shownHeight * endScale) / 2;
     glass.style.setProperty("--front-x", appLeft + "px");
     glass.style.setProperty("--front-y", appTop + "px");
     glass.style.setProperty("--front-w", appWidth * endScale + "px");
@@ -127,7 +185,7 @@
       return;
     }
 
-    // The same notebook pixels fill the viewport, then only its PDF travels into the heading.
+    // Extract the same pixels from the full-screen capture and carry them into the heading.
     const from = poses.front;
     const [x, y, w, h] = pdf;
     const fx = from.w * x / glass.naturalWidth, fy = from.h * y / glass.naturalHeight;
@@ -183,8 +241,8 @@
     const crosshair = view.transformPoint({ x: 800, y: 500 });
     stage.style.setProperty("--axis-x", crosshair.x / crosshair.w + "px");
     stage.style.setProperty("--axis-y", crosshair.y / crosshair.w + "px");
-    stage.style.setProperty("--axis-hole-x", (span * .56 + 32) + "px");
-    stage.style.setProperty("--axis-hole-y", (span * .49 + 20) + "px");
+    stage.style.setProperty("--axis-hole-x", (span * (mac ? .70 : .56) + 32) + "px");
+    stage.style.setProperty("--axis-hole-y", (span * (mac ? .80 : .49) + 20) + "px");
     const reveal = ease(clamp((progress - .49) / .39));
     stage.style.setProperty("--glass-light", String(.88 + .12 * reveal));
     stage.style.setProperty("--copy-opacity", String(1 - ease(clamp(progress / .25))));

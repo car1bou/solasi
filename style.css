@@ -144,6 +144,14 @@ img { display: block; max-width: 100%; height: auto; }
 .film-rig { z-index: -3; isolation: isolate; }
 .film-world { z-index: -3; }
 .film-world picture { display: contents; }
+[data-device="mac"] .film-world::before {
+  content: ""; position: absolute; inset: 0 100% 0 auto; width: var(--wood-wing, 0px);
+  background: var(--wing-photo, none) left center / var(--wing-size, auto) 100% no-repeat;
+  transform: scaleX(-1);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-device="mac"] .camera-framed .has-capture .film-scenery { mask-image: linear-gradient(#000 96%, transparent); }
+}
 .film-photo { width: 100%; height: 100%; object-fit: cover; object-position: 50% 48%; }
 .film-glass { display: none; }
 .field-overlay {
@@ -163,9 +171,24 @@ img { display: block; max-width: 100%; height: auto; }
 .film-copy { top: 45%; left: var(--edge); max-width: 39%; pointer-events: none; }
 .film-copy p { margin-bottom: clamp(1.15rem, 3.3svh, 2.4rem); font-size: clamp(.9rem, 1.2vw, 1.12rem); color: #f3dfc4; }
 .film-copy h1 { font-size: clamp(2.4rem, 4vw, 4.15rem); font-weight: 530; line-height: 1.1; letter-spacing: -.065em; }
+.hero-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1rem;
+  margin-top: clamp(.85rem, 2.8vh, 1.65rem);
+  visibility: var(--opening-link-visibility, visible);
+}
+.hero-actions a { pointer-events: auto; min-height: 2.75rem; align-items: center; }
+.hero-install {
+  display: inline-flex; gap: 1.05rem; padding: .65rem 1rem; border-radius: .28rem;
+  background: #f4dfbc; color: #34251b; text-decoration: none; font-size: .94rem; font-weight: 700;
+}
+.hero-install:hover { background: #fff0d6; }
+.hero-help:not([hidden]) { display: inline-flex; color: var(--cream); font-size: .86rem; }
 .film-description { left: var(--edge); bottom: 1.35rem; max-width: 24rem; color: #ffebcf; font-size: clamp(.87rem, 1.15vw, 1.05rem); line-height: 1.45; }
 .film-source { visibility: var(--opening-link-visibility, visible); right: var(--edge); bottom: .9rem; font-size: .88rem; }
 .film-source:focus-visible { opacity: 1; background: var(--night); }
+@media (max-height: 36rem) and (min-aspect-ratio: 3/2) {
+  [data-device="mac"] .film-source { bottom: 0; }
+}
 .film.camera-ready { height: 249svh; }
 .camera-ready .film-stage { position: sticky; top: 0; }
 @media (prefers-reduced-motion: no-preference) {
@@ -212,7 +235,7 @@ html:has(#image-viewer[open]) { overflow-y: hidden; }
   .film-copy h1 { font-size: clamp(1.75rem, 3.3vw, 3.2rem); }
 }
 @media (max-aspect-ratio: 9/10) {
-  .film-copy { top: auto; bottom: 16%; max-width: calc(100% - 2 * var(--edge)); }
+  .film-copy { top: auto; bottom: max(12%, 5.2rem); max-width: calc(100% - 2 * var(--edge)); }
   .film-copy h1 { font-size: clamp(2.12rem, 7vw, 3.5rem); }
   .film-copy p { margin-bottom: .7rem; }
   .film-description { max-width: 70%; bottom: 1.15rem; font-size: .85rem; }

@@ -135,6 +135,20 @@
     screen.open = true;
     screen.scrollIntoView({ behavior: "instant", block: "start" });
   }
+  if (document.documentElement.dataset.device === "mac") {
+    document.querySelector(".film-copy p").textContent = "Apple Silicon Mac · macOS 27 이상";
+    const lines = document.querySelectorAll("#heading > span");
+    lines[0].textContent = "대본에서 한 문장을";
+    lines[1].textContent = "다시 듣다.";
+    document.querySelector(".film-description").textContent = "강의 녹음을 대본으로 옮기고, 문장을 골라 그 순간의 목소리를 다시 들으세요.";
+    const example = document.querySelector(".result-example");
+    example.src = "assets/mac-transcript.png?v=dark1";
+    example.width = 1160;
+    example.height = 792;
+    example.alt = "Mac에서 기억과 학습 강의의 대본과 선택 구간 듣기 버튼을 함께 보여주는 화면";
+    document.querySelector(".result-story p").textContent = "‘기억과 학습’ 수업에서 작업 기억을 어떻게 설명했는지 다시 들어 보세요. 강의 기록의 대본에서 해당 문장을 고르고 ‘선택 구간 듣기’를 누르면 그때의 설명을 원음으로 확인할 수 있습니다.";
+    document.getElementById("transcript").open = true;
+  }
   openLinkedScreen(true);
   addEventListener("hashchange", () => openLinkedScreen(false));
 

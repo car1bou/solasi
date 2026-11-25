@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1536">
+  <filter id="edge"><feGaussianBlur stdDeviation="2.4"/></filter>
+  <path fill="white" fill-rule="evenodd" filter="url(#edge)" d="
+    M-20-20H1044V1556H-20Z
+    M193 229L824 228Q856 228 856 257L855 667Q859 680 862 693L911 842Q917 887 881 890H154Q121 890 123 847L165 689Q167 678 169 669L168 257Q168 232 193 229Z"/>
+</svg>

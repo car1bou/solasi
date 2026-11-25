@@ -28,7 +28,7 @@
   });
   const routes = [
     [".week-sketch span:last-child", find(".course-map b")],
-    [".solution-list li:last-child .solution-code", dock(".result-head", "assets/process-ink.webp?v=dark1", "screen")],
+    [".solution-list li:last-child .solution-code", find(".result-example")],
     [".process-list li:last-child .step-screen", dock(".work-heading", "assets/mac-transcript.png?v=dark1", "screen")],
     [".chapter-origin-mark", dock(".install-heading", "assets/solasi-icon.png", "mark")],
   ];
