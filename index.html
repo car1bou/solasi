@@ -3,120 +3,149 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Solasi로 PDF 필기와 강의 녹음을 과목별로 모으세요. 실제 앱 화면과 Android 태블릿, Mac 설치 안내를 확인할 수 있습니다.">
-  <meta name="theme-color" content="#f5e8da">
+  <meta name="description" content="수업의 다음 장, Solasi. 태블릿의 PDF 필기에서 Mac의 강의 녹음과 대본까지 실제 앱 화면으로 만나보세요.">
+  <meta name="theme-color" content="#211a17">
   <link rel="canonical" href="https://car1bou.github.io/solasi/">
   <link rel="icon" href="assets/solasi-icon.png" type="image/png">
-  <link rel="preload" href="assets/suit-solasi.woff2?v=4" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="preload" href="assets/suit-solasi.woff2?v=5" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="chapters.css?v=1">
+  <script src="camera.js?v=1" defer></script>
+  <script src="experience.js?v=3" defer></script>
   <script src="release.js?v=4" defer></script>
-  <script src="experience.js?v=2" defer></script>
   <title>Solasi | 수업의 다음 장</title>
 </head>
 <body>
-  <a class="skip-link" href="#main">본문으로 이동</a>
+  <a class="skip-link" href="#preview">기능 소개로 건너뛰기</a>
   <header class="masthead">
     <div class="masthead-inner wrap">
-      <a href="./" class="brand"><img src="assets/solasi-icon.png" alt="" width="34" height="34">Solasi</a>
+      <a href="#home" class="brand" aria-label="Solasi 첫 장면">Solasi</a>
       <nav aria-label="주 메뉴">
-        <a href="#preview" class="preview-link">앱 화면</a>
-        <a href="#install" class="install-link">설치하기</a>
+        <a href="#preview">기능 소개</a>
+        <a href="#process">사용 순서</a>
+        <a href="#notes" class="screens-link">앱 화면</a>
+        <a href="#install" class="install-link">설치하기 <span aria-hidden="true">↓</span></a>
       </nav>
     </div>
   </header>
 
-  <main id="main" tabindex="-1">
-    <section class="hero" id="home" aria-labelledby="heading">
-      <picture class="hero-art" aria-hidden="true">
-        <source media="(max-width: 62rem), (max-aspect-ratio: 7/5)" srcset="assets/tablet-study-mobile.jpg">
-        <img src="assets/tablet-study.jpg" alt="" width="1817" height="866" fetchpriority="high">
-      </picture>
-      <div class="hero-content wrap">
-        <h1 id="heading">수업의<br>다음 장.</h1>
-        <p>PDF에 남긴 필기와 강의 녹음을<br class="desktop-break"> 한 과목에서 다시 펼쳐보세요.</p>
-        <a class="hero-cta" href="#preview"><span>앱 둘러보기</span><span class="down-arrow" aria-hidden="true"></span></a>
+  <main id="main">
+    <section class="film" id="home" aria-labelledby="heading">
+      <div class="film-stage">
+        <div class="film-world" aria-hidden="true">
+          <img class="film-photo" src="assets/tablet-study.jpg?v=2" width="1817" height="866" alt="" fetchpriority="high">
+          <img class="film-glass" src="assets/tablet-notes.png" width="1600" height="1000" alt="" decoding="async">
+        </div>
+        <div class="film-shade" aria-hidden="true"></div>
+        <div class="film-copy wrap">
+          <h1 id="heading">수업의<br><span>다음 장.</span></h1>
+          <p>PDF에 남긴 필기부터<br>다시 듣고 싶은 강의의 한 문장까지.</p>
+        </div>
+        <p class="film-credit wrap"><span>Android 태블릿</span>PDF 필기 화면</p>
+        <div class="film-deck">
+          <div class="film-deck-inner wrap">
+            <div class="film-controls" role="group" aria-label="인트로 재생 조절">
+              <button class="film-play" type="button"><span class="play-icon" aria-hidden="true"></span><span class="play-label">인트로 재생</span></button>
+              <input type="range" class="film-seek" min="0" max="1000" value="0" aria-label="인트로 재생 위치" aria-valuetext="0초, 전체 8초">
+              <span class="film-time" aria-hidden="true"><span>0:00</span> / 0:08</span>
+              <span class="film-hint">스크롤로 감상</span>
+            </div>
+            <a class="film-continue" href="#preview">기능 소개로 <span aria-hidden="true">↓</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="cut-opening" id="preview" data-scene-surface="dark" aria-labelledby="preview-heading">
+      <div class="wrap cut-intro">
+        <h2 id="preview-heading">이 밑줄,<br>왜 그었더라?</h2>
+        <div class="cut-index">
+          <p>자료에는 밑줄이 남고, 설명은 녹음에 남습니다. Solasi에서는 그날의 자료와 기록을 한 과목에서 다시 펼칠 수 있어요.</p>
+          <nav aria-label="기능별 실제 앱 화면">
+            <a href="#notes"><span>PDF 필기</span><small>Android 태블릿</small></a>
+            <a href="#transcript"><span>녹음과 대본</span><small>Mac</small></a>
+          </nav>
+        </div>
       </div>
     </section>
 
-    <section class="preview" id="preview" aria-labelledby="preview-heading">
-      <div class="story-head wrap">
-        <h2 id="preview-heading">필기부터 원음까지.</h2>
-        <nav class="chapter-links" aria-label="앱 화면 장면">
-          <a href="#notes">PDF 필기</a>
-          <a href="#transcript">녹음과 대본</a>
-        </nav>
+    <section class="cut-process" id="process" data-scene-surface="paper" aria-labelledby="process-heading">
+      <div class="wrap cut-process-layout">
+        <h2 id="process-heading">수업 전부터<br>복습까지.</h2>
+        <ol class="lesson-order">
+          <li>
+            <span>수업 전</span>
+            <div><h3>오늘 볼 자료를 펼쳐요.</h3><p>과목에 강의 PDF를 추가하고 수업을 시작할 쪽을 엽니다.</p></div>
+          </li>
+          <li>
+            <span>수업 중</span>
+            <div><h3>쓰고, 들리는 대로 담아요.</h3><p>슬라이드에 필기하고 강의를 녹음합니다. 짧은 생각은 페이지 메모에 남겨요.</p></div>
+          </li>
+          <li>
+            <span>수업 후</span>
+            <div><h3>궁금한 대목만 다시 들어요.</h3><p>Mac에서 녹음을 대본으로 만든 뒤, 다시 듣고 싶은 문장의 원음을 재생합니다.</p></div>
+          </li>
+        </ol>
       </div>
-
-      <article class="chapter notes-scene" id="notes" aria-labelledby="notes-heading">
-        <div class="wrap chapter-inner">
-          <header class="chapter-title">
-            <h3 id="notes-heading">자료 위에 바로 쓰기.</h3>
-            <p>Android 태블릿에서 PDF를 펼치고, 펜으로 표시하거나 페이지마다 메모를 남겨요.</p>
-          </header>
-          <figure class="chapter-figure">
-            <div class="chapter-media">
-              <img src="assets/tablet-notes.png" alt="Android 태블릿의 Solasi. 작업 기억 강의 자료에 밑줄과 형광펜 표시가 있습니다." width="1600" height="1000" loading="lazy" decoding="async">
-            </div>
-            <figcaption><span>Android 태블릿의 필기만 모드</span><a href="assets/tablet-notes.png" class="enlarge">화면 크게 보기</a></figcaption>
-          </figure>
-        </div>
-      </article>
-
-      <article class="chapter transcript-scene" id="transcript" aria-labelledby="transcript-heading">
-        <div class="wrap chapter-inner">
-          <header class="chapter-title">
-            <h3 id="transcript-heading">들은 순간으로 돌아가기.</h3>
-            <p>Mac에서 녹음과 대본을 함께 보고, 궁금한 문장의 원음을 다시 들어요.</p>
-          </header>
-          <figure class="chapter-figure">
-            <div class="chapter-media">
-              <img src="assets/mac-transcript.png" alt="Mac의 Solasi. 강의 녹음 아래에 작업 기억을 설명하는 전사 대본이 표시됩니다." width="1160" height="792" loading="lazy" decoding="async">
-            </div>
-            <figcaption><span>Mac의 강의 녹음과 대본</span><a href="assets/mac-transcript.png" class="enlarge">화면 크게 보기</a></figcaption>
-          </figure>
-        </div>
-      </article>
     </section>
 
-    <section id="install" class="install" aria-labelledby="install-heading">
-      <div class="wrap install-inner">
-        <h2 id="install-heading">Solasi 설치하기</h2>
-        <article class="install-entry" id="android">
-          <div class="entry-heading">
-            <div>
-              <h3>Android 태블릿</h3>
-              <p id="android-compatibility">Android 9 이상, ARM64 <span id="release-version" data-code="3">v3 개발 프리뷰</span></p>
-            </div>
-            <a class="download" id="download-apk" href="https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk" aria-describedby="android-compatibility">Android APK 다운로드</a>
-          </div>
-          <details>
-            <summary>Android 설치 방법</summary>
-            <ol>
-              <li>태블릿에서 APK를 다운로드하고 파일을 엽니다.</li>
-              <li>Android가 요청하면 해당 설치 출처를 허용하고 설치를 확인합니다.</li>
-              <li>Solasi가 새 APK를 받으면 <strong>설정 → Android 업데이트 → 업데이트 설치</strong>에서 적용합니다.</li>
-            </ol>
-            <a class="support-link" href="https://github.com/car1bou/solasi/releases/tag/android-updates">릴리스와 체크섬</a>
-          </details>
-        </article>
+    <section class="cut-shot cut-notes" id="notes" data-scene-surface="paper" aria-labelledby="notes-heading">
+      <div class="wrap cut-shot-layout">
+        <div class="cut-shot-text">
+          <h2 id="notes-heading">자료 위에 <br>바로 쓰기.</h2>
+          <p>태블릿에서 <strong>필기만</strong>을 누르면 PDF와 펜 도구가 넓게 펼쳐져요. 중요한 용어에는 밑줄을, 다시 볼 부분에는 형광펜을 남겨보세요.</p>
+        </div>
+        <figure class="product-still">
+          <div class="screen-window"><img src="assets/tablet-notes.png" width="1600" height="1000" loading="lazy" decoding="async" alt="작업 기억 강의 PDF에 밑줄과 형광펜 표시를 남긴 Android 태블릿 필기 화면"></div>
+          <figcaption><span>Android 태블릿의 필기만 모드</span><a class="enlarge" href="assets/tablet-notes.png">화면 크게 보기</a></figcaption>
+        </figure>
+      </div>
+    </section>
 
-        <article class="install-entry" id="mac">
-          <div class="entry-heading">
-            <div>
-              <h3>Mac</h3>
-              <p id="mac-compatibility">Apple Silicon, macOS 27 이상 <span>개발 프리뷰</span></p>
-            </div>
-            <a class="download" id="mac-build" href="https://github.com/car1bou/solasi/blob/main/docs/development.md#mac-앱-빌드" aria-describedby="mac-compatibility">Mac 소스 빌드 안내</a>
-          </div>
-          <details>
-            <summary>Mac 설치 방법</summary>
-            <ol>
-              <li>Apple Silicon Mac에 Python 3.12, Node/npm, Apple Command Line Tools를 준비합니다.</li>
-              <li>Mac 소스 빌드 안내에 따라 앱과 실행 엔진을 빌드합니다.</li>
-              <li><strong>~/Applications/Solasi.app</strong>을 열고 설정에서 사용할 모델을 준비합니다.</li>
-            </ol>
-          </details>
-        </article>
+    <section class="cut-shot cut-transcript" id="transcript" data-scene-surface="dark" aria-labelledby="transcript-heading">
+      <div class="wrap cut-shot-layout">
+        <div class="cut-shot-text">
+          <h2 id="transcript-heading">문장에서 <br>목소리로.</h2>
+          <p>Mac의 대본에서 문장을 고르고 <strong>선택 구간 듣기</strong>를 누르세요. 그 부분의 원음을 들으며 잘못 옮겨진 단어를 고칠 수 있어요.</p>
+        </div>
+        <figure class="product-still">
+          <div class="screen-window"><img src="assets/mac-transcript.png" width="1160" height="792" loading="lazy" decoding="async" alt="Mac에서 열린 기억과 학습 수업의 대본 탭. 녹음 조작부 아래에 전사한 문장이 보입니다."></div>
+          <figcaption><span>Mac의 강의 녹음과 대본</span><a class="enlarge" href="assets/mac-transcript.png">화면 크게 보기</a></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="install" class="cut-install" data-scene-surface="install" aria-labelledby="install-heading">
+      <div class="wrap cut-install-layout">
+        <h2 id="install-heading">Solasi<br>설치하기.</h2>
+        <div class="install-options">
+          <article id="android">
+            <h3>Android 태블릿</h3>
+            <p id="android-compatibility">Android 9 이상, ARM64 <span id="release-version" data-code="3">v3 개발 프리뷰</span></p>
+            <a class="device-download" id="download-apk" href="https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk" aria-describedby="android-compatibility">Android APK 다운로드</a>
+            <details>
+              <summary>Android 설치 방법</summary>
+              <ol>
+                <li>태블릿에서 APK를 다운로드하고 파일을 엽니다.</li>
+                <li>Android가 요청하면 해당 설치 출처를 허용하고 설치를 확인합니다.</li>
+                <li>Solasi가 새 APK를 받으면 <strong>설정 → Android 업데이트 → 업데이트 설치</strong>에서 적용합니다.</li>
+              </ol>
+              <a class="support-link" href="https://github.com/car1bou/solasi/releases/tag/android-updates">릴리스와 체크섬</a>
+            </details>
+          </article>
+          <article id="mac">
+            <h3>Mac</h3>
+            <p id="mac-compatibility">Apple Silicon, macOS 27 이상 <span>개발 프리뷰</span></p>
+            <a class="device-download" id="mac-build" href="https://github.com/car1bou/solasi/blob/main/docs/development.md#mac-앱-빌드" aria-describedby="mac-compatibility">Mac 소스 빌드 안내</a>
+            <details>
+              <summary>Mac 설치 방법</summary>
+              <ol>
+                <li>Apple Silicon Mac에 Python 3.12, Node/npm, Apple Command Line Tools를 준비합니다.</li>
+                <li>Mac 소스 빌드 안내에 따라 앱과 실행 엔진을 빌드합니다.</li>
+                <li><strong>~/Applications/Solasi.app</strong>을 열고 설정에서 사용할 모델을 준비합니다.</li>
+              </ol>
+            </details>
+          </article>
+        </div>
       </div>
     </section>
   </main>
