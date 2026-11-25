@@ -15,6 +15,19 @@
   --study-head: clamp(2.45rem, 4.1vw, 4.15rem);
 }
 .field { color: var(--study-text); }
+/* Each exposure scrolls with its chapter; the moving grain is shared beneath them. */
+.study-problems { background-color: rgb(21 15 13 / 54%); }
+.study-solutions { background-color: rgb(180 110 64 / 58%); }
+.study-results { background-color: rgb(18 13 11 / 63%); }
+.study-walkthrough { background-color: rgb(144 88 49 / 51%); }
+.study-work { background-color: rgb(29 20 17 / 58%); }
+.study-install { background-color: rgb(192 115 62 / 61%); }
+.footer { background-color: rgb(16 12 10 / 70%); }
+.study-solutions, .study-walkthrough, .study-install {
+  --study-muted: #fff0de;
+  --study-oak: #ffe3b9;
+  --study-line: rgb(255 232 195 / 27%);
+}
 .field, .field [id] { scroll-margin-top: var(--header); }
 .field-frame {
   width: min(73rem, calc(100% - 2 * var(--edge, 1.25rem)));
@@ -156,11 +169,11 @@
     transform: scaleY(0); transform-origin: top; transition: transform .34s ease;
   }
   .solution-list h3 { transition: transform .38s cubic-bezier(.2,.72,.22,1), color .28s; }
-  .solution-list .is-current { background-color: var(--study-fine); }
+  .solution-list .is-current { background-color: rgb(42 25 14 / 18%); }
   .solution-list .is-current::after { transform: scaleY(1); }
   .solution-list .is-current h3 { color: var(--study-oak); transform: translateX(.28em); }
 }
-.study-process .field-frame { padding-top: clamp(4rem, 8vw, 8rem); }
+.study-results .field-frame { padding-top: clamp(4rem, 8vw, 8rem); }
 .result-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; }
 .result-head h2 { align-self: start; }
 .result-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(.75rem, 1.5vw, 1.5rem); padding: var(--study-gap); border-bottom: 1px solid var(--study-line); }
