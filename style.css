@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Solasi Web";
-  src: url("assets/suit-solasi.woff2?v=6") format("woff2");
+  src: url("assets/suit-solasi.woff2?v=7") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -121,8 +121,16 @@ img { display: block; max-width: 100%; height: auto; }
 .camera-framed .film-world { inset: 0 auto auto 0; width: var(--photo-w); height: var(--photo-h); transform-origin: 0 0; }
 .camera-framed .film-photo { opacity: var(--desk-opacity, 1); }
 .camera-framed .film-glass {
-  display: block; position: absolute; inset: 0 auto auto 0; width: 1600px; height: 1000px; max-width: none;
+  display: block; position: absolute; inset: 0 auto auto 0; width: var(--capture-w); height: var(--capture-h); max-width: none;
+  z-index: -2; pointer-events: none; opacity: var(--screen-mix, 0);
   transform-origin: 0 0; filter: brightness(var(--glass-light, 1));
+}
+.camera-framed .film-glass.is-front {
+  left: var(--front-x);
+  top: var(--front-y);
+  width: var(--front-w);
+  height: var(--front-h);
+  filter: none;
 }
 .footer { background: #292017; color: var(--cream); border-top: 1px solid var(--rule-night); }
 .footer-inner { width: min(78%, 73rem); margin: auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 2rem; padding-block: clamp(3rem, 8vw, 7rem); }

@@ -151,11 +151,11 @@
 .work-index details p { max-width: 29rem; padding: .55rem .4rem 1.65rem 0; color: var(--study-muted); font-size: .97rem; }
 .work-index summary:hover { color: var(--study-oak); }
 .work-gallery { align-self: center; border-left: 1px solid var(--study-line); background: var(--study-panel); }
-.work-mac, .work-grid:has(:is(#transcript, #audio)[open]) .work-android { display: none; }
+.work-ink, .work-mac, .work-grid:has(:is(#ink, #transcript, #audio)[open]) .work-android { display: none; }
+.work-grid:has(#ink[open]) .work-ink { display: block; }
 .work-grid:has(:is(#transcript, #audio)[open]) .work-mac { display: block; }
 .work-image { display: grid; align-items: center; width: 100%; aspect-ratio: 1.54; overflow: clip; }
 .work-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.work-grid:has(#ink[open]) .work-android img { transform: scale(1.24); transform-origin: 43% 54%; }
 .work-grid:has(#audio[open]) .work-mac img { transform: scale(1.25); transform-origin: 50% 25%; }
 .work-still figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 .65rem; padding: .15rem 1.05rem; font-size: .83rem; color: var(--study-muted); }
 .study-install { background: linear-gradient(176deg, var(--study-base) 0, var(--study-walnut) 80%); }

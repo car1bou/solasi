@@ -7,10 +7,10 @@
   <meta name="theme-color" content="#392c20">
   <link rel="canonical" href="https://car1bou.github.io/solasi/">
   <link rel="icon" href="assets/solasi-icon.png" type="image/png">
-  <link rel="preload" href="assets/suit-solasi.woff2?v=6" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="style.css?v=11">
-  <link rel="stylesheet" href="chapters.css?v=2">
-  <script src="camera.js?v=2" defer></script>
+  <link rel="preload" href="assets/suit-solasi.woff2?v=7" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="chapters.css?v=3">
+  <script src="camera.js?v=3" defer></script>
   <script src="process.js?v=1" defer></script>
   <script src="experience.js?v=4" defer></script>
   <script src="release.js?v=4" defer></script>
@@ -44,11 +44,11 @@
       <div class="film-stage">
         <div class="film-world" aria-hidden="true">
           <picture>
-            <source media="(max-aspect-ratio: 59/50)" srcset="assets/study-field-upright.jpg">
-            <img class="film-photo" src="assets/study-field.jpg" width="1672" height="941" alt="" fetchpriority="high">
+            <source media="(max-aspect-ratio: 59/50)" srcset="assets/study-field-upright.jpg?v=2">
+            <img class="film-photo" src="assets/study-field.jpg?v=2" width="1672" height="941" alt="" fetchpriority="high">
           </picture>
-          <img class="film-glass" src="assets/tablet-notes.png" width="1600" height="1000" alt="" decoding="async">
         </div>
+        <img class="film-glass" src="assets/tablet-notebook.png" width="2560" height="1600" alt="" decoding="async">
         <div class="field-overlay" aria-hidden="true"></div>
         <div class="field-axes" aria-hidden="true"></div>
         <header class="film-copy">
@@ -149,15 +149,19 @@
         <header class="section-head work-heading"><h2 id="work-heading">실제 앱에서<br><span>이렇게 씁니다.</span></h2></header>
         <div class="work-grid">
           <div class="work-index">
-            <details name="work" id="notes" open><summary>PDF 펼쳐 보기</summary><p>Android 태블릿에서 ‘필기만’을 누르면 자료와 필기 도구가 화면을 채웁니다.</p></details>
-            <details name="work" id="ink"><summary>중요한 문장 표시하기</summary><p>펜으로 용어 아래에 선을 긋고, 형광펜으로 핵심 문장을 표시합니다.</p></details>
+            <details name="work" id="notes" open><summary>PDF 펼쳐 보기</summary><p>과목에서 강의 PDF를 열면 필기 도구와 페이지 메모를 함께 볼 수 있습니다.</p></details>
+            <details name="work" id="ink"><summary>중요한 문장 표시하기</summary><p>‘필기만’을 눌러 PDF를 넓게 펼치고, 펜과 형광펜으로 중요한 대목에 표시합니다.</p></details>
             <details name="work" id="audio"><summary>강의 녹음 확인하기</summary><p>Mac에서 강의 기록을 열어 그날 녹음한 원음을 다시 듣습니다.</p></details>
             <details name="work" id="transcript"><summary>대본에서 다시 듣기</summary><p>‘대본’ 탭에서 문장을 고르고 ‘선택 구간 듣기’를 누릅니다. 원음을 들으며 잘못 옮겨진 단어를 고칠 수 있습니다.</p></details>
           </div>
           <div class="work-gallery">
             <figure class="work-still work-android">
-              <div class="work-image"><img src="assets/tablet-notes.png" width="1600" height="1000" loading="lazy" decoding="async" alt="작업 기억 강의 PDF에 밑줄과 형광펜 표시가 남아 있는 Android 필기 화면"></div>
-              <figcaption><span>Android 태블릿 · PDF 필기</span><a class="enlarge" href="assets/tablet-notes.png">화면 크게 보기</a></figcaption>
+              <div class="work-image"><img src="assets/tablet-notebook.png" width="2560" height="1600" loading="lazy" decoding="async" alt="Solasi Android의 인지심리학 과목. 계열 위치 효과 강의 PDF와 필기 도구, 페이지 메모가 함께 열려 있습니다."></div>
+              <figcaption><span>Android 태블릿 · 과목 노트</span><a class="enlarge" href="assets/tablet-notebook.png">화면 크게 보기</a></figcaption>
+            </figure>
+            <figure class="work-still work-ink">
+              <div class="work-image"><img src="assets/tablet-writing.png" width="2560" height="1600" loading="lazy" decoding="async" alt="같은 강의 PDF를 필기만 모드로 연 Solasi Android 화면. 그래프와 필기 표시가 넓게 보입니다."></div>
+              <figcaption><span>Android 태블릿 · 필기만 모드</span><a class="enlarge" href="assets/tablet-writing.png">화면 크게 보기</a></figcaption>
             </figure>
             <figure class="work-still work-mac">
               <div class="work-image"><img src="assets/mac-transcript.png" width="1160" height="792" loading="lazy" decoding="async" alt="Mac 강의 기록의 대본 탭. 녹음 조작부 아래에 전사된 문장들이 이어집니다."></div>
@@ -228,7 +232,7 @@
       <p id="viewer-label"></p>
       <form method="dialog"><button type="submit" autofocus>닫기</button></form>
     </div>
-    <img src="assets/tablet-notes.png" alt="" loading="lazy">
+    <img src="assets/tablet-notebook.png" alt="" loading="lazy">
   </dialog>
 </body>
 </html>
