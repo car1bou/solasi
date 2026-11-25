@@ -1,0 +1,67 @@
+@media (prefers-reduced-motion: no-preference) {
+  .problem-visual, .course-map { view-timeline: --diagram block; }
+
+  .diagram-motion :is(.file-sketch, .week-sketch, .course-map) span {
+    animation: open-record 1s cubic-bezier(.36, .08, .3, 1) both;
+  }
+  .file-sketch span:first-child { --from-x: 4%; --from-y: 86%; --from-angle: 3deg; }
+  .file-sketch span:nth-child(2) { --from-x: -5%; --from-angle: -3deg; }
+  .file-sketch span:last-child { --from-y: -86%; --start: .14; }
+  .week-sketch span:first-child { --from-x: 41%; --from-y: 89%; }
+  .week-sketch span:last-child { --from-x: -41%; --from-y: -89%; --start: .18; }
+
+  .diagram-motion .sound-line {
+    position: relative;
+    grid-row: 1;
+    background: repeating-linear-gradient(to right, transparent 0 3px, var(--study-tick) 3px 5px);
+  }
+  .diagram-motion .sound-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(to right, transparent 0 3px, var(--study-oak) 3px 5px);
+    animation: read-wave 1s linear both;
+  }
+  .diagram-motion .sound-sketch::after {
+    content: "";
+    grid-area: 1 / 1 / 2 / -1;
+    align-self: center;
+    height: 5.25rem;
+    border-right: 2px solid var(--study-oak);
+    pointer-events: none;
+    animation: scan-wave 1s linear both;
+  }
+  .sound-sketch { --start: .12; --end: .69; }
+
+  .diagram-motion .course-map { container-type: inline-size; }
+  .diagram-motion .course-map b { z-index: 1; }
+  .course-map span:nth-child(2) { --from-y: calc(22.73cqw - 50%); }
+  .course-map span:nth-child(3) { --from-x: calc(46cqw - 50%); --start: .14; }
+  .course-map span:nth-child(4) { --from-x: calc(50% - 46cqw); --start: .18; }
+  .course-map span:nth-child(5) { --from-y: calc(50% - 22.73cqw); --start: .22; }
+  .diagram-motion .course-map::before { animation: open-orbit 1s ease-out both; }
+
+  /* Both clocks scrub the same keyframes and the same portion of the viewport. */
+  .diagram-motion :is(.file-sketch, .week-sketch, .course-map) span,
+  .diagram-motion :is(.sound-line, .sound-sketch)::after,
+  .diagram-motion .course-map::before {
+    animation-timeline: --diagram;
+    animation-range: cover calc(var(--start, .10) * 100%) cover calc(var(--end, .62) * 100%);
+    animation-duration: auto;
+  }
+  .diagram-manual :is(.file-sketch, .week-sketch, .course-map) span,
+  .diagram-manual :is(.sound-line, .sound-sketch)::after,
+  .diagram-manual .course-map::before {
+    animation-timeline: auto;
+    animation-play-state: paused;
+    animation-duration: calc((var(--end, .62) - var(--start, .10)) * 1s);
+    animation-delay: calc((var(--start, .10) - var(--diagram-position, 1)) * 1s);
+  }
+}
+
+@keyframes open-record {
+  from { transform: translate(var(--from-x, 0%), var(--from-y, 0%)) rotate(var(--from-angle, 0deg)); }
+}
+@keyframes read-wave { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes scan-wave { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes open-orbit { from { transform: scale(.16); opacity: .15; } }

@@ -3,8 +3,34 @@
   const menu = header.querySelector(".fold-nav");
   const sections = Array.from(document.querySelectorAll("main > section"));
   const navLinks = header.querySelectorAll("a[href^='#']");
+  const solutions = Array.from(document.querySelectorAll(".solution-list li"));
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   let scheduled = false;
   let current = "";
+  let highlighted;
+
+  if ("IntersectionObserver" in window) {
+    const arrivals = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add("has-arrived");
+        arrivals.unobserve(entry.target);
+      }
+    });
+    document.querySelectorAll(".field .motion-title").forEach(title => arrivals.observe(title));
+  }
+
+  function highlightSolution() {
+    const center = (innerHeight + header.offsetHeight) / 2;
+    const row = reduced.matches ? undefined : solutions.find(item => {
+      const rect = item.getBoundingClientRect();
+      return rect.top <= center && rect.bottom > center;
+    });
+    if (row === highlighted) return;
+    highlighted?.classList.remove("is-current");
+    row?.classList.add("is-current");
+    highlighted = row;
+  }
 
   function updateNavigation() {
     scheduled = false;
@@ -12,6 +38,7 @@
     const next = sections.findIndex(section => section.getBoundingClientRect().top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
     const active = visible === "preview" ? "home" : visible;
+    highlightSolution();
     header.classList.toggle("compact", scrollY > limit);
     if (active === current) return;
     current = active;
@@ -25,6 +52,7 @@
   }
   addEventListener("scroll", schedule, { passive: true });
   addEventListener("resize", schedule);
+  reduced.addEventListener("change", schedule);
   document.addEventListener("toggle", schedule, true);
   updateNavigation();
 
@@ -66,4 +94,47 @@
       viewer.showModal();
     });
   }
+})();
+
+(() => {
+  const root = document.documentElement;
+  if (CSS.supports("view-timeline: --diagram block") && CSS.supports("animation-range: cover 10% cover 60%")) {
+    root.classList.add("diagram-motion");
+    return;
+  }
+  if (!window.IntersectionObserver) return;
+
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  const diagrams = document.querySelectorAll(".problem-visual, .course-map");
+  const visible = new Set();
+  let frame = 0;
+  function paint() {
+    frame = 0;
+    for (const diagram of visible) {
+      const {top, height} = diagram.getBoundingClientRect();
+      diagram.style.setProperty("--diagram-position", (innerHeight - top) / (innerHeight + height));
+    }
+  }
+  function schedule() {
+    if (!frame && visible.size) frame = requestAnimationFrame(paint);
+  }
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target);
+      else visible.delete(entry.target);
+    }
+    schedule();
+  });
+  function configure() {
+    observer.disconnect();
+    visible.clear();
+    cancelAnimationFrame(frame);
+    frame = 0;
+    if (!reduced.matches) diagrams.forEach(diagram => observer.observe(diagram));
+  }
+  root.classList.add("diagram-motion", "diagram-manual");
+  addEventListener("scroll", schedule, {passive:true});
+  addEventListener("resize", schedule);
+  reduced.addEventListener("change", configure);
+  configure();
 })();
