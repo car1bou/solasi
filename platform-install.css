@@ -1,0 +1,17 @@
+.platform-heading {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .35rem 1rem;
+}
+.platform-heading a {
+  display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--study-muted); font-size: .87rem;
+}
+.platform-heading [aria-current] { text-decoration: none; }
+.hero-install:disabled, .device-download:disabled {
+  min-height: 2.75rem; padding: .6rem .95rem; border: 1px solid rgb(247 227 203 / 40%); border-radius: .28rem;
+  background: rgb(50 38 29 / 88%); color: #e4d3be; cursor: not-allowed; text-decoration: none; opacity: 1;
+}
+.hero-install:disabled { pointer-events: auto; }
+.device-download:disabled::after { content: none; }
+@media (min-width: 48rem) {
+  .install-options article:nth-child(odd) { border-left: 0; }
+  .install-options article:nth-child(n+3) { border-top: 1px solid var(--study-line); }
+}

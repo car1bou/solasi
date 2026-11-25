@@ -196,8 +196,9 @@
 .step-copy h3 { font-size: clamp(1.75rem, 3.1vw, 3rem); }
 .step-copy p { max-width: 19rem; color: var(--study-muted); }
 .step-film { width: 100%; min-width: 0; justify-self: end; }
+[data-device="ipad"] .study-walkthrough { --demo-ratio: 1.333333; }
 .step-screen {
-  position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: .4rem;
+  position: relative; width: 100%; aspect-ratio: var(--demo-ratio, 1.6); overflow: hidden; border-radius: .4rem;
   background: var(--study-base); box-shadow: 0 1.15rem 2rem -.95rem #1e150ec4, 0 0 0 1px var(--study-line);
 }
 .step-screen :is(img, video) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -214,7 +215,7 @@
   position: absolute; inset: 0; padding-block: 1rem 3.25rem; border: 0; opacity: 0;
   pointer-events: none;
 }
-.is-scrubbed .step-film { width: min(100%, calc((100svh - var(--header) - 7rem) * 1.6)); }
+.is-scrubbed .step-film { width: min(100%, calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6))); }
 .is-scrubbed .process-list li[data-in-frame] { opacity: 1; }
 .is-scrubbed [data-in-frame] .step-copy > * {
   transform: translateY(var(--step-shift));
@@ -380,7 +381,7 @@
 .is-scrubbed .process-heading span + br + span { margin-inline-start: .18em; }
 .is-scrubbed .process-list { translate: 0 var(--approach-y, 0px); }
 .is-scrubbed .process-list li { padding-block-start: clamp(4.2rem, 10svh, 7.2rem); }
-.is-scrubbed .step-film { max-width: calc((100svh - var(--header) - clamp(10rem, 21svh, 16rem)) * 1.6); }
+.is-scrubbed .step-film { max-width: calc((100svh - var(--header) - clamp(10rem, 21svh, 16rem)) * var(--demo-ratio, 1.6)); }
 .camera-ready:not(.docked) + .study-walkthrough :is(.process-heading, .step-copy),
 .camera-ready:not(.docked) + .study-walkthrough .process-list::before,
 .camera-ready:not(.docked) + .study-walkthrough .process-list::after { opacity: var(--lesson-copy, 0); }
@@ -390,5 +391,5 @@
 @media (max-height: 32.99rem) {
   .is-scrubbed .process-heading { font-size: 1.35rem; }
   .is-scrubbed .process-list li { padding-block: 2.7rem 1.65rem; }
-  .is-scrubbed .step-film { max-width: calc((100svh - var(--header) - 7rem) * 1.6); }
+  .is-scrubbed .step-film { max-width: calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6)); }
 }

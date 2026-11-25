@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="태블릿에서 PDF에 필기하고, Mac에서 대본의 한 문장을 골라 강의 원음을 다시 들으세요. Solasi의 기능과 설치 방법을 확인하세요.">
+  <meta name="description" content="Android 태블릿, iPad, Mac, Windows에서 사용하는 Solasi의 수업 기록 화면과 기기별 설치 파일 공개 상태를 확인하세요.">
   <meta name="theme-color" content="#392c20">
   <link rel="canonical" href="https://car1bou.github.io/solasi/">
   <link rel="icon" href="assets/solasi-icon.png" type="image/png">
@@ -25,10 +25,19 @@
   <script>
     (() => {
       const root = document.documentElement;
+      const previews = {windows: "windows", ipad: "ipad", mac: "mac", tablet: "android", android: "android"};
       const device = new URLSearchParams(location.search).get("device");
-      // iPadOS can identify as Macintosh when requesting the desktop site.
-      const mac = /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints < 2;
-      root.dataset.device = device === "mac" || device === "tablet" ? device : (mac ? "mac" : "tablet");
+      const ua = navigator.userAgent;
+      const os = navigator.userAgentData?.platform || navigator.platform || "";
+      // In desktop browsing mode iPadOS advertises a Mac with a multi-touch screen.
+      const macOS = /Macintosh/i.test(ua) || /^Mac/i.test(os);
+      const phone = /iPhone|iPod/i.test(ua + " " + os);
+      const isIPad = /iPad/i.test(ua) || (macOS && !phone && navigator.maxTouchPoints > 1);
+      const detected = isIPad ? "ipad" : /Windows|Win32|Win64/i.test(os + " " + ua) ? "windows"
+        : /Android/i.test(os + " " + ua) ? "android" : macOS && !phone ? "mac" : "other";
+      const platform = Object.hasOwn(previews, device) ? previews[device] : detected;
+      root.dataset.platform = platform;
+      root.dataset.device = platform === "other" || platform === "android" ? "tablet" : platform;
       if ((location.hash && location.hash !== "#home") || new URLSearchParams(location.search).has("platform")
         || performance.getEntriesByType("navigation")[0]?.type === "back_forward") return;
 
@@ -52,16 +61,20 @@
       }, { once: true });
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=21">
-  <link rel="stylesheet" href="chapters.css?v=12">
+  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="chapters.css?v=13">
+  <link rel="stylesheet" href="platform-install.css?v=1">
   <link rel="stylesheet" href="diagram-motion.css?v=3">
   <link rel="stylesheet" href="chapter-exchange.css?v=2">
-  <script src="camera.js?v=11" defer></script>
+  <script src="platform-page.js?v=1" defer></script>
+  <script src="ipad-page.js?v=1" defer></script>
+  <script src="windows-page.js?v=1" defer></script>
+  <script src="camera.js?v=12" defer></script>
   <script src="process.js?v=5" defer></script>
   <script src="experience.js?v=13" defer></script>
   <script src="wood-field.js?v=2" defer></script>
-  <script src="chapter-exchange.js?v=4" defer></script>
-  <script src="release.js?v=5" defer></script>
+  <script src="chapter-exchange.js?v=5" defer></script>
+  <script src="release.js?v=6" defer></script>
   <title>Solasi | 강의 필기와 녹음을 한곳에</title>
 </head>
 <body>
@@ -336,11 +349,11 @@
       <div class="field-frame">
         <header class="install-heading">
           <h2 id="install-heading" class="motion-title"><span>다음 수업을</span><br><span>Solasi와 함께.</span></h2>
-          <a class="field-link" href="#devices">설치 방법 보기 <span aria-hidden="true">↓</span></a>
+          <a class="field-link" href="#devices">기기별 설치 파일 <span aria-hidden="true">↓</span></a>
         </header>
         <div class="install-options" id="devices">
           <article id="android">
-            <h3>Android 태블릿</h3>
+            <div class="platform-heading"><h3>Android 태블릿</h3><a href="?device=tablet" aria-label="Android 태블릿 소개 보기">소개 보기</a></div>
             <p id="android-compatibility">Android 9 이상, ARM64 <span id="release-version" data-code="3">v3 개발 프리뷰</span></p>
             <a class="device-download" id="download-apk" href="https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk" aria-describedby="android-compatibility">Android APK 다운로드</a>
             <details>
@@ -354,7 +367,7 @@
             </details>
           </article>
           <article id="mac">
-            <h3>Mac</h3>
+            <div class="platform-heading"><h3>Mac</h3><a href="?device=mac" aria-label="Mac 소개 보기">소개 보기</a></div>
             <p id="mac-compatibility">Apple Silicon, macOS 27 이상 <span id="mac-release-version" data-code="55">빌드 55 · 미리보기</span></p>
             <a class="device-download" id="download-mac" href="https://github.com/car1bou/solasi/releases/download/macos-updates/Solasi-macOS-arm64-55.zip" aria-describedby="mac-compatibility">Mac용 ZIP 다운로드</a>
             <details>
@@ -367,6 +380,14 @@
               <a class="support-link" href="https://github.com/car1bou/solasi/releases/tag/macos-updates">최초 실행 및 기존 앱 업데이트 안내</a>
               <a class="support-link" id="mac-build" href="https://github.com/car1bou/solasi/blob/main/docs/development.md#mac-앱-빌드">Mac 소스 빌드 안내</a>
             </details>
+          </article>
+          <article id="ipad">
+            <div class="platform-heading"><h3>iPad</h3><a href="?device=ipad" aria-label="iPad 소개 보기">소개 보기</a></div>
+            <button type="button" class="device-download" id="download-ipad" disabled>iPad용 설치 파일 준비 중</button>
+          </article>
+          <article id="windows">
+            <div class="platform-heading"><h3>Windows</h3><a href="?device=windows" aria-label="Windows 소개 보기">소개 보기</a></div>
+            <button type="button" class="device-download" id="download-windows" disabled>Windows용 설치 파일 준비 중</button>
           </article>
         </div>
       </div>

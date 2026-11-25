@@ -26,7 +26,7 @@
     mark.className = "chapter-origin-mark";
     label.prepend(mark);
   });
-  dock(".work-heading", "assets/mac-transcript.png?v=dark1", "screen");
+  dock(".work-heading", find(".work-mac .work-image img").src, "screen");
   const routes = [
     [".process-list li:last-child .step-screen", find(".lecture-window")],
     [".week-sketch span:last-child", find(".course-map b")],
