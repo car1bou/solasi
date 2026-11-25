@@ -87,7 +87,7 @@
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
     const active = visible === "preview" ? "home" : visible;
     highlightSolution();
-    const compact = scrollY > limit;
+    const compact = sections[0].classList.contains("camera-ready") ? tops[1] <= stage.clientHeight : scrollY > limit;
     const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
     header.classList.toggle("compact", compact);
     header.classList.toggle("folded", folded);

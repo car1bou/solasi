@@ -76,7 +76,7 @@
 }
 .problem-lede { display: grid; justify-items: start; gap: clamp(1.2rem,3.4vw,3.2rem); }
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
-/* Camera registration uses the same crop for the in-flight and settled image. */
+/* Frame the lecture detail in the original app capture. */
 .lecture-page {
   --app-w: 2560; --app-h: 1600;
   --pdf-x: 538; --pdf-y: 439; --pdf-w: 1340; --pdf-h: 1004;
@@ -88,20 +88,8 @@
   width: calc(var(--app-w) / var(--pdf-w) * 100%); max-width: none; height: auto;
   transform: translate(calc(-100% * var(--pdf-x) / var(--app-w)), calc(-100% * var(--pdf-y) / var(--app-h)));
 }
-.lecture-page.in-flight .lecture-window {
-  position: fixed; inset: 0 auto auto 0; z-index: 3; transform-origin: 0 0;
-  width: var(--flight-width); aspect-ratio: var(--app-w) / var(--app-h); pointer-events: none; box-shadow: none;
-}
-.lecture-page.in-flight img { width: 100%; transform: none; }
-.film.passes-page .film-glass { visibility: hidden; }
 .problem-heading.page-missing { grid-template-columns: 1fr; }
 .problem-heading.page-missing .lecture-page { display: none; }
-@media (prefers-reduced-motion: no-preference) {
-  .camera-ready + .study-problems .problem-lede {
-    transform: translateY(var(--lede-lift,0px)); opacity: var(--lede-ink,1);
-  }
-  .camera-ready + .study-problems .problem-lede .motion-title > span { animation: none; }
-}
 .problem-list, .solution-list, .result-list, .process-list { list-style: none; padding: 0; }
 .problem-list { display: grid; gap: 1.2rem; border-top: 1px solid var(--study-line); }
 .problem-list > li {

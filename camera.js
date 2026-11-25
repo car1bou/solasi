@@ -9,7 +9,6 @@
   const glass = film.querySelector(".film-glass");
   const intro = document.querySelector(".problem-heading");
   const paper = intro.querySelector(".lecture-page");
-  const paperWindow = paper.querySelector(".lecture-window");
   const paperImage = paper.querySelector("img");
   const motion = matchMedia("(prefers-reduced-motion: reduce)");
   const narrow = matchMedia("(max-aspect-ratio: 9/10)");
@@ -65,14 +64,12 @@
     ]);
   }
 
-  let poses, pdf, deskFromGlass, appToGlass, previous = -1, previousPass = -1, frame = 0;
+  let poses, deskFromGlass, appToGlass, previous = -1, previousCover = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
-    const bounds = getComputedStyle(paper);
-    pdf = ["x", "y", "w", "h"].map(key => Number(bounds.getPropertyValue("--pdf-" + key)));
-    if (!pdf[2] || !pdf[3]) return;
+    const pageLeft = Number(getComputedStyle(paper).getPropertyValue("--pdf-x"));
     const portrait = narrow.matches;
     const photo = portrait ? mobilePhoto : desktopPhoto;
     const glassOnDesk = project(photo.screen);
@@ -139,7 +136,7 @@
     const endScale = Math.max((w + 4) / appWidth, (h + 4) / shownHeight);
     const fullW = appWidth * endScale, fullH = appHeight * endScale;
     const centered = (w - fullW) / 2;
-    const appLeft = Math.min(-2, Math.max(centered, w * .045 - pdf[0] * endScale));
+    const appLeft = Math.min(-2, Math.max(centered, w * .045 - pageLeft * endScale));
     const appTop = (h - shownHeight * endScale) / 2;
     glass.style.setProperty("--front-x", appLeft + "px");
     glass.style.setProperty("--front-y", appTop + "px");
@@ -160,64 +157,33 @@
     const directions = (corners, origin, span) => corners.map(point =>
       point.map((value, axis) => (value - origin[axis]) / span));
     poses = { near: directions(opening, aim, openWidth), far: directions(landing, center, closeWidth),
-      aim, center, openWidth, zoom: closeWidth / openWidth,
-      front: { x: appLeft, y: appTop, w: fullW, h: fullH } };
-    paper.style.setProperty("--flight-width", poses.front.w + "px");
-    previous = previousPass = -1;
-  }
-
-  function passPage(t, travel, ready) {
-    if (t === previousPass) return;
-    previousPass = t;
-    const height = stage.clientHeight;
-    const passing = t > 0 && t < 1;
-    const to = passing ? paper.getBoundingClientRect() : null;
-    film.classList.toggle("passes-page", passing);
-    paper.classList.toggle("in-flight", passing);
-    const mix = ease(t);
-    const arc = Math.sin(Math.PI * t) ** 2;
-    const lead = .095 * (1 - mix) + (narrow.matches ? .22 : .07) * arc;
-    intro.style.setProperty("--lede-lift", (ready ? -height * lead : 0).toFixed(2) + "px");
-    intro.style.setProperty("--lede-ink", (ready ? .22 + .78 * ease(clamp((t - .12) / .55)) : 1).toFixed(3));
-    if (!passing) {
-      paperWindow.style.removeProperty("transform");
-      paperWindow.style.removeProperty("clip-path");
-      return;
-    }
-
-    // Extract the same pixels from the full-screen capture and carry them into the heading.
-    const from = poses.front;
-    const [x, y, w, h] = pdf;
-    const fx = from.w * x / glass.naturalWidth, fy = from.h * y / glass.naturalHeight;
-    const scale = (to.width / (from.w * w / glass.naturalWidth)) ** mix;
-    const left = (from.x + fx) * (1 - mix) + to.left * mix;
-    const restingTop = to.top - (1 - t) * travel;
-    const upper = (from.y + fy) * (1 - mix) + restingTop * mix
-      - arc * Math.min(height * .11, 80) + travel * t ** 4 * (1 - t);
-    paperWindow.style.transform = `translate3d(${left}px,${upper}px,0) rotate(${arc * -2}deg) scale(${scale}) translate(${-fx}px,${-fy}px)`;
-    const trim = ease(clamp((t - .025) / .54)) * 100;
-    const inset = [y / glass.naturalHeight, 1 - (x + w) / glass.naturalWidth,
-      1 - (y + h) / glass.naturalHeight, x / glass.naturalWidth];
-    paperWindow.style.clipPath = "inset(" + inset.map(edge => (edge * trim).toFixed(4) + "%").join(" ") + ")";
+      aim, center, openWidth, zoom: closeWidth / openWidth };
+    previous = previousCover = -1;
   }
 
   function paint() {
     frame = 0;
     if (!poses) return;
     const box = film.getBoundingClientRect();
+    const height = stage.clientHeight;
     const captureReady = glass.naturalWidth > 0;
-    const ready = captureReady && paperImage.naturalWidth > 0;
-    const height = stage.clientHeight, travel = Math.max(1, height - header.offsetHeight - 12);
-    const progress = motion.matches || !captureReady ? 0 : clamp(-box.top / Math.max(1, box.height - height));
-    const pass = ready && !motion.matches ? clamp((height - box.bottom) / travel) : 0;
-    if (progress !== previous || pass !== previousPass) {
-      const immersion = ready ? ease(clamp((progress - .7) / .29)) * (1 - ease(clamp((pass - .06) / .30))) : 0;
-      header.style.setProperty("--into-app", (-101 * immersion).toFixed(2) + "%");
+    const moving = captureReady && !motion.matches;
+    const scroll = moving ? clamp(-box.top / Math.max(1, box.height - height)) : 0;
+    // Hold the photograph for the first scroll beat, then settle inside the app before the page turns.
+    const progress = clamp((scroll - .13) / .75);
+    const cover = moving ? Math.min(height, Math.max(0, height - box.bottom)) : 0;
+    if (cover !== previousCover) {
+      stage.classList.toggle("revealing-chapter", cover > 0 && cover < height);
+      stage.style.setProperty("--cover-y", cover + "px");
+      stage.style.setProperty("--cover-feather", Math.min(height * .12, cover * .75, 96) + "px");
     }
-    passPage(pass, travel, ready);
+    if (progress === previous && cover === previousCover) return;
+    previousCover = cover;
+    const immersion = ease(clamp((progress - .30) / .36)) * (1 - ease(clamp((cover / height - .18) / .44)));
+    header.style.setProperty("--into-app", (-101 * immersion).toFixed(2) + "%");
     if (progress === previous) return;
     previous = progress;
-    const t = progress * (1 + progress * (1 - progress));
+    const t = ease(progress);
     const level = ease(clamp(t / .88));
     const { near, far, aim, center, openWidth, zoom } = poses;
     const span = openWidth * zoom ** t;
@@ -258,7 +224,7 @@
   }
 
   function refresh() {
-    film.classList.toggle("camera-ready", !motion.matches);
+    film.classList.toggle("camera-ready", !motion.matches && !(glass.complete && !glass.naturalWidth));
     compose();
     paint();
   }
@@ -267,7 +233,7 @@
   refresh();
   window.addEventListener("load", refresh, { once: true });
   glass.addEventListener("load", refresh, { once: true });
-  paperImage.addEventListener("load", refresh, { once: true });
+  glass.addEventListener("error", refresh, { once: true });
   if (paperImage.complete && !paperImage.naturalWidth) intro.classList.add("page-missing");
   paperImage.addEventListener("error", () => intro.classList.add("page-missing"), { once: true });
   window.addEventListener("scroll", schedule, { passive: true });
