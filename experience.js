@@ -1,26 +1,47 @@
 (() => {
   const header = document.querySelector(".masthead");
   const desk = document.querySelector(".desk-surface");
+  const grain = desk.querySelector("img");
+  const cameraSurfaces = [desk, document.querySelector(".film-stage")];
   const menu = header.querySelector(".fold-nav");
+  const inlineNav = header.querySelector(".wide-nav");
+  const narrowNav = matchMedia("(max-width: 58rem)");
+  const footer = document.querySelector(".footer");
   const sections = Array.from(document.querySelectorAll("main > section"));
   const navLinks = header.querySelectorAll("a[href^='#']");
   const solutions = Array.from(document.querySelectorAll(".solution-list li"));
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const pointerLight = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
+  const deskPointer = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
+  // Side-light position and shadow depth as each chapter comes into view.
+  const daylight = {
+    home: [-.12, .31], preview: [-.12, .31], solutions: [.21, .08],
+    process: [-.20, .72], work: [.22, .35], install: [-.06, .16]
+  };
   let scheduled = false;
   let current = "";
   let highlighted;
-  let lightFrame, pointerX;
+  let lookFrame, lookX = 0, lookY = 0;
 
-  document.addEventListener("pointermove", event => {
-    if (!pointerLight.matches || event.pointerType !== "mouse") return;
-    pointerX = event.clientX;
-    if (lightFrame) return;
-    lightFrame = requestAnimationFrame(() => {
-      desk.style.setProperty("--light-follow", ((pointerX - innerWidth / 2) * .025).toFixed(1) + "px");
-      lightFrame = 0;
+  function look(x, y) {
+    lookX = Math.max(-1, Math.min(1, x));
+    lookY = Math.max(-1, Math.min(1, y));
+    if (lookFrame) return;
+    lookFrame = requestAnimationFrame(() => {
+      for (const surface of cameraSurfaces) {
+        surface.style.setProperty("--look-x", lookX.toFixed(3));
+        surface.style.setProperty("--look-y", lookY.toFixed(3));
+      }
+      lookFrame = 0;
     });
+  }
+  document.addEventListener("pointermove", event => {
+    if (deskPointer.matches && event.pointerType === "mouse") {
+      look(event.clientX * 2 / innerWidth - 1, event.clientY * 2 / innerHeight - 1);
+    }
   }, { passive: true });
+  document.documentElement.addEventListener("pointerleave", () => look(0, 0));
+  addEventListener("blur", () => look(0, 0));
+  deskPointer.addEventListener("change", () => look(0, 0));
 
   if ("IntersectionObserver" in window) {
     const arrivals = new IntersectionObserver(entries => {
@@ -47,18 +68,36 @@
 
   function updateNavigation() {
     scheduled = false;
+    const tops = sections.map(section => section.getBoundingClientRect().top);
     if (!reduced.matches) {
       const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
       const progress = Math.max(0, Math.min(1, scrollY / travel));
-      desk.style.setProperty("--desk-drift", (-(.15 + progress * 1.65) * innerHeight).toFixed(2) + "px");
-      desk.style.setProperty("--desk-light", ((progress - .5) * innerWidth * .32).toFixed(2) + "px");
+      const drift = Math.min(travel * .18, grain.clientHeight - innerHeight * 1.37);
+      desk.style.setProperty("--desk-drift", (-.18 * innerHeight - progress * drift).toFixed(2) + "px");
+      desk.style.setProperty("--desk-play", document.hidden || tops[1] >= innerHeight ? "paused" : "running");
+      const index = Math.max(0, tops.filter(top => top < innerHeight).length - 1);
+      const from = daylight[sections[Math.max(0, index - 1)].id];
+      const to = daylight[sections[index].id];
+      const part = Math.min(1, (innerHeight - tops[index]) / innerHeight);
+      const mix = part * part * (3 - 2 * part);
+      const light = from[0] + (to[0] - from[0]) * mix, shade = from[1] + (to[1] - from[1]) * mix;
+      const foot = footer.getBoundingClientRect();
+      const reveal = Math.max(0, Math.min(1, (innerHeight - foot.top) / Math.min(foot.height, innerHeight)));
+      const close = reveal * reveal * (3 - 2 * reveal);
+      desk.style.setProperty("--desk-light", ((light + (.24 - light) * close) * innerWidth).toFixed(2) + "px");
+      desk.style.setProperty("--desk-shade", (shade + (.76 - shade) * close).toFixed(3));
     }
     const limit = header.offsetHeight + 2;
-    const next = sections.findIndex(section => section.getBoundingClientRect().top > limit);
+    const next = tops.findIndex(top => top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
     const active = visible === "preview" ? "home" : visible;
     highlightSolution();
-    header.classList.toggle("compact", scrollY > limit);
+    const compact = scrollY > limit;
+    const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
+    header.classList.toggle("compact", compact);
+    header.classList.toggle("folded", folded);
+    inlineNav.toggleAttribute("inert", folded);
+    menu.toggleAttribute("inert", !folded);
     if (active === current) return;
     current = active;
     for (const link of navLinks) {
@@ -71,12 +110,17 @@
   }
   addEventListener("scroll", schedule, { passive: true });
   addEventListener("resize", schedule);
+  document.addEventListener("visibilitychange", updateNavigation);
   reduced.addEventListener("change", schedule);
   document.addEventListener("toggle", schedule, true);
+  header.addEventListener("focusout", schedule);
   updateNavigation();
 
   menu.querySelector("nav").addEventListener("click", event => {
     if (event.target.closest("a")) menu.open = false;
+  });
+  menu.addEventListener("focusout", event => {
+    if (event.relatedTarget && !menu.contains(event.relatedTarget)) menu.open = false;
   });
   document.addEventListener("click", event => { if (menu.open && !menu.contains(event.target)) menu.open = false; });
   document.addEventListener("keydown", event => {

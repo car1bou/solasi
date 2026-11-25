@@ -65,7 +65,7 @@
   function showStep() {
     scheduled = false;
     if (reduced.matches) return;
-    const top = parseFloat(getComputedStyle(stage).top);
+    const top = Number.parseFloat(getComputedStyle(stage).top) || 0;
     const rect = runway.getBoundingClientRect();
     const travel = Math.max(1, rect.height - stage.offsetHeight);
     const threshold = Math.min(stage.offsetHeight, innerHeight) * .48;
@@ -122,6 +122,7 @@
   }
 
   configure();
+  window.addEventListener("load", requestStep, { once: true });
   document.addEventListener("visibilitychange", syncPlayback);
   window.addEventListener("scroll", requestStep, { passive: true });
   window.addEventListener("resize", () => {

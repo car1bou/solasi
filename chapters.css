@@ -59,11 +59,11 @@
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
 /* Exact PDF bounds in the released 2560 × 1600 notebook capture. */
 .lecture-page {
-  --pdf-x: 538; --pdf-y: 487; --pdf-w: 1340; --pdf-h: 1004;
+  --pdf-x: 538; --pdf-y: 439; --pdf-w: 1340; --pdf-h: 1004;
   position: relative; width: min(100%,29rem); justify-self: center;
   aspect-ratio: var(--pdf-w) / var(--pdf-h);
 }
-.lecture-window { position: absolute; inset: 0; overflow: hidden; background: #fffefa; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
+.lecture-window { position: absolute; inset: 0; overflow: hidden; background: #23251f; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
 .lecture-window img {
   width: calc(2560 / var(--pdf-w) * 100%); max-width: none; height: auto;
   transform: translate(calc(-100% * var(--pdf-x) / 2560), calc(-100% * var(--pdf-y) / 1600));
