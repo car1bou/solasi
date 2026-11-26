@@ -416,20 +416,8 @@
 }
 
 
-@media (prefers-reduced-motion: no-preference) {
-  html { scroll-snap-type: y proximity; }
-  .film::before, .chapter-stop {
-    position: absolute; left: 0; top: 0; width: 1px; height: 1px; pointer-events: none;
-    scroll-snap-align: start; scroll-snap-stop: always;
-  }
-  .film::before { content: ""; }
-  .chapter-stop {
-    top: calc(var(--chapter-index) * var(--step-travel) + 2px);
-    scroll-margin-top: var(--header);
-  }
-  :is(.study-problems, .study-solutions, .study-results, .study-work, .study-install, .footer) {
-    scroll-snap-align: start; scroll-snap-stop: always;
-  }
-  .field :target { scroll-snap-align: start; }
+.chapter-stop {
+  position: absolute; left: 0; top: calc(var(--chapter-index) * var(--step-travel) + 2px);
+  width: 1px; height: 1px; pointer-events: none;
 }
 .process-run:not(.is-player) .chapter-stop { display: none; }

@@ -49,8 +49,9 @@
     const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
     const chapters = Array.from(document.querySelectorAll(".is-player .chapter-stop"),
       stop => stop.getBoundingClientRect().top + y - headerHeight);
+    const chapterStops = [0, ...chapters, tops[2] - headerHeight];
     return {
-      tops, travel, stops: [0, ...chapters, ...tops.slice(2).map(top => top - headerHeight), Math.min(foot.top + y, travel), travel],
+      tops, travel, chapterStops, stops: [...chapterStops, ...tops.slice(3).map(top => top - headerHeight), Math.min(foot.top + y, travel), travel],
       rowBounds: solutions.map(row => {
         const rect = row.getBoundingClientRect();
         return [rect.top + y, rect.bottom + y];
@@ -127,37 +128,107 @@
   header.addEventListener("focusout", schedule);
   updateNavigation();
 
-  // Some desktop wheels deliver several screens of momentum in one gesture.
-  // Leave ordinary scrolling native until that gesture would cross its next scene.
-  let wheelTime = -Infinity, direction = 0, boundary, intendedY = 0, caught = false;
-  function stopAtScene(event) {
-    const dy = event.deltaY;
-    if (reduced.matches || !dy || event.ctrlKey || event.metaKey || event.shiftKey ||
-        Math.abs(event.deltaX) >= Math.abs(dy) || event.defaultPrevented ||
-        viewer.open || menu.open) return;
-
-    const sign = Math.sign(dy);
+  // Decide after the entire gesture settles so a flick's small trailing deltas never pull it back.
+  const quietTime = 220;
+  const smallDistance = () => Math.min(180, Math.max(120, innerHeight * .22));
+  let gesture, timer, snapFrame = 0, wheelTime = -Infinity, touch, lastScrollY = scrollY;
+  function cancelSnap() {
+    clearTimeout(timer);
+    cancelAnimationFrame(snapFrame);
+    snapFrame = 0;
+    gesture = null;
+  }
+  function resetInput() {
+    cancelSnap();
+    touch = null;
+    wheelTime = -Infinity;
+  }
+  function settle() {
+    if (!gesture) return;
+    const { start, delta } = gesture;
+    const direction = Math.sign(delta);
+    cancelSnap();
     const y = scrollY;
-    if (event.timeStamp - wheelTime > 180 || sign !== direction) {
-      if (!layout) layout = measure(y);
-      boundary = sign > 0 ? layout.stops.find(stop => stop > y + 3)
-        : layout.stops.filter(stop => stop < y - 3).pop();
-      intendedY = y;
-      direction = sign;
-      caught = false;
+    const travel = Math.abs(y - start);
+    if (Math.abs(delta) < 5 || travel < 2 || travel > smallDistance() || reduced.matches || viewer.open || menu.open) return;
+    if (!layout) layout = measure(y);
+    const chapter = layout.chapterStops.findIndex(stop => Math.abs(stop - start) <= 4);
+    let target = chapter < 0 ? undefined : layout.chapterStops[chapter + direction];
+    if (target === undefined) {
+      let nearest = Math.min(100, innerHeight * .14);
+      for (const stop of layout.stops) {
+        const gap = Math.abs(stop - y);
+        if ((stop - start) * direction > 2 && gap <= nearest) {
+          target = stop;
+          nearest = gap;
+        }
+      }
+    }
+    if (target === undefined || Math.abs(target - y) <= 1) return;
+    // Native smooth scrolling can swallow a new wheel gesture while it is still animating.
+    const startTime = performance.now();
+    const duration = Math.min(380, 140 + Math.abs(target - y) * .34);
+    function align(now) {
+      const t = Math.min(1, Math.max(0, (now - startTime) / duration));
+      scrollTo({top: target - (target - y) * (1 - t) ** 3, behavior: "instant"});
+      snapFrame = t < 1 ? requestAnimationFrame(align) : 0;
+    }
+    snapFrame = requestAnimationFrame(align);
+  }
+  function waitForRest() {
+    if (!gesture) return;
+    if (Math.abs(scrollY - gesture.start) > smallDistance()) return cancelSnap();
+    if (touch) return;
+    clearTimeout(timer);
+    timer = setTimeout(settle, quietTime);
+  }
+  addEventListener("wheel", event => {
+    if (snapFrame) cancelSnap();
+    if (reduced.matches || viewer.open || menu.open || event.defaultPrevented || event.ctrlKey ||
+        event.metaKey || event.shiftKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY)) return resetInput();
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
+    const delta = event.deltaY * unit;
+    if (event.timeStamp - wheelTime > quietTime) {
+      cancelSnap();
+      // A passive wheel listener can run after compositing but before the scroll event.
+      const y = scrollY;
+      const start = Math.abs(lastScrollY - y) <= Math.abs(delta) + 2 ? lastScrollY : y;
+      gesture = {start, delta: 0, distance: 0};
     }
     wheelTime = event.timeStamp;
-    if (boundary === undefined || !event.cancelable) return;
-    const distance = dy * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
-    intendedY = (sign > 0 ? Math.max(y, intendedY) : Math.min(y, intendedY)) + distance;
-    if (!caught && sign * (intendedY - boundary) < 0) return;
-    event.preventDefault();
-    if (!caught) {
-      caught = true;
-      scrollTo({top: boundary, behavior: "smooth"});
-    }
+    if (!gesture) return;
+    gesture.delta += delta;
+    gesture.distance += Math.abs(delta);
+    if (gesture.distance > smallDistance()) cancelSnap();
+    else waitForRest();
+  }, {passive: true});
+  addEventListener("touchstart", event => {
+    resetInput();
+    if (event.touches.length !== 1 || reduced.matches || viewer.open || menu.open) return;
+    const finger = event.touches[0];
+    touch = {x: finger.clientX, y: finger.clientY, time: event.timeStamp};
+    gesture = {start: scrollY, delta: 0, distance: 0};
+  }, {passive: true});
+  addEventListener("touchend", event => {
+    if (!touch || !gesture) return resetInput();
+    const finger = event.changedTouches[0];
+    const dy = touch.y - finger.clientY;
+    const distance = Math.abs(dy);
+    const speed = distance / Math.max(1, event.timeStamp - touch.time);
+    if (distance < 5 || distance > smallDistance() || speed > .65 || Math.abs(touch.x - finger.clientX) >= distance) return resetInput();
+    gesture.delta = dy;
+    touch = null;
+    waitForRest();
+  }, {passive: true});
+  addEventListener("scroll", () => {
+    lastScrollY = scrollY;
+    waitForRest();
+  }, {passive: true});
+  for (const name of ["touchcancel", "pointerdown", "keydown", "hashchange", "resize", "blur", "pagehide"]) {
+    addEventListener(name, resetInput, {passive: true});
   }
-  addEventListener("wheel", stopAtScene, {passive: false});
+
+  reduced.addEventListener("change", resetInput);
 
   menu.querySelector("nav").addEventListener("click", event => {
     if (event.target.closest("a")) menu.open = false;
