@@ -6,6 +6,7 @@
   const inlineNav = header.querySelector(".wide-nav");
   const narrowNav = matchMedia("(max-width: 58rem)");
   const footer = document.querySelector(".footer");
+  const viewer = document.getElementById("image-viewer");
   const sections = Array.from(document.querySelectorAll("main > section"));
   const navLinks = header.querySelectorAll("a[href^='#']");
   const solutions = Array.from(document.querySelectorAll(".solution-list li"));
@@ -18,7 +19,7 @@
   };
   let scheduled = false;
   let current = "";
-  let highlighted;
+  let highlighted, layout;
   let lookFrame, lookX = 0, lookY = 0;
 
   function look(x, y) {
@@ -40,12 +41,28 @@
   addEventListener("blur", () => look(0, 0));
   deskPointer.addEventListener("change", () => look(0, 0));
 
-  function highlightSolution() {
-    const center = (innerHeight + header.offsetHeight) / 2;
-    const row = reduced.matches ? undefined : solutions.find(item => {
-      const rect = item.getBoundingClientRect();
-      return rect.top <= center && rect.bottom > center;
-    });
+  // Document positions stay fixed while scrolling. Measure again when content or the viewport resizes.
+  function measure(y) {
+    const foot = footer.getBoundingClientRect();
+    const tops = sections.map(section => section.getBoundingClientRect().top + y);
+    const headerHeight = header.offsetHeight;
+    const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const chapters = Array.from(document.querySelectorAll(".is-player .chapter-stop"),
+      stop => stop.getBoundingClientRect().top + y - headerHeight);
+    return {
+      tops, travel, stops: [0, ...chapters, ...tops.slice(2).map(top => top - headerHeight), Math.min(foot.top + y, travel), travel],
+      rowBounds: solutions.map(row => {
+        const rect = row.getBoundingClientRect();
+        return [rect.top + y, rect.bottom + y];
+      }),
+      foot: foot.top + y, footHeight: foot.height, header: headerHeight
+    };
+  }
+
+  function highlightSolution(y) {
+    const center = y + (innerHeight + layout.header) / 2;
+    const index = reduced.matches ? -1 : layout.rowBounds.findIndex(([top, bottom]) => top <= center && bottom > center);
+    const row = solutions[index];
     if (row === highlighted) return;
     highlighted?.classList.remove("is-current");
     row?.classList.add("is-current");
@@ -54,28 +71,29 @@
 
   function updateNavigation() {
     scheduled = false;
-    const tops = sections.map(section => section.getBoundingClientRect().top);
+    const y = scrollY;
+    if (!layout) layout = measure(y);
+    const { tops, travel } = layout;
+    const viewEnd = y + innerHeight;
     if (!reduced.matches) {
-      const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-      const progress = Math.max(0, Math.min(1, scrollY / travel));
+      const progress = Math.max(0, Math.min(1, y / travel));
       desk.style.setProperty("--desk-drift", ((.08 - .16 * progress) * innerHeight).toFixed(2) + "px");
-      const index = Math.max(0, tops.filter(top => top < innerHeight).length - 1);
+      const index = Math.max(0, tops.filter(top => top < viewEnd).length - 1);
       const from = daylight[sections[Math.max(0, index - 1)].id];
       const to = daylight[sections[index].id];
-      const part = Math.min(1, (innerHeight - tops[index]) / innerHeight);
+      const part = Math.min(1, (viewEnd - tops[index]) / innerHeight);
       const mix = part * part * (3 - 2 * part);
       const light = from[0] + (to[0] - from[0]) * mix, shade = from[1] + (to[1] - from[1]) * mix;
-      const foot = footer.getBoundingClientRect();
-      const reveal = Math.max(0, Math.min(1, (innerHeight - foot.top) / Math.min(foot.height, innerHeight)));
+      const reveal = Math.max(0, Math.min(1, (viewEnd - layout.foot) / Math.min(layout.footHeight, innerHeight)));
       const close = reveal * reveal * (3 - 2 * reveal);
       desk.style.setProperty("--desk-light", ((light + (.24 - light) * close) * innerWidth).toFixed(2) + "px");
       desk.style.setProperty("--desk-shade", (shade + (.76 - shade) * close).toFixed(3));
     }
-    const limit = header.offsetHeight + 2;
+    const limit = y + layout.header + 2;
     const next = tops.findIndex(top => top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
     const active = visible === "solutions" || visible === "results" ? "preview" : visible;
-    highlightSolution();
+    highlightSolution(y);
     const compact = tops[1] <= limit;
     const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
     header.classList.toggle("compact", compact);
@@ -92,13 +110,54 @@
   function schedule() {
     if (!scheduled) { scheduled = true; requestAnimationFrame(updateNavigation); }
   }
+  function invalidateLayout() {
+    layout = null;
+    schedule();
+  }
+  if (window.ResizeObserver) {
+    const sizes = new ResizeObserver(invalidateLayout);
+    for (const element of [header, footer, ...sections, ...solutions]) sizes.observe(element);
+  }
   addEventListener("scroll", schedule, { passive: true });
-  addEventListener("resize", schedule);
-  document.addEventListener("visibilitychange", updateNavigation);
-  reduced.addEventListener("change", schedule);
-  document.addEventListener("toggle", schedule, true);
+  addEventListener("resize", invalidateLayout);
+  addEventListener("load", invalidateLayout, { once: true });
+  document.addEventListener("visibilitychange", invalidateLayout);
+  reduced.addEventListener("change", invalidateLayout);
+  document.addEventListener("toggle", invalidateLayout, true);
   header.addEventListener("focusout", schedule);
   updateNavigation();
+
+  // Some desktop wheels deliver several screens of momentum in one gesture.
+  // Leave ordinary scrolling native until that gesture would cross its next scene.
+  let wheelTime = -Infinity, direction = 0, boundary, intendedY = 0, caught = false;
+  function stopAtScene(event) {
+    const dy = event.deltaY;
+    if (reduced.matches || !dy || event.ctrlKey || event.metaKey || event.shiftKey ||
+        Math.abs(event.deltaX) >= Math.abs(dy) || event.defaultPrevented ||
+        viewer.open || menu.open) return;
+
+    const sign = Math.sign(dy);
+    const y = scrollY;
+    if (event.timeStamp - wheelTime > 180 || sign !== direction) {
+      if (!layout) layout = measure(y);
+      boundary = sign > 0 ? layout.stops.find(stop => stop > y + 3)
+        : layout.stops.filter(stop => stop < y - 3).pop();
+      intendedY = y;
+      direction = sign;
+      caught = false;
+    }
+    wheelTime = event.timeStamp;
+    if (boundary === undefined || !event.cancelable) return;
+    const distance = dy * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+    intendedY = (sign > 0 ? Math.max(y, intendedY) : Math.min(y, intendedY)) + distance;
+    if (!caught && sign * (intendedY - boundary) < 0) return;
+    event.preventDefault();
+    if (!caught) {
+      caught = true;
+      scrollTo({top: boundary, behavior: "smooth"});
+    }
+  }
+  addEventListener("wheel", stopAtScene, {passive: false});
 
   menu.querySelector("nav").addEventListener("click", event => {
     if (event.target.closest("a")) menu.open = false;
@@ -127,7 +186,6 @@
   openLinkedScreen(true);
   addEventListener("hashchange", () => openLinkedScreen(false));
 
-  const viewer = document.getElementById("image-viewer");
   if (typeof viewer.showModal !== "function") return;
   for (const link of document.querySelectorAll(".enlarge")) {
     link.addEventListener("click", event => {

@@ -322,6 +322,7 @@
 }
 .study-walkthrough:has(.is-player) .field-frame { border-color: transparent; }
 .process-run.is-player {
+  position: relative;
   --stage-h: calc(100svh - var(--header));
   --screen-clearance: clamp(8.3rem, 18svh, 10.4rem);
   --ruler-height: min(7.5%, 4.5rem);
@@ -331,7 +332,7 @@
 }
 .is-player :is(.process-heading, .process-list) {
   grid-area: 1 / 1; align-self: start; position: sticky; top: var(--header);
-  height: var(--stage-h); translate: 0 var(--approach-y, 0px);
+  height: var(--stage-h);
 }
 .is-player .process-heading {
   z-index: 2; padding: clamp(.6rem, 2.1svh, 1.4rem) .6rem 0; pointer-events: none;
@@ -379,16 +380,8 @@
   position: absolute; bottom: 0; left: 50%; translate: -50% 0;
   width: 100vw; height: var(--ruler-height); overflow: clip; pointer-events: none;
 }
-.process-ruler i {
-  position: absolute; bottom: 0; left: var(--tick-left); width: var(--tick-width, 1px); height: 100%;
-  transform-origin: bottom; transform: translateX(var(--ruler-x, 0px)) scaleY(var(--tick-height, 0));
-  opacity: var(--tick-light, .46);
-  background: linear-gradient(to bottom, #f7e5cc 0%, #ebc6a7 51%, rgb(214 163 127 / 18%));
-}
 @media (prefers-reduced-motion: no-preference) {
-  .process-ruler i {
-    animation: ruler-breathe 7s ease-in-out var(--tick-delay, 0s) infinite alternate;
-  }
+  .process-ruler { transform-origin: bottom; animation: ruler-breathe 7s ease-in-out infinite alternate; }
   @keyframes ruler-breathe { from { scale: 1 .986; } to { scale: 1 1.01; } }
 }
 .camera-ready:not(.docked) + .study-walkthrough :is(.process-heading, .step-copy, .process-ruler, figcaption) {
@@ -421,3 +414,22 @@
     justify-content: start;
   }
 }
+
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-snap-type: y proximity; }
+  .film::before, .chapter-stop {
+    position: absolute; left: 0; top: 0; width: 1px; height: 1px; pointer-events: none;
+    scroll-snap-align: start; scroll-snap-stop: always;
+  }
+  .film::before { content: ""; }
+  .chapter-stop {
+    top: calc(var(--chapter-index) * var(--step-travel) + 2px);
+    scroll-margin-top: var(--header);
+  }
+  :is(.study-problems, .study-solutions, .study-results, .study-work, .study-install, .footer) {
+    scroll-snap-align: start; scroll-snap-stop: always;
+  }
+  .field :target { scroll-snap-align: start; }
+}
+.process-run:not(.is-player) .chapter-stop { display: none; }

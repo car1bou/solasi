@@ -164,18 +164,55 @@
   }
 
   const surfaces = canvases.map(canvas => {
-    const surface = { canvas, hero: canvas.dataset.wood === "hero", img: canvas.parentElement.querySelector("img"), paint: undefined };
+    const surface = { canvas, hero: canvas.dataset.wood === "hero", img: canvas.parentElement.querySelector("img"), cold: true };
     canvas.addEventListener("webglcontextlost", event => { event.preventDefault(); surface.paint = null; });
-    canvas.addEventListener("webglcontextrestored", () => { surface.paint = undefined; start(); });
+    canvas.addEventListener("webglcontextrestored", () => { surface.paint = undefined; surface.cold = true; start(); });
+    surface.img.addEventListener("load", () => { surface.cold = true; invalidate(); });
     return surface;
   });
   let frame = 0, last = 0, clock = 0, velocity = 0, previousScroll = scrollY;
   let x = innerWidth*.4, y = innerHeight*.5, targetX = x, targetY = y, strength = 0, targetStrength = 0;
 
+  // Only the moving light is rasterized here. Keep the photograph and the camera at full resolution.
+  const interval = 1000 / 30;
+  let nextPaint = 0, dirty = true, filmEnd, scrollRange;
+  function invalidate() { dirty = true; start(); }
+
+  function measure() {
+    dirty = false;
+    filmEnd = film.getBoundingClientRect().bottom + scrollY;
+    scrollRange = Math.max(1, document.documentElement.scrollHeight-innerHeight);
+    for (const surface of surfaces) {
+      const { canvas, hero, img } = surface;
+      const width = canvas.clientWidth, height = canvas.clientHeight;
+      if (!width || !height) continue;
+      const scale = Math.min(1, 1024 / Math.max(width, height), Math.sqrt(440000 / (width*height)));
+      const w = Math.max(1, Math.round(width*scale)), h = Math.max(1, Math.round(height*scale));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      surface.crop = [0,0,1,1];
+      if (hero) continue;
+      surface.rect = canvas.getBoundingClientRect();
+      if (!img.naturalWidth) continue;
+      const b = img.getBoundingClientRect(), rect = surface.rect;
+      const fit = Math.max(b.width/img.naturalWidth, b.height/img.naturalHeight);
+      const iw = img.naturalWidth*fit, ih = img.naturalHeight*fit;
+      const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
+      surface.crop = [(rect.left-b.left+(iw-b.width)/2)/iw, 0, rect.width/iw, rect.height/ih];
+      surface.cropTop = (rect.top-b.top+drift+(ih-b.height)/2)/ih;
+      surface.photoHeight = ih;
+    }
+  }
+
   function update(now) {
     frame = 0;
     if (document.hidden || reduced.matches || document.querySelector("dialog[open]")) return;
-    const dt = clamp((now-last)/1000,.001,.05);
+    if (now < nextPaint - .5) {
+      frame = requestAnimationFrame(update);
+      return;
+    }
+    nextPaint = Math.max(nextPaint + interval, now + interval*.5);
+    if (dirty) measure();
+    const dt = clamp((now-last)/1000,.001,.1);
     last = now;
     clock = (clock + dt*.89) % (Math.PI*200);
     const follow = 1-Math.exp(-dt*5.5);
@@ -186,26 +223,22 @@
     const speed = clamp((scroll-previousScroll)/(innerHeight*dt), -2, 2);
     velocity += (speed-velocity)*(1-Math.exp(-dt*3.5));
     previousScroll = scroll;
-    const travel = scroll / Math.max(1, document.documentElement.scrollHeight-innerHeight);
-    const bottom = film.getBoundingClientRect().bottom;
+    const travel = scroll / scrollRange;
+    const bottom = filmEnd - scroll;
     let active = false;
     for (const surface of surfaces) {
-      if (surface.hero ? bottom <= 0 || stage.classList.contains("inside-screen") : bottom >= innerHeight && !stage.classList.contains("dissolving-desk")) continue;
-      const {canvas, img, hero} = surface;
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) continue;
-      const scale = Math.min(devicePixelRatio, 1440/Math.max(canvas.clientWidth,canvas.clientHeight), Math.sqrt(880000/(canvas.clientWidth*canvas.clientHeight)));
-      const w = Math.max(1, Math.round(canvas.clientWidth*scale)), h = Math.max(1, Math.round(canvas.clientHeight*scale));
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      const {canvas, img, hero, crop} = surface;
+      const visible = hero ? bottom > 0 && !stage.classList.contains("inside-screen")
+        : bottom < innerHeight || stage.classList.contains("dissolving-desk");
+      // Prime both programs, textures and first draws during entry, before the first dissolve.
+      if (!crop || !visible && !(surface.cold && img.complete && img.naturalWidth)) continue;
       if (surface.paint === undefined) surface.paint = makePainter(canvas,img);
       if (!surface.paint) continue;
-      active = true;
-      let crop = [0,0,1,1];
-      if (!hero && img.naturalWidth) {
-        const b = img.getBoundingClientRect();
-        const fit = Math.max(b.width/img.naturalWidth,b.height/img.naturalHeight);
-        const iw = img.naturalWidth*fit, ih = img.naturalHeight*fit;
-        crop = [(rect.left-b.left+(iw-b.width)/2)/iw, (rect.top-b.top+(ih-b.height)/2)/ih, rect.width/iw, rect.height/ih];
+      active ||= visible;
+      surface.cold = !img.complete || !img.naturalWidth;
+      if (!hero && surface.photoHeight) {
+        const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
+        crop[1] = surface.cropTop - drift/surface.photoHeight;
       }
       // The camera publishes its opening crop even when a visitor arrives at a deep link.
       const framing = canvas.parentElement.dataset.woodView;
@@ -213,16 +246,17 @@
         surface.view = framing.split(" ").map(Number);
         surface.framing = framing;
       }
+      const rect = hero ? (strength > .001 || !surface.view ? canvas.getBoundingClientRect() : null) : surface.rect;
       const view = surface.view || [-rect.left/rect.width, -rect.top/rect.height, innerWidth/rect.width, innerHeight/rect.height];
-      surface.paint(clock, velocity, travel, clamp(innerWidth/innerHeight,.8,1.95),
-        ((x-rect.left)/rect.width-view[0])/view[2], ((y-rect.top)/rect.height-view[1])/view[3],
-        strength, crop, view);
+      const px = rect ? ((x-rect.left)/rect.width-view[0])/view[2] : .5;
+      const py = rect ? ((y-rect.top)/rect.height-view[1])/view[3] : .5;
+      surface.paint(clock, velocity, travel, clamp(innerWidth/innerHeight,.8,1.95), px, py, strength, crop, view);
     }
     if (active) frame = requestAnimationFrame(update);
   }
   function start() {
     if (!frame && !document.hidden && !reduced.matches && !document.querySelector("dialog[open]")) {
-      last = performance.now();
+      nextPaint = last = performance.now();
       previousScroll = scrollY;
       frame = requestAnimationFrame(update);
     }
@@ -235,7 +269,12 @@
   document.documentElement.addEventListener("pointerleave", release);
   window.addEventListener("blur", release);
   mouse.addEventListener("change", release);
-  for (const name of ["scroll","resize","pageshow"]) window.addEventListener(name, start, {passive:true});
+  window.addEventListener("scroll", start, {passive:true});
+  for (const name of ["resize","pageshow"]) window.addEventListener(name, invalidate);
+  if ("ResizeObserver" in window) {
+    const sizes = new ResizeObserver(invalidate);
+    for (const element of [document.body, film, ...canvases]) sizes.observe(element);
+  }
   // An instant anchor jump can update the camera after the last sleeping material frame.
   new MutationObserver(start).observe(stage, {attributes: true, attributeFilter: ["class"]});
   document.addEventListener("visibilitychange", start);

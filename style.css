@@ -28,6 +28,8 @@
 }
 * { box-sizing: border-box; }
 html, body { overflow-x: clip; }
+html { scrollbar-width: none; }
+html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; }
 body { isolation: isolate; }
 .desk-surface {
   position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;

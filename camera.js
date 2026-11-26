@@ -11,8 +11,10 @@
   const heroDescription = film.querySelector(".film-description");
   const glass = film.querySelector(".film-glass");
   const plane = film.querySelector(".glass-plane");
+  const axes = film.querySelector(".field-axes");
   const lesson = document.getElementById("process");
   const list = lesson.querySelector(".process-list");
+  const chapterTitle = lesson.querySelector(".process-heading");
   const seat = list.querySelector(".step-screen");
   const intro = document.querySelector(".problem-heading");
   const paper = intro.querySelector(".lecture-page");
@@ -79,7 +81,7 @@
     ]);
   }
 
-  let opening, landing, deskFromGlass, previous = -1, frame = 0;
+  let opening, landing, deskFromGlass, origin = 0, travel = 1, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
@@ -152,6 +154,8 @@
 
     const target = seat.getBoundingClientRect();
     const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
+    origin = film.getBoundingClientRect().top + scrollY;
+    travel = Math.max(1, film.offsetHeight - h - stickyTop);
     const top = target.top + stickyTop - list.getBoundingClientRect().top;
     landing = [[target.left, top], [target.right, top],
       [target.right, top + target.height], [target.left, top + target.height]];
@@ -162,9 +166,7 @@
     frame = 0;
     if (!landing) return;
     const moving = film.classList.contains("camera-ready");
-    const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
-    const travel = Math.max(1, film.offsetHeight - stage.clientHeight - stickyTop);
-    const offset = -film.getBoundingClientRect().top;
+    const offset = scrollY - origin;
     const scroll = moving ? clamp(offset / travel) : 0;
     if (scroll === previous) return;
     previous = scroll;
@@ -173,24 +175,22 @@
     const shot = opening.map((corner, i) => corner.map((n, axis) =>
       n + (landing[i][axis] - n) * t));
     const view = project(shot);
-    world.style.transform = view.multiply(deskFromGlass).toString();
-    plane.style.transform = view.toString();
-    stage.classList.toggle("has-capture", glass.naturalWidth > 0);
-    const copy = 1 - ease(clamp((scroll - .12) / .32));
     const room = 1 - ease(clamp((scroll - .14) / .50));
+    if (room > 0) world.style.transform = view.multiply(deskFromGlass).toString();
+    plane.style.transform = view.toString();
+    const copy = 1 - ease(clamp((scroll - .12) / .32));
     stage.style.setProperty("--copy-opacity", copy);
     stage.style.setProperty("--opening-link-visibility", copy > .05 ? "visible" : "hidden");
     stage.style.setProperty("--room-presence", room);
     stage.style.setProperty("--desk-opacity", room);
     header.style.setProperty("--header-fill", ease(clamp((scroll - .58) / .42)));
     const chapter = ease(clamp((scroll - .72) / .23));
-    stage.style.setProperty("--screen-mix", glass.naturalWidth ? 1 : 0);
     stage.classList.toggle("inside-screen", room === 0);
     stage.classList.toggle("dissolving-desk", room < 1);
     film.classList.toggle("docked", docked);
     lesson.style.setProperty("--lesson-copy", moving ? chapter : 1);
-    lesson.style.setProperty("--approach-y", moving ? -Math.max(0, travel - offset) + "px" : "0px");
-    const center = view.transformPoint({ x: 800, y: planeHeight / 2 });
+    const approach = moving && offset < travel ? "0 " + (offset - travel) + "px" : "";
+    list.style.translate = chapterTitle.style.translate = approach;
     const span = Math.hypot(shot[1][0] - shot[0][0], shot[1][1] - shot[0][1]);
     // Fit the undistorted recording into the photographed LCD and then into the player.
     const height = Math.hypot(shot[3][0] - shot[0][0], shot[3][1] - shot[0][1]);
@@ -198,18 +198,23 @@
       const fit = (glass.naturalWidth / glass.naturalHeight) / (span / height);
       glass.parentElement.style.transform = `scale(${Math.min(1, fit)}, ${Math.min(1, 1 / fit)})`;
     }
-    stage.style.setProperty("--axis-x", center.x / center.w + "px");
-    stage.style.setProperty("--axis-y", center.y / center.w + "px");
-    stage.style.setProperty("--axis-hole-x", (span * (device === "windows" || device === "mac" ? .70 : .56) + 32) + "px");
-    stage.style.setProperty("--axis-hole-y", (span * (device === "windows" || device === "mac" ? .80 : .49) + 20) + "px");
+    if (!copy) return;
+    const center = view.transformPoint({ x: 800, y: planeHeight / 2 });
+    axes.style.setProperty("--axis-x", center.x / center.w + "px");
+    axes.style.setProperty("--axis-y", center.y / center.w + "px");
+    axes.style.setProperty("--axis-hole-x", (span * (device === "windows" || device === "mac" ? .70 : .56) + 32) + "px");
+    axes.style.setProperty("--axis-hole-y", (span * (device === "windows" || device === "mac" ? .80 : .49) + 20) + "px");
   }
 
   function schedule() {
-    if (!frame && !motion.matches) frame = requestAnimationFrame(paint);
+    if (!frame && !motion.matches && !(previous === 1 && scrollY >= origin + travel)) frame = requestAnimationFrame(paint);
   }
 
   function refresh() {
-    film.classList.toggle("camera-ready", !motion.matches && glass.naturalWidth > 0 && plate.naturalWidth > 0);
+    const captured = glass.naturalWidth > 0;
+    stage.classList.toggle("has-capture", captured);
+    stage.style.setProperty("--screen-mix", captured ? 1 : 0);
+    film.classList.toggle("camera-ready", !motion.matches && captured && plate.naturalWidth > 0);
     compose();
     paint();
   }
@@ -226,6 +231,8 @@
   window.addEventListener("scroll", schedule, { passive: true });
   if (window.ResizeObserver) {
     const sizes = new ResizeObserver(refresh);
+    sizes.observe(film);
+    sizes.observe(header);
     sizes.observe(stage);
     sizes.observe(seat);
     sizes.observe(heroCopy);

@@ -12,12 +12,14 @@
   const returnFrame = document.createElement("canvas");
   const deviceScreen = document.querySelector(".film-display");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const ruler = document.createElement("div");
+  const ruler = document.createElement("canvas");
+  const ink = ruler.getContext("2d");
   ruler.className = "process-ruler";
   ruler.setAttribute("aria-hidden", "true");
   let current = -1, watching = false, seated = false, frame = 0;
   let paused = Boolean(navigator.connection?.saveData);
-  let pointerX = null, spacing = 0, lastWidth = 0, lastRuler = "";
+  let pointerX = null, lastPointer = null, lastSweep = -1;
+  let width, height, top, runwayStart, runwayHeight, stageHeight, spacing, density, gradient;
   const clamp = n => Math.max(0, Math.min(1, n));
   const fade = n => { const t = clamp(n); return t * t * (3 - 2 * t); };
 
@@ -46,10 +48,16 @@
     else poster.addEventListener("load", decode, {once: true});
   });
 
-  function play(i) {
+  function prepare(i) {
     const clip = clips[i];
-    if (!clip.hasAttribute("src")) clip.src = figures[i].querySelector("a").href;
-    clip.play().catch(() => updateButton(i));
+    if (!clip || clip.hasAttribute("src")) return;
+    clip.preload = "auto";
+    clip.src = figures[i].querySelector("a").href;
+  }
+
+  function play(i) {
+    prepare(i);
+    clips[i].play().catch(() => updateButton(i));
   }
 
   function updateButton(i) {
@@ -83,47 +91,62 @@
     return button;
   });
 
-  function drawRuler(position) {
-    const width = document.documentElement.clientWidth;
-    if (width !== lastWidth) {
-      lastWidth = width;
+  function measure() {
+    if (reduced.matches) return;
+    top = parseFloat(getComputedStyle(stage).top) || 0;
+    runwayStart = runway.getBoundingClientRect().top + scrollY;
+    runwayHeight = runway.offsetHeight;
+    stageHeight = stage.offsetHeight;
+    height = innerHeight;
+    const viewportWidth = document.documentElement.clientWidth;
+    const pixelRatio = Math.min(2, window.devicePixelRatio || 1);
+    if (ink && (viewportWidth !== width || pixelRatio !== density)) {
+      width = viewportWidth;
+      density = pixelRatio;
       spacing = Math.max(28, Math.min(67, width * .035));
-      ruler.replaceChildren();
-      for (let i = -1; i <= Math.ceil(width / spacing) + 1; i++) {
-        const tick = document.createElement("i");
-        tick.style.setProperty("--tick-left", i * spacing + "px");
-        tick.style.setProperty("--tick-delay", -(i + 2) * .43 + "s");
-        ruler.append(tick);
-      }
-      lastRuler = "";
+      ruler.width = Math.round(width * density);
+      ruler.height = Math.round(64 * density);
+      gradient = ink.createLinearGradient(0, 1, 0, 0);
+      gradient.addColorStop(0, "#f7e5cc");
+      gradient.addColorStop(.51, "#ebc6a7");
+      gradient.addColorStop(1, "rgba(214,163,127,.18)");
+      lastSweep = -1;
     }
-    const key = position.toFixed(4) + "/" + pointerX;
-    if (key === lastRuler) return;
-    lastRuler = key;
+    if (frame) cancelAnimationFrame(frame);
+    sync();
+  }
+
+  function drawRuler(position) {
+    if (!ink || !width) return;
     const chapter = Math.floor(position);
     const sweep = chapter + fade((position - chapter - .10) / .80);
+    if (sweep === lastSweep && pointerX === lastPointer) return;
+    lastSweep = sweep;
+    lastPointer = pointerX;
     const shift = -(sweep * width * .72 % spacing);
     const peak = width * (.455 + .065 * Math.sin(sweep * 1.7));
-    ruler.style.setProperty("--ruler-x", shift + "px");
-    Array.from(ruler.children).forEach((tick, i) => {
-      const x = (i - 1) * spacing + shift;
-      const height = Math.exp(-Math.abs(x - peak) / (width * .18));
+    ink.resetTransform();
+    ink.clearRect(0, 0, ruler.width, ruler.height);
+    ink.fillStyle = gradient;
+    for (let x = shift; x <= width + spacing; x += spacing) {
+      const wave = Math.exp(-Math.abs(x - peak) / (width * .18));
       const nearby = pointerX === null ? 0 : Math.exp(-(((x - pointerX) / Math.max(45, width * .06)) ** 2));
-      tick.style.setProperty("--tick-height", Math.min(1, .04 + .96 * height + .16 * nearby).toFixed(3));
-      tick.style.setProperty("--tick-light", Math.min(.9, .11 + .54 * height + .30 * nearby).toFixed(3));
-      tick.style.setProperty("--tick-width", Math.abs(x - peak) < spacing / 2 ? "2px" : "1px");
-    });
+      const bar = ruler.height * Math.min(1, .04 + .96 * wave + .16 * nearby);
+      ink.globalAlpha = Math.min(.9, .11 + .54 * wave + .30 * nearby);
+      ink.setTransform(density, 0, 0, -bar, x * density, ruler.height);
+      ink.fillRect(0, 0, Math.abs(x - peak) < spacing / 2 ? 2 : 1, 1);
+    }
   }
 
   function sync() {
     frame = 0;
     if (reduced.matches) return;
-    const top = parseFloat(getComputedStyle(stage).top) || 0;
-    const rect = runway.getBoundingClientRect();
-    const travel = Math.max(1, runway.offsetHeight - stage.offsetHeight);
-    const position = clamp((top - rect.top) / travel) * steps.length;
+    const runwayTop = runwayStart - scrollY;
+    const runwayBottom = runwayTop + runwayHeight;
+    const travel = Math.max(1, runwayHeight - stageHeight);
+    const position = clamp((top - runwayTop) / travel) * steps.length;
     const index = Math.min(steps.length - 1, Math.floor(position));
-    const docked = rect.top <= top + 1;
+    const docked = runwayTop <= top + 1;
     if (seated && !docked && copyFrame(0, returnFrame)) deviceScreen.append(returnFrame);
     seated = docked;
     const changed = current !== index;
@@ -141,12 +164,16 @@
       steps[index].inert = false;
       steps[index].setAttribute("aria-current", "step");
       steps[index].append(ruler);
-      if (posters[index + 1]) posters[index + 1].loading = "eager";
+      if (!navigator.connection?.saveData) {
+        prepare(index);
+        prepare(index + 1);
+        if (posters[index + 1]) posters[index + 1].loading = "eager";
+      }
     }
-    const inView = rect.top <= innerHeight && rect.bottom > top;
+    const inView = runwayTop <= height && runwayBottom > top;
     if (inView) drawRuler(position);
-    const visible = docked && rect.bottom >= top + stage.offsetHeight * .48;
-    figures[index].inert = !visible;
+    const visible = docked && runwayBottom >= top + stageHeight * .48;
+    if (figures[index].inert !== !visible) figures[index].inert = !visible;
     const shouldPlay = visible && !document.hidden;
     if (changed || shouldPlay !== watching) {
       watching = shouldPlay;
@@ -174,17 +201,29 @@
       step.inert = figures[i].inert = !reduced.matches;
       buttons[i].hidden = reduced.matches;
     });
-    sync();
+    measure();
   }
 
+  // The pinned screens overlap. Place their snap positions on the scrolling runway.
+  steps.forEach((_, i) => {
+    const stop = document.createElement("span");
+    stop.className = "chapter-stop";
+    stop.setAttribute("aria-hidden", "true");
+    stop.style.setProperty("--chapter-index", i);
+    runway.append(stop);
+  });
   configure();
   runway.addEventListener("pointermove", event => {
     if (event.pointerType === "mouse") { pointerX = event.clientX; schedule(); }
   }, {passive: true});
   runway.addEventListener("pointerleave", () => { pointerX = null; schedule(); });
   window.addEventListener("scroll", schedule, {passive: true});
-  window.addEventListener("resize", schedule);
-  window.addEventListener("load", schedule, {once: true});
+  if (window.ResizeObserver) {
+    const sizes = new ResizeObserver(measure);
+    [runway, stage, document.querySelector(".film"), document.querySelector(".masthead")].forEach(el => sizes.observe(el));
+  }
+  window.addEventListener("resize", measure);
+  window.addEventListener("load", measure, {once: true});
   document.addEventListener("visibilitychange", sync);
   reduced.addEventListener("change", configure);
 })();
