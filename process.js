@@ -1,136 +1,137 @@
 (() => {
   const runway = document.querySelector(".process-run");
-  if (!runway) return;
   const film = document.querySelector(".film");
+  const display = film.querySelector(".film-display");
   const stage = runway.querySelector(".process-list");
   const steps = [...stage.children];
   const clips = steps.map(step => step.querySelector("video"));
-  const originals = steps.map(step => step.querySelector(".step-film a"));
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  let scheduled = false;
-  let current = -1;
-  let lastProgress = -1;
-  let inView = false;
-  let activeClip;
-  let held = false;
+  const devices = steps.map(step => step.querySelector("figcaption > span").textContent.trim());
+  const separate = steps.map((step, i) => step.dataset.separateDemo ||
+    (i > 0 && devices[i] !== devices[i - 1] ? devices[i] + " 시연" : ""));
+  const links = steps.map(step => step.querySelector(".step-film a"));
+  const controls = runway.querySelector(".process-controls");
+  const previous = controls.querySelector(".step-prev");
+  const next = controls.querySelector(".step-next");
+  const counter = controls.querySelector("output");
   const toggle = document.createElement("button");
   toggle.type = "button";
-  toggle.hidden = true;
-  toggle.className = "step-toggle";
+  counter.after(toggle);
+  const heldFrame = document.createElement("canvas");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)");
+  let current = 0, seated = false, visible = false, frame = 0;
+  let paused = Boolean(navigator.connection?.saveData);
 
-  function updateControl() {
-    toggle.hidden = !activeClip?.classList.contains("is-showing");
-    if (!toggle.hidden) {
-      toggle.textContent = activeClip.ended ? "다시 보기" : activeClip.paused ? "이어서 보기" : "일시 정지";
-    }
+  function updateControls() {
+    const clip = clips[current];
+    previous.disabled = current === 0;
+    next.disabled = current === steps.length - 1;
+    const separateDemo = separate[current + 1];
+    next.textContent = separateDemo ? separateDemo + " →" : "다음 →";
+    next.setAttribute("aria-label", separateDemo ? "다음 단계: " + separateDemo : "다음 단계");
+    counter.setAttribute("aria-live", paused ? "polite" : "off");
+    counter.textContent = (current + 1) + " / " + steps.length;
+    toggle.textContent = clip.ended ? "다시 보기" : clip.paused ? "재생" : "일시 정지";
+    toggle.disabled = Boolean(clip.error);
   }
 
-  function playClip(clip) {
-    clip.play().catch(() => {
-      if (clip === activeClip && clip.paused) clip.classList.remove("is-showing");
-      updateControl();
-    });
+  function play() {
+    const clip = clips[current];
+    if (!clip.hasAttribute("src")) clip.src = links[current].href;
+    clip.play().catch(updateControls);
   }
 
-  toggle.addEventListener("click", () => {
-    if (!activeClip) return;
-    held = !activeClip.paused;
-    if (held) activeClip.pause();
-    else playClip(activeClip);
-  });
-
-  clips.forEach(clip => {
-    clip.addEventListener("playing", () => {
-      if (clip === activeClip) {
-        clip.classList.add("is-showing");
-        updateControl();
-      }
-    });
-    clip.addEventListener("pause", updateControl);
-    clip.addEventListener("ended", updateControl);
-    clip.addEventListener("error", () => { clip.classList.remove("is-showing"); updateControl(); });
-  });
-
-  function syncPlayback() {
-    const next = inView && !document.hidden && !reduced.matches && !navigator.connection?.saveData
-      ? clips[current] : undefined;
-    if (next === activeClip) return;
-    activeClip?.pause();
-    activeClip = next;
-    updateControl();
-    if (!next) return;
-    if (!next.hasAttribute("src")) next.src = originals[current].href;
-    if (!held) playClip(next);
-  }
-
-  function showStep() {
-    scheduled = false;
-    if (reduced.matches) return;
-    const top = Number.parseFloat(getComputedStyle(stage).top) || 0;
-    const rect = runway.getBoundingClientRect();
-    const travel = Math.max(1, rect.height - stage.offsetHeight);
-    const threshold = Math.min(stage.offsetHeight, innerHeight) * .48;
-    const seated = !film.classList.contains("camera-ready") || rect.top <= top + 1;
-    if (!seated && inView && current === 0 && clips[0].readyState >= 1) clips[0].currentTime = 0;
-    inView = seated && rect.top <= innerHeight - threshold && rect.bottom >= top + threshold;
-    const progress = Math.max(0, Math.min(1, (top - rect.top) / travel));
-    if (progress === lastProgress) { syncPlayback(); return; }
-    lastProgress = progress;
-    stage.style.setProperty("--ruler-x", (-progress * stage.clientWidth * .84).toFixed(2) + "px");
-
-    // Keep each step still for reading, then roll its lines through the same slots.
-    const position = Math.max(0, Math.min(steps.length - 1, progress * steps.length - .5));
-    const first = Math.floor(position);
-    const mix = Math.max(0, Math.min(1, (position - first - .22) / .56));
-    const eased = mix * mix * (3 - 2 * mix);
+  function select(index) {
+    const old = clips[current];
+    old.pause();
+    if (old.readyState >= 1) old.currentTime = 0;
+    old.classList.remove("is-showing");
+    current = index;
     steps.forEach((step, i) => {
-      const offset = Math.max(-1, Math.min(1, i - first - eased));
-      const visible = Math.abs(offset) < 1;
-      step.toggleAttribute("data-in-frame", visible);
-      step.toggleAttribute("data-wiping", visible && offset > 0);
-      if (visible) step.style.setProperty("--step-shift", (offset * 100).toFixed(2) + "%");
+      step.inert = i !== index;
+      if (i === index) step.setAttribute("aria-current", "step");
+      else step.removeAttribute("aria-current");
     });
-    const index = first + Number(mix >= .5);
-    if (index !== current) {
-      steps[current]?.removeAttribute("aria-current");
-      if (originals[current]) originals[current].inert = true;
-      current = index;
-      held = false;
-      steps[current].setAttribute("aria-current", "step");
-      originals[current].inert = false;
-      originals[current].before(toggle);
-      if (clips[current].readyState >= 1) clips[current].currentTime = 0;
-    }
-    syncPlayback();
+    if (steps[index + 1]) steps[index + 1].querySelector("img").loading = "eager";
+    updateControls();
+    if (visible && !paused) play();
   }
 
-  function requestStep() {
-    if (!scheduled && !reduced.matches) {
-      scheduled = true;
-      requestAnimationFrame(showStep);
-    }
+  previous.onclick = () => select(current - 1);
+  next.onclick = () => select(current + 1);
+  toggle.onclick = () => {
+    const clip = clips[current];
+    paused = !clip.paused;
+    if (paused) clip.pause();
+    else play();
+  };
+
+  clips.forEach((clip, i) => {
+    clip.addEventListener("playing", () => {
+      if (i !== current || !visible) { clip.pause(); return; }
+      clip.classList.add("is-showing");
+      updateControls();
+    });
+    clip.addEventListener("pause", updateControls);
+    clip.addEventListener("error", updateControls);
+    clip.addEventListener("ended", () => {
+      if (i === current && visible && !paused && i + 1 < steps.length && !separate[i + 1] &&
+          !steps[i].contains(document.activeElement)) select(i + 1);
+      else updateControls();
+    });
+  });
+
+  // Scrolling back carries the frame the visitor last saw onto the physical display.
+  function keepFrame() {
+    const clip = clips[current];
+    const source = clip.readyState >= 2 && clip.classList.contains("is-showing")
+      ? clip : steps[current].querySelector("img");
+    const width = source.videoWidth || source.naturalWidth;
+    if (!width) return;
+    heldFrame.width = width;
+    heldFrame.height = source.videoHeight || source.naturalHeight;
+    heldFrame.getContext("2d").drawImage(source, 0, 0);
+    if (!heldFrame.parentElement) display.append(heldFrame);
+  }
+
+  function sync() {
+    frame = 0;
+    if (reduced.matches) return;
+    const top = parseFloat(getComputedStyle(stage).top) || 0;
+    const rect = runway.getBoundingClientRect();
+    const docked = !film.classList.contains("camera-ready") || rect.top <= top + 1;
+    if (seated && !docked) keepFrame();
+    seated = docked;
+    const threshold = Math.min(stage.offsetHeight, innerHeight) * .48;
+    const watching = docked && !document.hidden && rect.top <= innerHeight - threshold && rect.bottom >= top + threshold;
+    if (watching === visible) return;
+    visible = watching;
+    const clip = clips[current];
+    if (!visible) clip.pause();
+    else if (!paused && !clip.ended) play();
+  }
+
+  function schedule() {
+    if (!frame) frame = requestAnimationFrame(sync);
   }
 
   function configure() {
-    runway.classList.toggle("is-scrubbed", !reduced.matches);
-    originals.forEach(link => { link.inert = !reduced.matches; });
-    steps[current]?.removeAttribute("aria-current");
-    current = -1;
+    visible = seated = false;
+    clips[current].pause();
+    heldFrame.remove();
+    runway.classList.toggle("is-player", !reduced.matches);
+    controls.hidden = reduced.matches;
     if (reduced.matches) {
-      syncPlayback();
+      steps.forEach(step => { step.inert = false; step.removeAttribute("aria-current"); });
     } else {
-      lastProgress = -1;
-      showStep();
+      select(0);
+      sync();
     }
   }
 
   configure();
-  window.addEventListener("load", requestStep, { once: true });
-  document.addEventListener("visibilitychange", syncPlayback);
-  window.addEventListener("scroll", requestStep, { passive: true });
-  window.addEventListener("resize", () => {
-    lastProgress = -1;
-    requestStep();
-  });
+  window.addEventListener("scroll", schedule, {passive: true});
+  window.addEventListener("resize", schedule);
+  window.addEventListener("load", schedule, {once: true});
+  document.addEventListener("visibilitychange", sync);
   reduced.addEventListener("change", configure);
 })();

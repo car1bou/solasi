@@ -22,18 +22,17 @@ window.renderPlatformPage = function (page) {
   setTitle("#heading", hero.title);
   one(".film-description").textContent = hero.description;
   const paper = one(".lecture-page");
-  for (const image of [one(".film-glass"), paper.querySelector("img")]) {
-    image.width = hero.width;
-    image.height = hero.height;
-    setImage(image, hero.image, image.classList.contains("film-glass") ? "" : hero.alt);
-  }
+  const detail = paper.querySelector("img");
+  detail.width = hero.width;
+  detail.height = hero.height;
+  setImage(detail, hero.image, hero.alt);
   paper.style.setProperty("--app-w", hero.width);
   paper.style.setProperty("--app-h", hero.height);
   ["x", "y", "w", "h"].forEach((key, index) => paper.style.setProperty("--pdf-" + key, hero.crop[index]));
 
   if (page.tourTitle) setTitle("#process-heading", page.tourTitle);
-  one(".course-glass").src = steps[0].image;
   fill(".process-list > li", steps, (row, step) => {
+    row.removeAttribute("data-separate-demo");
     setCopy(row, step);
     setImage(row.querySelector(".step-screen img"), step.image, step.alt);
     row.querySelector("figcaption > span").textContent = step.caption || page.demoCaption || name;
@@ -61,3 +60,20 @@ window.renderPlatformPage = function (page) {
   });
   one("#image-viewer img").src = gallery[0].image;
 };
+
+// The Mac walkthrough starts inside a lecture recording. Keep the two native
+// captures in their recorded order so the first frame belongs to this device.
+if (document.documentElement.dataset.device === "mac") {
+  const list = document.querySelector(".process-list");
+  const recordings = [...list.querySelectorAll('a[href*="process-transcript.mp4"], a[href*="process-replay.mp4"]')]
+    .map(link => link.closest("li"));
+  list.replaceChildren(...recordings);
+  const [opening, conclusion] = document.querySelectorAll("#process-heading > span");
+  opening.textContent = "강의 대본에서";
+  conclusion.textContent = "다시 듣기까지.";
+  recordings.forEach((row, index) => {
+    row.querySelector(".step-number").textContent = String(index + 1).padStart(2, "0");
+    const poster = row.querySelector(".step-screen img");
+    poster.loading = index === 0 ? "eager" : "lazy";
+  });
+}

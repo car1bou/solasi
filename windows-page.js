@@ -4,7 +4,9 @@
   // These captures use the desktop UI shared by the Windows app and a public sample course.
   const image = name => "assets/windows-" + name + ".webp";
   const step = (name, title, description, alt) => ({
-    title, description, alt, image: image("step-" + name), video: "assets/windows-step-" + name + ".mp4"
+    title, description, alt,
+    image: image("step-" + name) + "?v=2",
+    video: "assets/windows-step-" + name + ".mp4?v=2"
   });
   window.renderPlatformPage({
     name: "Windows", demoCaption: "Windows 화면 예시",
@@ -20,7 +22,7 @@
       step("course", "과목 열기", "왼쪽 과목 목록에서 인지심리학을 선택해 이번 수업의 작업 공간을 엽니다.", "최근 기록에서 인지심리학 과목으로 이동하는 화면"),
       step("pdf", "강의 PDF 펼치기", "‘자료·필기’에서 기억과 학습 PDF를 열고 오늘 배울 그래프로 이동합니다.", "자료 목록에서 강의 PDF를 열어 2쪽으로 이동하는 화면"),
       step("memo", "쪽에 메모 남기기", "그래프 옆의 메모 칸에 회상률이 높은 위치를 적고 저장합니다.", "계열 위치 효과 자료 옆에 페이지 메모를 입력하는 화면"),
-      step("record", "강의 기록 찾기", "최근 기록에서 ‘기억과 학습’을 연 뒤 대본 탭으로 이동합니다.", "강의 기록을 열고 대본 탭을 선택하는 화면"),
+      step("record", "강의 기록 찾기", "홈으로 돌아가 최근 기록에서 ‘기억과 학습’을 열고 대본 탭을 선택합니다.", "메모를 저장한 뒤 홈으로 돌아가 강의 기록의 대본을 여는 화면"),
       step("replay", "한 구간 다시 듣기", "대본의 한 문장을 고르고 ‘선택 구간 듣기’로 그 부분의 원음을 확인합니다.", "선택한 대본 문장의 원음이 재생되는 화면")
     ],
     features: [

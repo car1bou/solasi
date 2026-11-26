@@ -47,10 +47,10 @@
 .motion-title > span { display: inline-block; max-width: 100%; }
 .field .motion-title > span:first-child, .install-heading .motion-title > span { color: inherit; }
 @media (prefers-reduced-motion: no-preference) {
-  .film-copy .motion-title > span, .motion-title.has-arrived > span {
+  .motion-title.has-arrived:not(.process-heading) > span {
     animation: lift-title .64s cubic-bezier(.2,.72,.22,1) backwards;
   }
-  .film-copy .motion-title > span:last-child, .motion-title.has-arrived > span:last-child {
+  .motion-title.has-arrived:not(.process-heading) > span:last-child {
     animation-delay: .085s;
   }
   @keyframes lift-title {
@@ -206,41 +206,28 @@
 .step-screen video { display: none; }
 .step-film figcaption { display: flex; align-items: center; justify-content: space-between; gap: .5rem; color: var(--study-muted); font-size: .82rem; }
 .step-film figcaption > span { margin-inline-end: auto; }
-.step-toggle { min-height: 2.75rem; padding: .2rem .45rem; border: 0; background: none; color: inherit; cursor: pointer; }
-.step-toggle:hover { text-decoration: underline; }
 .step-film a { display: inline-flex; align-items: center; gap: .35em; min-height: 2.75rem; }
-.process-run.is-scrubbed { height: 370svh; }
-.is-scrubbed .process-list { position: sticky; top: var(--header); height: calc(100svh - var(--header)); min-height: 16rem; }
-.is-scrubbed .process-list li {
-  position: absolute; inset: 0; padding-block: 1rem 3.25rem; border: 0; opacity: 0;
-  pointer-events: none;
+.process-run.is-player { position: relative; }
+.is-player .process-list { position: sticky; top: var(--header); height: calc(100svh - var(--header)); min-height: 16rem; }
+.is-player .process-list li {
+  position: absolute; inset: 0; padding-block: 1rem 3.75rem; border: 0; visibility: hidden;
 }
-.is-scrubbed .step-film { width: min(100%, calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6))); }
-.is-scrubbed .process-list li[data-in-frame] { opacity: 1; }
-.is-scrubbed [data-in-frame] .step-copy > * {
-  transform: translateY(var(--step-shift));
-  clip-path: inset(max(0%, calc(0% - var(--step-shift))) -.12em max(0%, var(--step-shift)));
+.is-player .process-list li[aria-current="step"] { visibility: visible; }
+.is-player .step-film { width: min(100%, calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6))); }
+.is-player .step-screen video { display: block; }
+.is-player .step-screen:has(.is-showing) img { opacity: 0; }
+.is-player .step-copy p { min-height: 3.2em; }
+.process-controls {
+  position: absolute; bottom: .45rem; inset-inline: 0; display: flex; align-items: center;
+  justify-content: center; gap: .75rem; color: var(--study-text); font-variant-numeric: tabular-nums;
 }
-.is-scrubbed [data-wiping] .step-film {
-  clip-path: inset(-3rem var(--step-shift) -3rem -2rem);
+.process-controls[hidden] { display: none; }
+.process-controls button {
+  min-height: 2.75rem; min-width: 2.75rem; padding-inline: .55rem; border: 0;
+  color: inherit; background: transparent; font: inherit; cursor: pointer;
 }
-.is-scrubbed .step-screen video { display: block; }
-.is-scrubbed .step-screen:has(.is-showing) img { opacity: 0; }
-.is-scrubbed [aria-current="step"] .step-film :is(a, button) { pointer-events: auto; }
-.is-scrubbed .step-copy p { min-height: 3.2em; }
-.is-scrubbed .process-list::before {
-  position: absolute; content: ""; bottom: calc(3.5% - 2px); left: 50%; height: 1.12rem;
-  border-left: 2px solid var(--study-oak); z-index: 1;
-}
-.is-scrubbed .process-list::after {
-  position: absolute; content: ""; left: 20%; right: 20%; bottom: 3.5%; height: .75rem;
-  background-image: linear-gradient(to right, var(--study-tick) 1px, transparent 1px),
-    linear-gradient(to right, var(--study-line) 1px, transparent 1px);
-  background-size: 60px 100%, 12px 55%;
-  background-position: var(--ruler-x, 0px) bottom;
-  background-repeat: repeat-x;
-  border-bottom: 1px solid var(--study-line);
-}
+.process-controls button:disabled { opacity: .38; cursor: default; }
+.process-controls output { font-size: .86rem; }
 .work-grid { display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.35fr); border-bottom: 1px solid var(--study-line); }
 .work-index { align-self: center; padding: var(--study-gap); }
 .work-index details { border-block-start: 1px solid var(--study-line); }
@@ -322,7 +309,6 @@
   .result-head { grid-template-columns: 1fr; }
   .result-example { width: min(82%,19rem); }
   .result-list li { min-height: 10rem; }
-  .process-run.is-scrubbed { height: 350svh; }
   .work-grid, .install-options { grid-template-columns: 1fr; }
   .work-gallery, .install-options article + article { border-left: 0; border-top: 1px solid var(--study-line); }
   .work-grid { padding-inline: .9rem; }
@@ -345,8 +331,8 @@
   .step-copy h3 { align-self: center; }
   .step-number { font-size: clamp(2.5rem,8vw,4.25rem); }
   .step-copy p { grid-column: 1 / -1; max-width: none; }
-  .is-scrubbed .step-copy p { min-height: 3.2em; }
-  .is-scrubbed .step-film { width: min(100%, 76svh); justify-self: center; }
+  .is-player .step-copy p { min-height: 3.2em; }
+  .is-player .step-film { width: min(100%, 76svh); justify-self: center; }
 }
 @media (max-height: 32.99rem) and (min-aspect-ratio: 1/1) {
   .problem-heading {
@@ -369,27 +355,29 @@
 }
 
 /* The photograph and the first course video occupy the same screen at the handoff. */
-.study-walkthrough:has(.is-scrubbed) .field-frame {
+.study-walkthrough:has(.is-player) .field-frame {
   width: min(calc(100% - 2 * var(--edge)), max(73rem, 76vw));
 }
-.is-scrubbed .process-heading {
+.is-player .process-heading {
   position: sticky; top: var(--header); z-index: 1; height: 0; padding: 0 .6rem;
   translate: 0 calc(var(--approach-y, 0px) + clamp(.5rem, 2.3svh, 1.6rem));
   font-size: clamp(1.6rem, 3.15vw, 3.1rem); line-height: 1.08; pointer-events: none;
 }
-.is-scrubbed .process-heading br { display: none; }
-.is-scrubbed .process-heading span + br + span { margin-inline-start: .18em; }
-.is-scrubbed .process-list { translate: 0 var(--approach-y, 0px); }
-.is-scrubbed .process-list li { padding-block-start: clamp(4.2rem, 10svh, 7.2rem); }
-.is-scrubbed .step-film { max-width: calc((100svh - var(--header) - clamp(10rem, 21svh, 16rem)) * var(--demo-ratio, 1.6)); }
-.camera-ready:not(.docked) + .study-walkthrough :is(.process-heading, .step-copy),
-.camera-ready:not(.docked) + .study-walkthrough .process-list::before,
-.camera-ready:not(.docked) + .study-walkthrough .process-list::after { opacity: var(--lesson-copy, 0); }
+.is-player .process-heading br { display: none; }
+.is-player .process-heading span + br + span { margin-inline-start: .18em; }
+.is-player .process-list { translate: 0 var(--approach-y, 0px); }
+.is-player .process-list li { padding-block-start: clamp(4.2rem, 10svh, 7.2rem); }
+.is-player .step-film { max-width: calc((100svh - var(--header) - clamp(10rem, 21svh, 16rem)) * var(--demo-ratio, 1.6)); }
+.camera-ready:not(.docked) + .study-walkthrough .process-heading { opacity: var(--lesson-copy, 0); }
+.camera-ready:not(.docked) + .study-walkthrough .step-copy { opacity: var(--step-copy, 0); }
 .camera-ready:not(.docked) + .study-walkthrough .step-screen { visibility: hidden; }
-.camera-ready:not(.docked) + .study-walkthrough figcaption { opacity: var(--lesson-copy, 0); visibility: var(--lesson-controls, hidden); }
+@media (prefers-reduced-motion: no-preference) {
+  .is-player :is(figcaption, .process-controls) { transition: opacity .24s ease-out; }
+}
+.camera-ready:not(.docked) + .study-walkthrough :is(figcaption, .process-controls) { opacity: 0; visibility: hidden; }
 .camera-ready:not(.docked) + .study-walkthrough figcaption:focus-within { opacity: 1; }
 @media (max-height: 32.99rem) {
-  .is-scrubbed .process-heading { font-size: 1.35rem; }
-  .is-scrubbed .process-list li { padding-block: 2.7rem 1.65rem; }
-  .is-scrubbed .step-film { max-width: calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6)); }
+  .is-player .process-heading { font-size: 1.35rem; }
+  .is-player .process-list li { padding-block: 2.7rem 3rem; }
+  .is-player .step-film { max-width: calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6)); }
 }

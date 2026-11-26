@@ -12,14 +12,19 @@
     .entry-loader { display: none; }
     .entry-visit .entry-loader {
       position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; pointer-events: none;
-      color: #f7e5c8; background: radial-gradient(ellipse at 55% 65%, #503a29, #302319 75%);
+      color: #f7e5c8; isolation: isolate;
+    }
+    .entry-loader::before {
+      content: ""; position: absolute; inset: 0; z-index: -1;
+      background: radial-gradient(ellipse at 55% 65%, #503a29, #302319 75%);
     }
     .entry-loader svg { width: clamp(5.1rem, 8vw, 6.7rem); height: auto; }
-    .entry-reveal .entry-loader { opacity: 0; transition: opacity .14s linear; }
+    .entry-reveal .entry-loader::before, .entry-reveal .entry-loader svg { opacity: 0; }
     @media (prefers-reduced-motion: no-preference) {
       .entry-rays { animation: ray-turn 4.8s linear infinite; transform-origin: 0 0; }
       @keyframes ray-turn { to { transform: rotate(1turn); } }
-      .entry-reveal .entry-loader { transition: opacity .64s cubic-bezier(.4,0,.35,1); }
+      .entry-loader::before { transition: opacity .72s ease-in-out; }
+      .entry-loader svg { transition: opacity .36s ease-out; }
     }
   </style>
   <script>
@@ -46,13 +51,11 @@
       function reveal() {
         if (!root.classList.contains("entry-visit") || root.classList.contains("entry-reveal")) return;
         root.classList.add("entry-reveal");
-        window.setTimeout(clear, 680);
+        window.setTimeout(clear, 760);
       }
-      // Uncover the page even if a first-visit image stalls or the visitor starts navigating.
       window.setTimeout(reveal, 3000);
-      for (const event of ["pointerdown", "keydown", "wheel", "hashchange", "pagehide"]) {
-        window.addEventListener(event, clear, { once: true, passive: true });
-      }
+      window.addEventListener("pagehide", clear, { once: true });
+      window.addEventListener("hashchange", reveal, { once: true });
       document.addEventListener("DOMContentLoaded", () => {
         const images = document.querySelectorAll(".film-photo, .film-glass");
         Promise.allSettled(Array.from(images, image => image.decode())).then(() => {
@@ -61,16 +64,16 @@
       }, { once: true });
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=23">
-  <link rel="stylesheet" href="chapters.css?v=13">
+  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="chapters.css?v=14">
   <link rel="stylesheet" href="platform-install.css?v=1">
   <link rel="stylesheet" href="diagram-motion.css?v=3">
   <link rel="stylesheet" href="chapter-exchange.css?v=2">
-  <script src="platform-page.js?v=1" defer></script>
-  <script src="ipad-page.js?v=1" defer></script>
-  <script src="windows-page.js?v=1" defer></script>
-  <script src="camera.js?v=13" defer></script>
-  <script src="process.js?v=5" defer></script>
+  <script src="platform-page.js?v=2" defer></script>
+  <script src="ipad-page.js?v=2" defer></script>
+  <script src="windows-page.js?v=2" defer></script>
+  <script src="camera.js?v=14" defer></script>
+  <script src="process.js?v=6" defer></script>
   <script src="experience.js?v=13" defer></script>
   <script src="wood-field.js?v=2" defer></script>
   <script src="chapter-exchange.js?v=5" defer></script>
@@ -151,8 +154,7 @@
               <canvas class="wood-field" data-wood="hero" aria-hidden="true"></canvas>
             </div>
             <div class="glass-plane">
-              <img class="film-glass" width="2560" height="1600" alt="" decoding="async">
-              <img class="course-glass" src="assets/process-course-opening.webp" width="1280" height="800" alt="" decoding="async">
+              <div class="film-display"><img class="film-glass" width="1280" height="800" alt="" decoding="async"></div>
             </div>
           </div>
           <div class="field-overlay"></div>
@@ -179,53 +181,58 @@
               <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 만들기</h3><p>이번 학기에 들을 과목을 만듭니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-course-opening.webp" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
+                  <img src="assets/process-course-opening.webp?v=full2" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=dark1" aria-label="과목 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=full2" aria-label="과목 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li>
               <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>자료 열기</h3><p>과목에서 강의 PDF를 열고 오늘 볼 페이지를 펼칩니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-material.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 자료 열기 시연 중인 Solasi 화면">
+                  <img src="assets/process-material.webp?v=full2" loading="lazy" decoding="async" alt="Android 태블릿에서 자료 열기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=dark1" aria-label="자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=full2" aria-label="자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+              </figure>
+            </li>
+            <li data-separate-demo="필기만 화면">
+              <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>PDF에서 ‘필기만’을 누르면 자료가 넓게 펼쳐집니다. 이 화면에서 중요한 문장에 형광펜을 긋고 펜으로 표시합니다.</p></div>
+              <figure class="step-film">
+                <div class="step-screen">
+                  <img src="assets/process-ink.webp?v=full2" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
+                  <video muted playsinline preload="none" aria-hidden="true"></video>
+                </div>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=full2" aria-label="필기하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li>
-              <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>PDF의 중요한 문장에 형광펜을 긋고, 펜으로 표시합니다.</p></div>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">04</span><h3>강의 대본 열기</h3><p>저장한 강의 기록에서 대본 탭을 열고 수업 내용을 확인합니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-ink.webp?v=dark1" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
+                  <img src="assets/process-transcript.webp?v=full2" loading="lazy" decoding="async" alt="Mac에서 기억과 학습 강의 기록의 대본을 여는 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=dark1" aria-label="필기하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
-              </figure>
-            </li>
-            <li>
-              <div class="step-copy"><span class="step-number" aria-hidden="true">04</span><h3>대본 만들기</h3><p>Mac에서 강의 녹음을 대본으로 옮깁니다.</p></div>
-              <figure class="step-film">
-                <div class="step-screen">
-                  <img src="assets/process-transcript.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 대본 만들기 시연 중인 Solasi 화면">
-                  <video muted playsinline preload="none" aria-hidden="true"></video>
-                </div>
-                <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=dark1" aria-label="대본 만들기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=full2" aria-label="강의 대본 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li>
               <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 문장을 골라 그 구간의 원음을 다시 듣습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-replay.webp?v=dark1" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
+                  <img src="assets/process-replay.webp?v=full2" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=dark1" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=full2" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
           </ol>
+          <div class="process-controls" role="group" aria-label="시연 단계 선택" hidden>
+            <button type="button" class="step-prev" aria-label="이전 단계">← 이전</button>
+            <output aria-live="off"></output>
+            <button type="button" class="step-next" aria-label="다음 단계">다음 →</button>
+          </div>
         </div>
       </div>
     </section>
@@ -306,7 +313,7 @@
             <p>시험을 앞두고 ‘계열 위치 효과’가 헷갈린다면, 인지심리학 자료에서 밑줄을 그은 페이지를 펼쳐 보세요. 그래프 옆에 적은 질문을 읽고, Mac으로 녹음한 수업은 대본에서 한 문장을 골라 그때의 설명을 다시 들을 수 있습니다.</p>
             <a class="field-link" href="#work">앱 화면 보기 <span aria-hidden="true">↘</span></a>
           </div>
-          <img class="result-example" src="assets/process-ink.webp?v=dark1" width="1280" height="800" loading="lazy" alt="초두 효과에 형광펜 표시와 손글씨를 남긴 인지심리학 강의 자료">
+          <img class="result-example" src="assets/review-highlight.webp" width="1280" height="800" loading="lazy" alt="초두 효과에 형광펜 표시와 손글씨를 남긴 인지심리학 강의 자료">
         </header>
         <ul class="result-list">
           <li><h3>표시해 둔 줄</h3><p>‘초두 효과’에 그은 형광펜과 그래프 위의 손글씨를 같은 PDF에서 봅니다. 어느 부분을 강조했는지 바로 짚을 수 있습니다.</p></li>
