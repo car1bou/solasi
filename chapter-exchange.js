@@ -7,13 +7,12 @@
   const mix = (a, b, t) => a + (b - a) * t;
   const ease = t => t * t * (3 - 2 * t);
 
-  function dock(header, src, kind) {
-    const image = new Image();
+  function dock(header, original, kind) {
+    const image = original.cloneNode(false);
     image.alt = "";
     image.setAttribute("aria-hidden", "true");
     image.className = "chapter-dock chapter-" + kind;
     image.loading = "lazy";
-    image.src = src;
     if (kind === "mark") find(header).prepend(image);
     else find(header).append(image);
     return image;
@@ -26,12 +25,12 @@
     mark.className = "chapter-origin-mark";
     label.prepend(mark);
   });
-  dock(".work-heading", find(".work-mac .work-image img").src, "screen");
+  dock(".work-heading", find(".work-mac .work-image img"), "screen");
   const routes = [
     [".process-list li:last-child .step-screen", find(".lecture-window")],
     [".week-sketch span:last-child", find(".course-map b")],
     [".solution-list li:last-child .solution-code", find(".result-example")],
-    [".chapter-origin-mark", dock(".install-heading", "assets/solasi-icon.png", "mark")],
+    [".chapter-origin-mark", dock(".install-heading", find(".brand img"), "mark")],
   ];
   const carrier = document.createElement("div");
   carrier.className = "chapter-carrier";
@@ -75,15 +74,6 @@
       still.className = "";
       still.alt = "";
       still.loading = "eager";
-      if (element.classList.contains("lecture-window")) {
-        // The next chapter shows a detail from the capture; land on the same crop.
-        const frame = element.getBoundingClientRect(), crop = image.getBoundingClientRect();
-        still.style.position = "absolute";
-        still.style.width = 100 * crop.width / frame.width + "%";
-        still.style.height = 100 * crop.height / frame.height + "%";
-        still.style.left = 100 * (crop.left - frame.left) / frame.width + "%";
-        still.style.top = 100 * (crop.top - frame.top) / frame.height + "%";
-      }
       surface.append(still);
       const video = element.querySelector("video");
       if (video) followVideo(video, surface);
@@ -160,11 +150,11 @@
       carrier.style.width = w.toFixed(2) + "px";
       carrier.style.height = h.toFixed(2) + "px";
       carrier.style.transform = "translate3d(" + (x - w / 2).toFixed(2) + "px," + (y - h / 2).toFixed(2) + "px,0)";
-      carrier.style.borderRadius = destination.classList.contains("chapter-mark") ? "22%" : "1.2%";
+      carrier.style.borderRadius = destination.classList.contains("chapter-mark") ? "22%" : "0";
       if (carrier.children.length === 2) {
-        const cut = 100 * ease(bound((t - .25) / .5));
-        carrier.firstChild.style.clipPath = "inset(0 0 0 " + cut.toFixed(2) + "%)";
-        carrier.lastChild.style.clipPath = "inset(0 " + (100 - cut).toFixed(2) + "% 0 0)";
+        const fade = ease(bound((t - .25) / .5));
+        carrier.firstChild.style.opacity = 1 - fade;
+        carrier.lastChild.style.opacity = fade;
       }
       return;
     }

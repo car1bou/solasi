@@ -39,7 +39,7 @@
     ]
   };
   const [desktopPhoto, mobilePhoto] = scenes[device] || scenes.tablet;
-  const planeHeight = device === "ipad" ? 1200 : 1000;
+  const planeHeight = device === "ipad" ? 1200 : device === "windows" ? 900 : 1000;
   plane.style.height = planeHeight + "px";
   const plate = world.querySelector(".film-photo");
   const portraitSource = document.createElement("source");
@@ -54,18 +54,10 @@
   glass.src = seat.querySelector("img").src;
   if (!paperImage.hasAttribute("src")) {
     const mac = device === "mac";
-    const capture = mac ? "assets/mac-transcript.png?v=dark1" : "assets/tablet-notebook.png?v=dark1";
-    paperImage.width = mac ? 1160 : 2560;
-    paperImage.height = mac ? 792 : 1600;
-    paperImage.src = capture;
-    if (mac) {
-      paperImage.alt = "Mac에서 기억과 학습 강의의 대본을 열어 작업 기억에 관한 문장을 확인하는 화면";
-      for (const [key, value] of Object.entries({x: 228, y: 53, w: 902, h: 441})) {
-        paper.style.setProperty("--pdf-" + key, value);
-      }
-      paper.style.setProperty("--app-w", paperImage.width);
-      paper.style.setProperty("--app-h", paperImage.height);
-    }
+    paperImage.width = mac ? 1280 : 2560;
+    paperImage.height = mac ? 800 : 1600;
+    paperImage.src = mac ? "assets/mac-transcript.png?v=se1" : "assets/tablet-notebook.png?v=se1";
+    if (mac) paperImage.alt = "Mac에서 소프트웨어 공학 개요의 대본을 열어 설계 문서와 테스트 결과에 대한 설명을 읽는 화면";
   }
   if (!window.DOMMatrix) return;
   const clamp = value => Math.max(0, Math.min(1, value));
@@ -94,6 +86,12 @@
     if (!w || !h) return;
     const portrait = narrow.matches;
     const photo = portrait ? mobilePhoto : desktopPhoto;
+    // The two front-on monitor photos have slightly wide LCDs. Calibrate the whole desk
+    // to the native display ratio so the app and bezel keep the same four corners.
+    const [tl, tr, , bl] = photo.screen;
+    const heightCorrection = device === "windows"
+      ? (tr[0] - tl[0]) / (bl[1] - tl[1]) * (planeHeight / 1600) : 1;
+    const photoHeight = photo.height * heightCorrection;
     const glassOnDesk = project(photo.screen);
     deskFromGlass = glassOnDesk.inverse();
     world.style.setProperty("--photo-w", photo.width + "px");
@@ -102,10 +100,11 @@
     // Leave enough photographed wood around the frame for both the pointer and idle camera.
     const roomX = Math.min(portrait ? 27 : 48, w * (portrait ? .031 : .042));
     const roomY = Math.min(24, h * .034);
-    const cover = Math.max((w + 2 * roomX) / photo.width, (h + 2 * roomY) / photo.height);
+    const cover = Math.max((w + 2 * roomX) / photo.width, (h + 2 * roomY) / photoHeight);
     // The bounds include the full case and accessories. Reserve actual text and navigation
     // space before fitting the photograph, including room for pointer-driven camera drift.
-    const [left, bodyTop, right, bottom] = photo.body;
+    const [left, rawTop, right, rawBottom] = photo.body;
+    const bodyTop = rawTop * heightCorrection, bottom = rawBottom * heightCorrection;
     const gap = Math.max(12, Math.min(24, w * .022));
     const safeLeft = portrait ? gap : heroCopy.offsetLeft + heroCopy.offsetWidth + gap;
     const safeRight = w - gap;
@@ -130,7 +129,7 @@
     const x = between(panorama ? w + overscan - photo.width * scale
       : pan(w, photo.width, aimX, (left + right) / 2, roomX),
       safeLeft - left * scale, safeRight - right * scale);
-    const y = between(pan(h, photo.height, aimY, (bodyTop + bottom) / 2, roomY),
+    const y = between(pan(h, photoHeight, aimY, (bodyTop + bottom) / 2, roomY),
       safeTop - bodyTop * scale, safeBottom - bottom * scale);
 
     world.classList.toggle("wide-desk", panorama);
@@ -144,12 +143,12 @@
     world.style.setProperty("--wood-wing", wing + "px");
     world.style.setProperty("--wing-photo", `url("assets/${photo.file}")`);
     world.style.setProperty("--wing-size", Math.max(photo.width, wing / .30) + "px");
-    world.style.maskImage = y > -roomY || y + photo.height * scale < h + roomY
+    world.style.maskImage = y > -roomY || y + photoHeight * scale < h + roomY
       ? "linear-gradient(transparent,#000 9%,#000 93%,transparent)" : "none";
-    opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * scale]);
+    opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * heightCorrection * scale]);
     // Anchor the moving light to this crop even when the page opens mid-zoom.
-    world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
-      w / (photo.width * scale), h / (photo.height * scale)].join(" ");
+    world.dataset.woodView = [-x / (photo.width * scale), -y / (photoHeight * scale),
+      w / (photo.width * scale), h / (photoHeight * scale)].join(" ");
 
     const target = seat.getBoundingClientRect();
     const stickyTop = parseFloat(getComputedStyle(list).top) || 0;

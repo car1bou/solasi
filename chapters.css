@@ -76,18 +76,12 @@
 }
 .problem-lede { display: grid; justify-items: start; gap: clamp(1.2rem,3.4vw,3.2rem); }
 .problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
-/* Frame the lecture detail in the original app capture. */
 .lecture-page {
-  --app-w: 2560; --app-h: 1600;
-  --pdf-x: 538; --pdf-y: 439; --pdf-w: 1340; --pdf-h: 1004;
-  position: relative; width: min(100%,29rem); justify-self: center;
-  aspect-ratio: var(--pdf-w) / var(--pdf-h);
+  width: 100%; min-width: 0; justify-self: center;
 }
-.lecture-window { position: absolute; inset: 0; overflow: hidden; background: #23251f; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
-.lecture-window img {
-  width: calc(var(--app-w) / var(--pdf-w) * 100%); max-width: none; height: auto;
-  transform: translate(calc(-100% * var(--pdf-x) / var(--app-w)), calc(-100% * var(--pdf-y) / var(--app-h)));
-}
+.lecture-window { background: #23251f; box-shadow: 0 .8rem 2.2rem -.8rem #170f0baa; }
+.lecture-window img, .work-image img { width: 100%; height: auto; }
+.lecture-window img:not([src]) { display: none; }
 .problem-heading.page-missing { grid-template-columns: 1fr; }
 .problem-heading.page-missing .lecture-page { display: none; }
 .problem-list, .solution-list, .result-list, .process-list { list-style: none; padding: 0; }
@@ -174,7 +168,7 @@
   align-items: center; gap: 1rem clamp(1.5rem,4vw,4rem);
 }
 .result-example {
-  width: min(100%,25rem); height: auto; justify-self: end; border-radius: .35rem;
+  width: 100%; height: auto; justify-self: end;
   box-shadow: 0 .65rem 1.6rem -.8rem #1e150eab;
 }
 .result-story { display: grid; justify-items: start; gap: clamp(1rem, 2vw, 1.6rem); }
@@ -217,8 +211,9 @@
 }
 .step-film { width: min(100%, 59rem); min-width: 0; }
 [data-device="ipad"] .study-walkthrough { --demo-ratio: 1.333333; }
+[data-device="windows"] .study-walkthrough { --demo-ratio: calc(16 / 9); }
 .step-screen {
-  position: relative; width: 100%; aspect-ratio: var(--demo-ratio, 1.6); overflow: hidden; border-radius: .4rem;
+  position: relative; width: 100%; aspect-ratio: var(--demo-ratio, 1.6); overflow: hidden;
   background: var(--study-base); box-shadow: 0 1.15rem 2rem -.95rem #1e150ec4, 0 0 0 1px var(--study-line);
 }
 .step-screen :is(img, video) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
@@ -252,17 +247,12 @@
 .work-ink, .work-mac, .work-grid:has(:is(#ink, #transcript, #audio)[open]) .work-android { display: none; }
 .work-grid:has(#ink[open]) .work-ink { display: block; }
 .work-grid:has(:is(#transcript, #audio)[open]) .work-mac { display: block; }
-.work-image { display: grid; align-items: center; width: 100%; aspect-ratio: 1.54; overflow: clip; }
-.work-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
-.work-grid:has(#audio[open]) .work-mac img { transform: scale(1.25); transform-origin: 50% 25%; }
 .work-still figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 .65rem; padding: .15rem 1.05rem; font-size: .83rem; color: var(--study-muted); }
 @media (prefers-reduced-motion: no-preference) {
-  .work-gallery { overflow: clip; }
   .work-image { animation: work-screen-in 480ms cubic-bezier(.2,.75,.23,1); }
-  .work-mac img { transition: transform 480ms cubic-bezier(.2,.75,.23,1); }
   @keyframes work-screen-in {
-    from { opacity: .6; clip-path: inset(0 9% 0 0); translate: .7rem 0; }
-    to { opacity: 1; clip-path: inset(0); translate: 0; }
+    from { opacity: .6; }
+    to { opacity: 1; }
   }
   @supports selector(details::details-content) and (transition-behavior: allow-discrete) {
     .work-index details::details-content {
@@ -296,7 +286,7 @@
     grid-template-columns: minmax(0,1fr); align-content: center; gap: 1.8rem;
     min-height: clamp(25rem,77svh,44rem); padding: 2.5rem clamp(1.15rem,5.5vw,2.4rem);
   }
-  .lecture-page { grid-row: 1; width: min(89%,22rem); }
+  .lecture-page { grid-row: 1; }
   .problem-lede { gap: .8rem; }
   .problem-list > li { grid-template-columns: 1fr; min-height: auto; }
   .problem-list li:nth-child(2) :is(.problem-copy,.problem-visual) { grid-column: auto; grid-row: auto; }
@@ -312,7 +302,6 @@
   .solution-code { display: none; }
   .result-list { grid-template-columns: repeat(2,minmax(0,1fr)); padding: .7rem; gap: .6rem; }
   .result-head { grid-template-columns: 1fr; }
-  .result-example { width: min(82%,19rem); }
   .result-list li { min-height: 10rem; }
   .work-grid, .install-options { grid-template-columns: 1fr; }
   .work-gallery, .install-options article + article { border-left: 0; border-top: 1px solid var(--study-line); }
@@ -333,7 +322,7 @@
     min-height: 77svh; gap: 1rem; padding: 1.25rem 1rem;
   }
   .problem-heading h2 { font-size: clamp(1.45rem,4.5vw,2.1rem); }
-  .lecture-page { grid-area: 1 / 2; width: min(100%,16rem); }
+  .lecture-page { grid-area: 1 / 2; }
 
 }
 @media (max-width: 24rem) {

@@ -12,6 +12,8 @@ window.renderPlatformPage = function (page) {
     node.querySelector("p").textContent = item.description;
   };
   const setImage = (image, src, alt) => {
+    image.width = page.hero.width;
+    image.height = page.hero.height;
     image.alt = alt || "";
     image.src = src;
   };
@@ -23,12 +25,7 @@ window.renderPlatformPage = function (page) {
   one(".film-description").textContent = hero.description;
   const paper = one(".lecture-page");
   const detail = paper.querySelector("img");
-  detail.width = hero.width;
-  detail.height = hero.height;
   setImage(detail, hero.image, hero.alt);
-  paper.style.setProperty("--app-w", hero.width);
-  paper.style.setProperty("--app-h", hero.height);
-  ["x", "y", "w", "h"].forEach((key, index) => paper.style.setProperty("--pdf-" + key, hero.crop[index]));
 
   if (page.tourTitle) setTitle("#process-heading", page.tourTitle);
   fill(".process-list > li", steps, (row, step) => {
@@ -58,7 +55,7 @@ window.renderPlatformPage = function (page) {
     figure.querySelector("figcaption > span").textContent = item.caption;
     figure.querySelector(".enlarge").href = item.image;
   });
-  one("#image-viewer img").src = gallery[0].image;
+  setImage(one("#image-viewer img"), gallery[0].image, gallery[0].alt);
 };
 
 // The default tour spans tablet and Mac. Device-specific tours stay on their own platform.
@@ -74,14 +71,14 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
     const macOpening = [
       {
         title: "강의 기록 열기",
-        description: "홈의 최근 기록에서 ‘기억과 학습’ 강의를 엽니다.",
+        description: "홈의 최근 기록에서 ‘소프트웨어 공학 개요’ 강의를 엽니다.",
         alt: "Mac용 Solasi 홈에 표시된 최근 강의 기록",
         asset: "mac-step-record",
       },
       {
         title: "대본 열기",
         description: "강의 기록에서 대본 탭을 눌러 녹음한 내용을 문장별로 확인합니다.",
-        alt: "Mac용 Solasi의 ‘기억과 학습’ 강의 기록과 대본 탭",
+        alt: "Mac용 Solasi의 ‘소프트웨어 공학 개요’ 강의 기록과 대본 탭",
         asset: "mac-step-transcript",
       },
     ];
@@ -92,9 +89,9 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
       row.querySelector("p").textContent = description;
       const image = row.querySelector(".step-screen img");
       image.alt = alt;
-      image.src = `assets/${asset}.webp`;
+      image.src = `assets/${asset}.webp?v=se1`;
       const link = row.querySelector(".step-film a");
-      link.href = `assets/${asset}.mp4`;
+      link.href = `assets/${asset}.mp4?v=se1`;
       link.setAttribute("aria-label", title + " 시연 영상 크게 보기");
     });
   } else {
@@ -105,7 +102,7 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
     const [first, second] = document.querySelectorAll("#heading > span");
     first.textContent = "강의 자료에";
     second.textContent = "바로 필기하세요.";
-    document.querySelector(".film-description").textContent = "과목을 만들고 강의 PDF를 펼치세요. 중요한 문장에 형광펜을 긋고 그래프 옆에 필기를 남길 수 있습니다.";
+    document.querySelector(".film-description").textContent = "과목을 만들고 강의 PDF를 펼치세요. 중요한 문장에 형광펜을 긋고 자료 옆에 필기를 남길 수 있습니다.";
   }
   list.replaceChildren(...recordings);
   recordings.forEach((row, index) => {
