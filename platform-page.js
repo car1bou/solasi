@@ -33,7 +33,6 @@ window.renderPlatformPage = function (page) {
   if (page.tourTitle) setTitle("#process-heading", page.tourTitle);
   fill(".process-list > li", steps, (row, step) => {
     row.dataset.recordedOn = document.documentElement.dataset.platform;
-    row.removeAttribute("data-separate-demo");
     setCopy(row, step);
     setImage(row.querySelector(".step-screen img"), step.image, step.alt);
     row.querySelector("figcaption > span").textContent = step.caption || page.demoCaption || name;

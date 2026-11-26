@@ -6,8 +6,7 @@
   const steps = [...stage.children];
   const clips = steps.map(step => step.querySelector("video"));
   const devices = steps.map(step => step.querySelector("figcaption > span").textContent.trim());
-  const separate = steps.map((step, i) => step.dataset.separateDemo ||
-    (i > 0 && devices[i] !== devices[i - 1] ? devices[i] + " 시연" : ""));
+  const separate = devices.map((device, i) => i > 0 && device !== devices[i - 1] ? device + " 시연" : "");
   const links = steps.map(step => step.querySelector(".step-film a"));
   const controls = runway.querySelector(".process-controls");
   const previous = controls.querySelector(".step-prev");
