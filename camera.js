@@ -82,13 +82,13 @@
     ]);
   }
 
-  let opening, landing, deskFromGlass, copyHeadroom, origin = 0, travel = 1, previous = -1, frame = 0;
+  let loadedPhoto, opening, landing, deskFromGlass, copyHeadroom, origin = 0, travel = 1, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
     if (!w || !h) return;
     const portrait = narrow.matches;
-    const photo = portrait ? mobilePhoto : desktopPhoto;
+    const photo = loadedPhoto || (portrait ? mobilePhoto : desktopPhoto);
     // The two front-on monitor photos have slightly wide LCDs. Calibrate the whole desk
     // to the native display ratio so the app and bezel keep the same four corners.
     const [tl, tr, , bl] = photo.screen;
@@ -136,13 +136,17 @@
       safeTop - bodyTop * scale, safeBottom - bottom * scale);
 
     const mask = {mac: "macbook", ipad: "ipad", windows: "windows-desktop"}[device];
-    const maskFile = mask ? mask + (portrait ? "-tall" : "") : "walnut-" + (portrait ? "tall" : "wide");
+    const tallPlate = photo === mobilePhoto;
+    const maskFile = mask ? mask + (tallPlate ? "-tall" : "") : "walnut-" + (tallPlate ? "tall" : "wide");
     const silhouette = `url("assets/${maskFile}-mask.svg")`;
     world.style.setProperty("--wood-mask", silhouette);
     backdrop.style.setProperty("--wood-mask", silhouette);
     backdrop.style.width = photo.width + "px";
     backdrop.style.height = photo.height + "px";
-    backdrop.style.backgroundImage = `url("assets/${photo.file}")`;
+    const photograph = `url("assets/${photo.file}")`;
+    backdrop.style.backgroundImage = photograph;
+    // A responsive picture can go blank while the other orientation downloads.
+    world.style.backgroundImage = loadedPhoto && !plate.naturalWidth ? photograph : "";
     opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * heightCorrection * scale]);
 
     const target = seat.getBoundingClientRect();
@@ -212,10 +216,13 @@
   }
 
   function refresh() {
+    if (plate.naturalWidth && plate.currentSrc) {
+      loadedPhoto = plate.currentSrc.endsWith("/" + mobilePhoto.file) ? mobilePhoto : desktopPhoto;
+    }
     const captured = glass.naturalWidth > 0;
     stage.classList.toggle("has-capture", captured);
     stage.style.setProperty("--screen-mix", captured ? 1 : 0);
-    film.classList.toggle("camera-ready", !motion.matches && captured && plate.naturalWidth > 0);
+    film.classList.toggle("camera-ready", !motion.matches && captured && Boolean(loadedPhoto));
     compose();
     paint();
   }

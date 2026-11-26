@@ -198,7 +198,7 @@ img { display: block; max-width: 100%; height: auto; }
 .camera-ready .film-source { pointer-events: auto; }
 .camera-ready + .study-walkthrough { margin-top: -100svh; }
 .camera-ready.docked .film-stage { visibility: hidden; }
-.camera-framed .film-world { inset: 0 auto auto 0; width: var(--photo-w); height: var(--photo-h); transform-origin: 0 0; }
+.camera-framed .film-world { inset: 0 auto auto 0; width: var(--photo-w); height: var(--photo-h); transform-origin: 0 0; background-size: 100% 100%; }
 .camera-framed .film-world { opacity: var(--room-presence, 1); }
 .camera-framed .glass-plane {
   display: block; position: absolute; inset: 0 auto auto 0; width: 1600px; height: 1000px;
