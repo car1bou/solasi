@@ -124,10 +124,6 @@
     screen.open = true;
     screen.scrollIntoView({ behavior: "instant", block: "start" });
   }
-  if (document.documentElement.dataset.device === "mac") {
-    document.querySelector(".film-copy p").textContent = "Apple Silicon Mac · macOS 27 이상";
-    document.getElementById("transcript").open = true;
-  }
   openLinkedScreen(true);
   addEventListener("hashchange", () => openLinkedScreen(false));
 

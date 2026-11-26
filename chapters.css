@@ -195,8 +195,8 @@
   font-size: .875rem; line-height: 1.32; text-wrap: pretty;
 }
 .step-film { width: min(100%, 59rem); min-width: 0; }
-[data-device="ipad"] .study-walkthrough { --demo-ratio: 1.333333; }
-[data-device="windows"] .study-walkthrough { --demo-ratio: calc(16 / 9); }
+[data-recorded-on="ipad"] { --demo-ratio: 1.333333; }
+[data-recorded-on="windows"] { --demo-ratio: calc(16 / 9); }
 .step-screen {
   position: relative; width: 100%; aspect-ratio: var(--demo-ratio, 1.6); overflow: hidden;
   background: var(--study-base); box-shadow: 0 1.15rem 2rem -.95rem #1e150ec4, 0 0 0 1px var(--study-line);

@@ -2,14 +2,8 @@
 window.renderPlatformPage = function (page) {
   const one = selector => document.querySelector(selector);
   const fill = (selector, items, render) => {
-    document.querySelectorAll(selector).forEach((node, index) => render(node, items[index]));
-  };
-  const setTitle = (selector, lines) => fill(selector + " > span", lines, (span, line) => {
-    span.textContent = line;
-  });
-  const setCopy = (node, item) => {
-    node.querySelector("h3").textContent = item.title;
-    node.querySelector("p").textContent = item.description;
+    const slots = document.querySelectorAll(selector);
+    items.forEach((item, index) => render(slots[index], item));
   };
   const setImage = (image, src, alt) => {
     image.width = page.hero.width;
@@ -25,15 +19,14 @@ window.renderPlatformPage = function (page) {
   const detail = paper.querySelector("img");
   setImage(detail, hero.image, hero.alt);
 
-  if (page.tourTitle) setTitle("#process-heading", page.tourTitle);
+  // The five chapters live in the HTML. Replace only recordings supplied by this platform.
   fill(".process-list > li", steps, (row, step) => {
     row.dataset.recordedOn = document.documentElement.dataset.platform;
-    setCopy(row, step);
+    row.querySelector(".step-copy p").textContent = step.description;
     setImage(row.querySelector(".step-screen img"), step.image, step.alt);
     row.querySelector("figcaption > span").textContent = step.caption || page.demoCaption || name;
     const link = row.querySelector(".step-film a");
     link.href = step.video;
-    link.setAttribute("aria-label", step.title + " 시연 영상 크게 보기");
   });
 
   fill(".work-index > details", page.details, (detail, item) => {
@@ -48,51 +41,7 @@ window.renderPlatformPage = function (page) {
   setImage(one("#image-viewer img"), gallery[0].image, gallery[0].alt);
 };
 
-// The default tour spans tablet and Mac. Device-specific tours stay on their own platform.
-const tourPlatform = document.documentElement.dataset.platform;
-if (tourPlatform === "mac" || tourPlatform === "android") {
-  const list = document.querySelector(".process-list");
-  const recordings = [...list.querySelectorAll(`[data-recorded-on="${tourPlatform}"]`)];
-  const [opening, conclusion] = document.querySelectorAll("#process-heading > span");
-  if (tourPlatform === "mac") {
-    opening.textContent = "강의 기록에서";
-    conclusion.textContent = "다시 듣기까지.";
-    // The native recording continues from the open lecture directly into its transcript.
-    const macOpening = [
-      {
-        title: "강의 기록 열기",
-        description: "홈의 최근 기록에서 다시 듣고 싶은 강의를 엽니다.",
-        alt: "Mac용 Solasi 홈에 표시된 최근 강의 기록",
-        asset: "mac-step-record",
-      },
-      {
-        title: "대본 열기",
-        description: "강의 기록에서 대본 탭을 눌러 녹음한 내용을 문장별로 확인합니다.",
-        alt: "Mac용 Solasi의 ‘소프트웨어 공학 개요’ 강의 기록과 대본 탭",
-        asset: "mac-step-transcript",
-      },
-    ];
-    recordings.splice(1, 0, recordings[0].cloneNode(true));
-    macOpening.forEach(({ title, description, alt, asset }, index) => {
-      const row = recordings[index];
-      row.querySelector("h3").textContent = title;
-      row.querySelector("p").textContent = description;
-      const image = row.querySelector(".step-screen img");
-      image.alt = alt;
-      image.src = `assets/${asset}.webp?v=se1`;
-      const link = row.querySelector(".step-film a");
-      link.href = `assets/${asset}.mp4?v=se1`;
-      link.setAttribute("aria-label", title + " 시연 영상 크게 보기");
-    });
-  } else {
-    opening.textContent = "과목 만들기부터";
-    conclusion.textContent = "PDF 필기까지.";
-    document.title = "Solasi | Android 태블릿";
-    document.querySelector(".film-copy > p").textContent = "Android 태블릿";
-  }
-  list.replaceChildren(...recordings);
-  recordings.forEach((row, index) => {
-    row.querySelector(".step-number").textContent = String(index + 1).padStart(2, "0");
-    row.querySelector(".step-screen img").loading = index === 0 ? "eager" : "lazy";
-  });
+if (document.documentElement.dataset.platform === "android") {
+  document.title = "Solasi | Android 태블릿";
+  document.querySelector(".film-copy > p").textContent = "Android 태블릿";
 }

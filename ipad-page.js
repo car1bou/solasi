@@ -1,27 +1,26 @@
 (() => {
   if (document.documentElement.dataset.device !== "ipad") return;
 
-  const screens = {
-    course: {title: "과목 만들기", description: "이번 학기에 들을 과목을 만들고 그 안에 강의 자료를 모읍니다.", alt: "홈 화면에서 소프트웨어 공학 과목을 추가하는 과정"},
-    pdf: {title: "강의 PDF 펼치기", description: "강의 PDF를 손글씨 노트로 연결하고 수업에서 다룰 쪽을 펼칩니다.", alt: "소프트웨어공학 개요 PDF 16쪽 ‘소프트웨어의 정의’를 펼친 화면"},
-    ink: {title: "형광펜으로 표시하기", description: "형광펜으로 중요한 구절에 표시합니다. 펜으로는 원래 자료 위에 필기할 수 있습니다.", alt: "강의 PDF의 소프트웨어 정의에 형광펜을 긋는 화면"},
-    memo: {title: "쪽 메모 남기기", description: "자료를 읽다 생긴 질문을 쪽 메모에 입력합니다.", alt: "16쪽 메모에 테스트 결과에 관한 질문을 적는 화면"},
-    review: {title: "저장한 메모 다시 보기", description: "메모를 다시 펼치면 적어 둔 질문을 원래 문장과 함께 읽을 수 있습니다.", alt: "소프트웨어 정의에 표시한 구절 옆에 저장된 쪽 메모를 다시 펼친 화면"}
-  };
-  const steps = Object.entries(screens).map(([id, step]) => ({
-    ...step, image: "assets/ipad-start-" + id + ".webp?v=se1", detail: "assets/ipad-" + id + ".webp?v=se1",
-    video: "assets/ipad-" + id + ".mp4?v=se1"
-  }));
+  const image = name => "assets/ipad-" + name + ".webp?v=se1";
+  const step = (name, description, alt) => ({
+    description, alt,
+    image: image("start-" + name),
+    video: "assets/ipad-" + name + ".mp4?v=se1"
+  });
+  const pdfAlt = "소프트웨어공학 개요 PDF 16쪽 ‘소프트웨어의 정의’를 펼친 iPad 화면";
+  const inkAlt = "iPad에서 소프트웨어 정의에 형광펜으로 표시한 화면";
   window.renderPlatformPage({
     name: "iPad", demoCaption: "iPad 화면 예시",
-    hero: {eyebrow: "iPad · iPadOS",
-      image: steps[2].detail, width: 1536, height: 1152, alt: steps[2].alt},
-    tourTitle: ["강의 PDF부터", "필기와 쪽 메모까지."],
-    steps,
+    hero: {eyebrow: "iPad · iPadOS", image: image("ink"), width: 1536, height: 1152, alt: inkAlt},
+    steps: [
+      step("course", "이번 학기에 들을 과목을 만들고 그 안에 강의 자료를 모읍니다.", "홈 화면에서 소프트웨어 공학 과목을 추가하는 과정"),
+      step("pdf", "강의 PDF를 손글씨 노트로 연결하고 수업에서 다룰 쪽을 펼칩니다.", pdfAlt),
+      step("ink", "중요한 구절에 형광펜을 긋습니다. 펜으로는 원래 자료 위에 필기할 수 있습니다.", inkAlt)
+    ],
     gallery: [
-      {image: steps[1].detail, alt: steps[1].alt, caption: "iPad 화면 예시 · 강의 자료"},
-      {image: steps[2].detail, alt: steps[2].alt, caption: "iPad 화면 예시 · PDF 필기"},
-      {image: steps[3].detail, alt: steps[3].alt, caption: "iPad 화면 예시 · 쪽 메모"}
+      {image: image("pdf"), alt: pdfAlt, caption: "iPad 화면 예시 · 강의 자료"},
+      {image: image("ink"), alt: inkAlt, caption: "iPad 화면 예시 · PDF 필기"},
+      {image: image("memo"), alt: "16쪽 메모에 테스트 결과에 관한 질문을 적는 화면", caption: "iPad 화면 예시 · 쪽 메모"}
     ],
     details: [
       {title: "PDF 펼쳐 보기", description: "과목에서 강의 PDF를 선택하고 페이지 번호로 필요한 쪽을 펼칩니다."},
