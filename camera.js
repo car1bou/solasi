@@ -87,7 +87,7 @@
     ]);
   }
 
-  let opening, landing, copyBounds, deskFromGlass, previous = -1, frame = 0;
+  let opening, landing, deskFromGlass, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
@@ -151,14 +151,9 @@
     world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
       w / (photo.width * scale), h / (photo.height * scale)].join(" ");
 
-    // The active caption can wrap to a different height after a manual chapter change.
-    const step = list.querySelector('[aria-current="step"]') || list.firstElementChild;
-    const target = step.querySelector(".step-screen").getBoundingClientRect();
+    const target = seat.getBoundingClientRect();
     const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
-    const listOffset = stickyTop - list.getBoundingClientRect().top;
-    const top = target.top + listOffset;
-    const copyRect = step.querySelector(".step-copy").getBoundingClientRect();
-    copyBounds = [copyRect.left, copyRect.top + listOffset, copyRect.right, copyRect.bottom + listOffset];
+    const top = target.top + stickyTop - list.getBoundingClientRect().top;
     landing = [[target.left, top], [target.right, top],
       [target.right, top + target.height], [target.left, top + target.height]];
     previous = -1;
@@ -189,18 +184,12 @@
     stage.style.setProperty("--room-presence", room);
     stage.style.setProperty("--desk-opacity", room);
     header.style.setProperty("--header-fill", ease(clamp((scroll - .58) / .42)));
-    stage.style.setProperty("--screen-mix", glass.naturalWidth ? 1 : 0);
+    const chapter = ease(clamp((scroll - .72) / .23));
+    stage.style.setProperty("--screen-mix", glass.naturalWidth ? 1 - chapter : 0);
     stage.classList.toggle("inside-screen", room === 0);
     stage.classList.toggle("dissolving-desk", room < 1);
     film.classList.toggle("docked", docked);
-    const arrival = moving ? ease(clamp((scroll - .42) / .48)) : 1;
-    lesson.style.setProperty("--lesson-copy", arrival);
-    // On stacked layouts the screen passes the text before settling beneath it.
-    const gap = Math.max(Math.min(...shot.map(p => p[0])) - copyBounds[2],
-      copyBounds[0] - Math.max(...shot.map(p => p[0])),
-      Math.min(...shot.map(p => p[1])) - copyBounds[3],
-      copyBounds[1] - Math.max(...shot.map(p => p[1])));
-    lesson.style.setProperty("--step-copy", arrival * ease(clamp(gap / 12)));
+    lesson.style.setProperty("--lesson-copy", moving ? chapter : 1);
     lesson.style.setProperty("--approach-y", moving ? -Math.max(0, travel - offset) + "px" : "0px");
     const center = view.transformPoint({ x: 800, y: planeHeight / 2 });
     const span = Math.hypot(shot[1][0] - shot[0][0], shot[1][1] - shot[0][1]);
@@ -243,7 +232,6 @@
     sizes.observe(heroCopy);
     sizes.observe(list);
   } else window.addEventListener("resize", refresh);
-  list.addEventListener("stepchange", refresh);
   motion.addEventListener("change", refresh);
   narrow.addEventListener("change", refresh);
 })();

@@ -183,19 +183,39 @@
 .result-list li { display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; min-height: clamp(11rem, 16vw, 16rem); padding: clamp(.8rem, 1.45vw, 1.4rem); background: var(--study-fine); }
 .result-list h3 { font-size: clamp(1.14rem, 1.5vw, 1.6rem); }
 .result-list p { color: var(--study-text); font-size: .93rem; }
-.process-heading { text-align: center; padding: clamp(5rem, 11vw, 11rem) 1rem clamp(2rem,5vw,5rem); }
+.process-heading {
+  text-align: center; padding: 4.5rem .75rem 2rem;
+}
 .process-list { width: 100%; }
 .process-list li {
-  display: grid; grid-template-columns: minmax(0,.64fr) minmax(0,1.6fr);
-  align-items: center; gap: clamp(1.3rem, 3.5vw, 3.5rem);
-  padding: clamp(2rem, 4.5vw, 4.5rem) clamp(1rem, 3.2vw, 3rem);
+  display: grid; justify-items: center; align-content: center; gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(2.5rem, 7vw, 6rem) clamp(.75rem, 3vw, 2rem);
 }
 .process-list li + li { border-top: 1px solid var(--study-line); }
-.step-copy { display: grid; justify-items: start; gap: .65rem; }
-.step-number { color: var(--study-oak); font-size: clamp(3.25rem, 6.5vw, 6.3rem); font-weight: 530; line-height: 1; letter-spacing: -.085em; font-variant-numeric: tabular-nums; }
-.step-copy h3 { font-size: clamp(1.75rem, 3.1vw, 3rem); }
-.step-copy p { max-width: 19rem; color: var(--study-muted); }
-.step-film { width: 100%; min-width: 0; justify-self: end; }
+.step-copy {
+  display: grid; justify-items: center; align-content: center; width: min(100%, 16rem);
+  text-align: center;
+}
+.step-number {
+  font-size: clamp(3.25rem, 9.1svh, 5.375rem); font-weight: 550;
+  line-height: .95; letter-spacing: -.08em; font-variant-numeric: tabular-nums;
+  padding-inline-end: .08em;
+}
+.step-copy h3 {
+  position: relative; width: fit-content; margin-top: clamp(1.3rem, 3.1svh, 2rem);
+  padding: .15rem .28rem; border: 1px solid currentColor;
+  font-size: .78rem; font-weight: 560; letter-spacing: -.035em; line-height: 1.18;
+}
+.step-copy h3::before, .step-copy h3::after {
+  content: ""; position: absolute; left: 50%; transform: translateX(-50%); background: currentColor;
+}
+.step-copy h3::before { bottom: 100%; height: .78rem; width: 1px; }
+.step-copy h3::after { bottom: calc(100% + .67rem); width: 3px; height: 3px; }
+.step-copy p {
+  margin-top: .95rem; max-width: 15.5rem; color: var(--study-muted);
+  font-size: .875rem; line-height: 1.32; text-wrap: pretty;
+}
+.step-film { width: min(100%, 59rem); min-width: 0; }
 [data-device="ipad"] .study-walkthrough { --demo-ratio: 1.333333; }
 .step-screen {
   position: relative; width: 100%; aspect-ratio: var(--demo-ratio, 1.6); overflow: hidden; border-radius: .4rem;
@@ -204,30 +224,15 @@
 .step-screen :is(img, video) { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .step-screen img { z-index: 1; }
 .step-screen video { display: none; }
-.step-film figcaption { display: flex; align-items: center; justify-content: space-between; gap: .5rem; color: var(--study-muted); font-size: .82rem; }
+.step-film figcaption {
+  min-height: 2.75rem; display: flex; align-items: center; justify-content: space-between;
+  gap: .55rem; color: var(--study-muted); font-size: .82rem;
+}
 .step-film figcaption > span { margin-inline-end: auto; }
-.step-film a { display: inline-flex; align-items: center; gap: .35em; min-height: 2.75rem; }
-.process-run.is-player { position: relative; }
-.is-player .process-list { position: sticky; top: var(--header); height: calc(100svh - var(--header)); min-height: 16rem; }
-.is-player .process-list li {
-  position: absolute; inset: 0; padding-block: 1rem 3.75rem; border: 0; visibility: hidden;
-}
-.is-player .process-list li[aria-current="step"] { visibility: visible; }
-.is-player .step-film { width: min(100%, calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6))); }
-.is-player .step-screen video { display: block; }
-.is-player .step-screen:has(.is-showing) img { opacity: 0; }
-.is-player .step-copy p { min-height: 3.2em; }
-.process-controls {
-  position: absolute; bottom: .45rem; inset-inline: 0; display: flex; align-items: center;
-  justify-content: center; gap: .75rem; color: var(--study-text); font-variant-numeric: tabular-nums;
-}
-.process-controls[hidden] { display: none; }
-.process-controls button {
-  min-height: 2.75rem; min-width: 2.75rem; padding-inline: .55rem; border: 0;
-  color: inherit; background: transparent; font: inherit; cursor: pointer;
-}
-.process-controls button:disabled { opacity: .38; cursor: default; }
-.process-controls output { font-size: .86rem; }
+.step-film :is(a, .step-play) { display: inline-flex; align-items: center; gap: .35em; min-height: 2.75rem; }
+.step-play { padding: 0 .25rem; background: transparent; border: none; color: inherit; cursor: pointer; }
+.step-play:hover { text-decoration: underline; }
+.step-play[hidden] { display: none; }
 .work-grid { display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.35fr); border-bottom: 1px solid var(--study-line); }
 .work-index { align-self: center; padding: var(--study-gap); }
 .work-index details { border-block-start: 1px solid var(--study-line); }
@@ -322,18 +327,6 @@
   .work-grid:has(#ink[open]) .work-gallery { order: 4; }
   .work-grid:has(#audio[open]) .work-gallery { order: 6; }
 }
-@media (max-width: 47.99rem) and (min-height: 33rem), (max-aspect-ratio: 1/1) and (max-width: 56rem) {
-  .process-list li {
-    grid-template-columns: minmax(0,1fr); align-content: center; gap: 1.15rem;
-    padding-inline: clamp(.65rem, 2.8vw, 1.35rem);
-  }
-  .step-copy { grid-template-columns: auto 1fr; align-items: baseline; gap: .6rem .9rem; }
-  .step-copy h3 { align-self: center; }
-  .step-number { font-size: clamp(2.5rem,8vw,4.25rem); }
-  .step-copy p { grid-column: 1 / -1; max-width: none; }
-  .is-player .step-copy p { min-height: 3.2em; }
-  .is-player .step-film { width: min(100%, 76svh); justify-self: center; }
-}
 @media (max-height: 32.99rem) and (min-aspect-ratio: 1/1) {
   .problem-heading {
     grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-content: center;
@@ -341,12 +334,7 @@
   }
   .problem-heading h2 { font-size: clamp(1.45rem,4.5vw,2.1rem); }
   .lecture-page { grid-area: 1 / 2; width: min(100%,16rem); }
-  .process-list li { grid-template-columns: minmax(0,.8fr) minmax(0,1.3fr); gap: .8rem; }
-  .step-copy { gap: .3rem; }
-  .step-number { font-size: 2.1rem; }
-  .step-copy h3 { font-size: 1.35rem; }
-  .step-copy p, .step-film figcaption { font-size: .78rem; }
-  .step-film :is(a, button) { min-height: 2rem; }
+
 }
 @media (max-width: 24rem) {
   .result-list { grid-template-columns: 1fr; }
@@ -354,30 +342,81 @@
   .install-options article > p span { display: block; margin-inline-start: 0; }
 }
 
-/* The photograph and the first course video occupy the same screen at the handoff. */
-.study-walkthrough:has(.is-player) .field-frame {
-  width: min(calc(100% - 2 * var(--edge)), max(73rem, 76vw));
+/* One pinned stage alternates a chapter title and its full recording as the reader scrolls. */
+.study-walkthrough:has(.is-player) {
+  --wash: rgb(45 19 14 / 88%);
+  --study-text: #fff0e1;
+  --study-muted: #d7c1ae;
+  --study-oak: var(--study-text);
+}
+.study-walkthrough:has(.is-player) .field-frame { border-color: transparent; }
+.process-run.is-player {
+  --stage-h: calc(100svh - var(--header));
+  --top-room: clamp(3.5rem, 9svh, 5.5rem);
+  --bottom-room: clamp(.4rem, 2svh, 1.5rem);
+  --step-travel: 96svh;
+  display: grid; grid-template: minmax(0,1fr) / minmax(0,1fr);
+  height: calc(var(--stage-h) + var(--steps, 1) * var(--step-travel));
+}
+.is-player :is(.process-heading, .process-list) {
+  grid-area: 1 / 1; align-self: start; position: sticky; top: var(--header);
+  height: var(--stage-h); translate: 0 var(--approach-y, 0px);
 }
 .is-player .process-heading {
-  position: sticky; top: var(--header); z-index: 1; height: 0; padding: 0 .6rem;
-  translate: 0 calc(var(--approach-y, 0px) + clamp(.5rem, 2.3svh, 1.6rem));
-  font-size: clamp(1.6rem, 3.15vw, 3.1rem); line-height: 1.08; pointer-events: none;
+  z-index: 2; padding: clamp(.6rem, 2.1svh, 1.4rem) .6rem 0; pointer-events: none;
+  font-size: clamp(.88rem, 1.15vw, 1.05rem); line-height: 1.08; letter-spacing: -.045em; font-weight: 540;
+  background: linear-gradient(var(--study-fine), var(--study-fine)) left top / 1px 50% no-repeat,
+    linear-gradient(var(--study-fine), var(--study-fine)) right top / 1px 50% no-repeat;
 }
-.is-player .process-heading br { display: none; }
-.is-player .process-heading span + br + span { margin-inline-start: .18em; }
-.is-player .process-list { translate: 0 var(--approach-y, 0px); }
-.is-player .process-list li { padding-block-start: clamp(4.2rem, 10svh, 7.2rem); }
-.is-player .step-film { max-width: calc((100svh - var(--header) - clamp(10rem, 21svh, 16rem)) * var(--demo-ratio, 1.6)); }
-.camera-ready:not(.docked) + .study-walkthrough .process-heading { opacity: var(--lesson-copy, 0); }
-.camera-ready:not(.docked) + .study-walkthrough .step-copy { opacity: var(--step-copy, 0); }
-.camera-ready:not(.docked) + .study-walkthrough .step-screen { visibility: hidden; }
+.is-player .process-heading span { color: inherit; }
+.is-player .process-list { isolation: isolate; }
+.is-player .process-list li {
+  position: absolute; inset: 0; border: 0; opacity: 0; visibility: hidden;
+  padding: var(--top-room) clamp(.55rem, 2.8vw, 2rem) var(--bottom-room);
+}
+.is-player .process-list li[aria-current="step"] { opacity: 1; visibility: visible; }
+.is-player .step-copy {
+  z-index: 1; position: absolute; top: 38%; left: 50%; translate: -50% -50%;
+  width: min(16rem, calc(100% - 1.25rem)); opacity: var(--card-opacity, 1); pointer-events: none;
+}
+.is-player .step-film {
+  z-index: 1; opacity: var(--demo-opacity, 0);
+  width: min(100%, 65rem, calc((var(--stage-h) - var(--top-room) - var(--bottom-room) - 2.75rem) * var(--demo-ratio, 1.6)));
+}
+.is-player .step-film[inert] { pointer-events: none; }
+.is-player .step-screen video { display: block; }
+.is-player .step-screen:has(.is-showing) img { opacity: 0; }
+.process-ruler {
+  position: absolute; bottom: 0; left: 50%; translate: -50% 0;
+  width: 100vw; height: 45%; overflow: clip; pointer-events: none;
+  opacity: var(--card-opacity, 1);
+}
+.process-ruler i {
+  position: absolute; bottom: 0; left: var(--tick-left); width: var(--tick-width, 1px); height: 100%;
+  transform-origin: bottom; transform: translateX(var(--ruler-x, 0px)) scaleY(var(--tick-height, 0));
+  opacity: var(--tick-light, .46);
+  background: linear-gradient(to bottom, #f7e5cc 0%, #ebc6a7 51%, rgb(214 163 127 / 18%));
+}
 @media (prefers-reduced-motion: no-preference) {
-  .is-player :is(figcaption, .process-controls) { transition: opacity .24s ease-out; }
+  .is-player .process-list li { transition: opacity .22s ease-out, visibility 0s linear .22s; }
+  .is-player .process-list li[aria-current="step"] { transition-delay: 0s; }
+  .is-player :is(.step-copy, .step-film, .process-ruler) { transition: opacity .28s ease-in-out; }
+  .process-ruler i {
+    animation: ruler-breathe 7s ease-in-out var(--tick-delay, 0s) infinite alternate;
+  }
+  @keyframes ruler-breathe { from { scale: 1 .986; } to { scale: 1 1.01; } }
 }
-.camera-ready:not(.docked) + .study-walkthrough :is(figcaption, .process-controls) { opacity: 0; visibility: hidden; }
-.camera-ready:not(.docked) + .study-walkthrough figcaption:focus-within { opacity: 1; }
+.camera-ready:not(.docked) + .study-walkthrough .process-heading,
+.camera-ready:not(.docked) + .study-walkthrough .process-list { opacity: var(--lesson-copy, 0); }
+.camera-ready:not(.docked) + .study-walkthrough .step-film { visibility: hidden; }
 @media (max-height: 32.99rem) {
-  .is-player .process-heading { font-size: 1.35rem; }
-  .is-player .process-list li { padding-block: 2.7rem 3rem; }
-  .is-player .step-film { max-width: calc((100svh - var(--header) - 7rem) * var(--demo-ratio, 1.6)); }
+  .is-player .step-copy { top: 42%; }
+  .is-player .step-number { font-size: clamp(2.5rem, 10svh, 3.25rem); }
+  .is-player .step-copy h3 { margin-top: 1.05rem; }
+  .is-player .step-copy p { margin-top: .5rem; font-size: .8rem; }
+  .process-ruler { height: 27%; }
+}
+@media (max-height: 23rem) and (min-aspect-ratio: 1/1) {
+  .is-player .step-copy { top: 43%; width: min(19rem, calc(100% - 1.5rem)); }
+  .is-player .step-copy p { max-width: 18.5rem; }
 }
