@@ -4,7 +4,7 @@
     android: {
       tag: "android-updates", file: /^Solasi-Android-arm64-v([1-9][0-9]{0,9})\.apk$/,
       link: document.querySelector("#download-apk"), version: document.querySelector("#release-version"),
-      label: "Android용 설치 파일", versionLabel: code => "v" + code + " 개발 프리뷰"
+      label: "Android 태블릿용 APK", versionLabel: code => "v" + code + " 개발 프리뷰"
     },
     mac: {
       tag: "macos-updates", file: /^Solasi-macOS-arm64-([1-9][0-9]{0,9})\.zip$/,
@@ -15,14 +15,13 @@
   const platform = document.documentElement.dataset.platform;
   const selectedCard = document.getElementById(platform)?.closest(".install-options article");
   const name = selectedCard?.querySelector("h3").textContent;
-  const shortName = platform === "android" ? "Android" : name;
   let hero = document.querySelector(".hero-install");
   const help = document.querySelector(".hero-help");
 
   function showHero() {
     const download = selectedCard.querySelector(".device-download");
     const action = download.disabled ? "배포 안내" : "설치 안내";
-    const actionLabel = shortName + " " + action;
+    const actionLabel = name + " " + action;
     document.querySelector(".fold-nav a[href='#install']").textContent = actionLabel;
     const topLink = document.querySelector(".masthead .install-link");
     topLink.firstChild.textContent = action + " ";
@@ -30,10 +29,10 @@
     document.querySelector(".footer .install-link").firstChild.textContent = actionLabel + " ";
     const fileLink = document.querySelector(".install-heading .field-link");
     fileLink.href = "#" + platform;
-    fileLink.firstChild.textContent = shortName + (download.disabled ? " 배포 상태 " : " 설치 파일 ");
+    fileLink.firstChild.textContent = name + (download.disabled ? " 배포 상태 " : " 설치 파일 ");
     help.hidden = false;
     help.href = "#" + platform;
-    help.textContent = shortName + (download.disabled ? " 배포 안내" : " 설치 방법");
+    help.textContent = name + (download.disabled ? " 배포 안내" : " 설치 방법");
     if (download.disabled) {
       const pending = download.cloneNode(true);
       pending.removeAttribute("id");

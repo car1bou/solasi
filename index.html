@@ -30,8 +30,14 @@
   <script>
     (() => {
       const root = document.documentElement;
-      const previews = {overview: "other", windows: "windows", ipad: "ipad", mac: "mac", tablet: "android", android: "android"};
-      const device = new URLSearchParams(location.search).get("device") || location.hash.slice(1);
+      const url = new URL(location.href);
+      if ((url.searchParams.get("device") || url.hash.slice(1)) === "tablet") {
+        url.searchParams.set("device", "android");
+        if (url.hash === "#tablet") url.hash = "";
+        history.replaceState(history.state, "", url);
+      }
+      const previews = {overview: "other", windows: "windows", ipad: "ipad", mac: "mac", android: "android"};
+      const device = url.searchParams.get("device") || url.hash.slice(1);
       const ua = navigator.userAgent;
       const os = navigator.userAgentData?.platform || navigator.platform || "";
       // In desktop browsing mode iPadOS advertises a Mac with a multi-touch screen.
@@ -43,7 +49,7 @@
       const platform = Object.hasOwn(previews, device) ? previews[device] : detected;
       root.dataset.platform = platform;
       root.dataset.device = platform === "other" || platform === "android" ? "tablet" : platform;
-      if ((location.hash && location.hash !== "#home") || new URLSearchParams(location.search).has("platform")
+      if ((location.hash && location.hash !== "#home") || url.searchParams.has("platform")
         || performance.getEntriesByType("navigation")[0]?.type === "back_forward") return;
 
       root.classList.add("entry-visit");
@@ -86,7 +92,7 @@
   <script src="process.js?v=scene2" defer></script>
   <script src="experience.js?v=scene2" defer></script>
   <script src="wood-field.js?v=scene2" defer></script>
-  <script src="release.js?v=7" defer></script>
+  <script src="release.js?v=8" defer></script>
   <title>Solasi | 수업을 기록하고 다시 찾는 노트</title>
 </head>
 <body>
@@ -365,11 +371,11 @@
         </header>
         <div class="install-options" id="devices">
           <article id="android">
-            <div class="platform-heading"><h3>Android 태블릿</h3><a href="?device=tablet" aria-label="Android 태블릿 소개 보기">소개 보기</a></div>
+            <div class="platform-heading"><h3>Android 태블릿</h3><a href="?device=android" aria-label="Android 태블릿 소개 보기">소개 보기</a></div>
             <p id="android-compatibility">Android 9 이상, ARM64 <span id="release-version" data-code="3">v3 개발 프리뷰</span></p>
-            <a class="device-download" id="download-apk" href="https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk" aria-describedby="android-compatibility">Android APK 다운로드</a>
+            <a class="device-download" id="download-apk" href="https://github.com/car1bou/solasi/releases/download/android-updates/Solasi-Android-arm64-v3.apk" aria-describedby="android-compatibility">Android 태블릿용 APK 다운로드</a>
             <details>
-              <summary>Android 설치 방법</summary>
+              <summary>Android 태블릿 설치 방법</summary>
               <ol>
                 <li>태블릿에서 APK를 다운로드하고 파일을 엽니다.</li>
                 <li>Android가 요청하면 해당 설치 출처를 허용하고 설치를 확인합니다.</li>
