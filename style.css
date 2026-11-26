@@ -1,6 +1,6 @@
 @font-face {
   font-family: "Solasi Web";
-  src: url("assets/suit-solasi.woff2?v=8") format("woff2");
+  src: url("assets/suit-solasi.woff2?v=talk1") format("woff2");
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -271,7 +271,21 @@ html:has(#image-viewer[open]) { overflow-y: hidden; }
   .film-copy h1 { font-size: 2rem; }
 }
 @media (max-width: 41rem) and (max-height: 31rem) and (min-aspect-ratio: 59/50) {
-  .film-copy { max-width: 29vw; }
+  .film-copy { max-width: 38vw; }
   .film-copy h1 { font-size: clamp(1.35rem, 3.9vw, 1.62rem); }
-  .film-description { max-width: 31vw; bottom: .65rem; }
+  .film-description { max-width: 38vw; bottom: .65rem; }
+}
+
+@media (max-width: 28rem) and (max-aspect-ratio: 9/10),
+       (max-height: 31rem) and (min-aspect-ratio: 59/50) {
+  .film-stage {
+    display: grid; align-content: end; justify-items: start; row-gap: .5rem;
+    padding: 0 var(--edge) .85rem;
+  }
+  .film-copy, .film-description { position: relative; inset: auto; }
+}
+
+@media (max-height: 23rem) and (min-aspect-ratio: 59/50) {
+  .film-copy > p { display: none; }
+  .hero-install { word-break: keep-all; }
 }

@@ -1,16 +1,4 @@
 @media (prefers-reduced-motion: no-preference) {
-  .result-list { view-timeline: --records block; }
-  .diagram-motion .result-list li {
-    --start: .1;
-    --end: .57;
-    animation: align-record auto cubic-bezier(.2,.69,.24,1) both;
-    animation-timeline: --records;
-    animation-range: cover calc(var(--start) * 100%) cover calc(var(--end) * 100%);
-  }
-  .diagram-motion .result-list li:nth-child(2) { --start: .14; --end: .61; --lift: 1.8rem; }
-  .diagram-motion .result-list li:nth-child(3) { --start: .18; --end: .65; --lift: 2.25rem; }
-  .diagram-motion .result-list li:nth-child(4) { --start: .22; --end: .69; --lift: 2.7rem; }
-
   .problem-visual, .course-map { view-timeline: --diagram block; }
 
   .diagram-motion :is(.file-sketch, .week-sketch, .course-map) span {
@@ -61,7 +49,6 @@
     animation-range: cover calc(var(--start, .10) * 100%) cover calc(var(--end, .62) * 100%);
     animation-duration: auto;
   }
-  .diagram-manual .result-list li,
   .diagram-manual :is(.file-sketch, .week-sketch, .course-map) span,
   .diagram-manual :is(.sound-line, .sound-sketch)::after,
   .diagram-manual .course-map::before {
@@ -77,7 +64,6 @@
   56% { translate: var(--arc-x, 0rem) var(--arc-y, 0rem); }
   to { translate: 0 0; }
 }
-@keyframes align-record { from { transform: translateY(var(--lift, 1.35rem)); } to { transform: none; } }
 @keyframes read-wave { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
 @keyframes scan-wave { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 @keyframes open-orbit { from { transform: scale(.16); opacity: .15; } }

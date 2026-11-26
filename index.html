@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Android 태블릿, iPad, Mac, Windows에서 사용하는 Solasi의 수업 기록 화면과 기기별 설치 파일 공개 상태를 확인하세요.">
+  <meta name="description" content="Solasi로 강의 PDF에 필기하고 녹음한 설명을 대본에서 다시 들어 보세요. 과목별 검색과 질문, 요약, 퀴즈까지 실제 수업 화면으로 소개합니다.">
   <meta name="theme-color" content="#392c20">
   <link rel="canonical" href="https://car1bou.github.io/solasi/">
   <link rel="icon" href="assets/solasi-icon.png" type="image/png">
-  <link rel="preload" href="assets/suit-solasi.woff2?v=8" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/suit-solasi.woff2?v=talk1" as="font" type="font/woff2" crossorigin>
   <style>
     .entry-loader { display: none; }
     .entry-visit .entry-loader {
@@ -30,7 +30,7 @@
   <script>
     (() => {
       const root = document.documentElement;
-      const previews = {windows: "windows", ipad: "ipad", mac: "mac", tablet: "android", android: "android"};
+      const previews = {overview: "other", windows: "windows", ipad: "ipad", mac: "mac", tablet: "android", android: "android"};
       const device = new URLSearchParams(location.search).get("device");
       const ua = navigator.userAgent;
       const os = navigator.userAgentData?.platform || navigator.platform || "";
@@ -64,21 +64,21 @@
       }, { once: true });
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=se1">
-  <link rel="stylesheet" href="chapters.css?v=se1">
+  <link rel="stylesheet" href="style.css?v=talk1">
+  <link rel="stylesheet" href="chapters.css?v=talk1">
   <link rel="stylesheet" href="platform-install.css?v=1">
-  <link rel="stylesheet" href="diagram-motion.css?v=3">
+  <link rel="stylesheet" href="diagram-motion.css?v=talk1">
   <link rel="stylesheet" href="chapter-exchange.css?v=se1">
-  <script src="platform-page.js?v=se1" defer></script>
-  <script src="ipad-page.js?v=se1" defer></script>
-  <script src="windows-page.js?v=se1" defer></script>
+  <script src="platform-page.js?v=talk1" defer></script>
+  <script src="ipad-page.js?v=talk1" defer></script>
+  <script src="windows-page.js?v=talk1" defer></script>
   <script src="camera.js?v=se1" defer></script>
   <script src="process.js?v=10" defer></script>
-  <script src="experience.js?v=se1" defer></script>
+  <script src="experience.js?v=talk1" defer></script>
   <script src="wood-field.js?v=2" defer></script>
   <script src="chapter-exchange.js?v=se1" defer></script>
   <script src="release.js?v=6" defer></script>
-  <title>Solasi | 강의 필기와 녹음을 한곳에</title>
+  <title>Solasi | 수업을 기록하고 다시 찾는 노트</title>
 </head>
 <body>
   <div class="entry-loader" aria-hidden="true">
@@ -119,16 +119,16 @@
       <a href="#home" class="brand" aria-label="Solasi 홈"><img src="assets/solasi-icon.png" width="26" height="26" alt="">Solasi</a>
       <nav class="wide-nav" aria-label="주 메뉴">
           <a href="#home">홈</a>
-          <a href="#process">사용 순서</a>
-          <a href="#solutions">주요 기능</a>
+          <a href="#process">사용 예시</a>
+          <a href="#preview">기능 소개</a>
           <a href="#work">앱 화면</a>
         </nav>
       <details class="fold-nav">
         <summary aria-label="탐색 메뉴"><span aria-hidden="true"></span></summary>
         <nav aria-label="전체 메뉴">
           <a href="#home">홈</a>
-          <a href="#process">사용 순서</a>
-          <a href="#solutions">주요 기능</a>
+          <a href="#process">사용 예시</a>
+          <a href="#preview">기능 소개</a>
           <a href="#work">앱 화면</a>
         </nav>
       </details>
@@ -162,13 +162,13 @@
         </div>
         <header class="film-copy">
           <p>Android 태블릿 · Mac</p>
-          <h1 id="heading" class="motion-title"><span>강의 필기와 녹음을</span><br><span>한곳에.</span></h1>
+          <h1 id="heading" class="motion-title"><span>수업을 기록하고</span><br><span>다시 찾는 노트.</span></h1>
           <div class="hero-actions">
             <a class="hero-install" href="#devices"><span>Solasi 설치하기</span><span aria-hidden="true">↓</span></a>
             <a class="hero-help" hidden>설치 방법</a>
           </div>
         </header>
-        <p class="film-description">태블릿에서 강의 자료에 필기하고,<br>Mac에서 대본의 한 문장을 골라 다시 들으세요.</p>
+        <p class="film-description">강의 PDF에 필기하고, 녹음을 다시 듣고,<br>내 수업 자료에서 답을 찾으세요.</p>
         <a class="film-source" href="https://github.com/car1bou/solasi">GitHub 프로젝트 <span aria-hidden="true">↗</span></a>
       </div>
     </section>
@@ -178,7 +178,7 @@
           <h2 class="motion-title process-heading" id="process-heading"><span>수업 준비부터</span><br><span>다시 듣기까지.</span></h2>
           <ol class="process-list" aria-labelledby="process-heading">
             <li data-recorded-on="android">
-              <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 만들기</h3><p>이번 학기에 들을 과목을 만듭니다.</p></div>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 만들기</h3><p>과목 하나를 만들어 이번 학기 강의 자료와 필기를 모읍니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
                   <img src="assets/process-course-opening.webp?v=se1" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
@@ -188,7 +188,7 @@
               </figure>
             </li>
             <li data-recorded-on="android">
-              <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>자료 열기</h3><p>소프트웨어 공학 과목에 1장 강의 PDF를 연결하고 16쪽 ‘소프트웨어의 정의’를 펼칩니다.</p></div>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>자료 열기</h3><p>과목에 강의 PDF를 넣고 오늘 배울 쪽을 펼칩니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
                   <img src="assets/process-material.webp?v=se1" loading="lazy" decoding="async" alt="Android에서 소프트웨어 공학 1장 PDF를 열고 16쪽으로 이동하는 화면">
@@ -198,7 +198,7 @@
               </figure>
             </li>
             <li data-recorded-on="android">
-              <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>PDF에서 ‘필기만’을 누르면 자료가 넓게 펼쳐집니다. 이 화면에서 중요한 문장에 형광펜을 긋고 펜으로 표시합니다.</p></div>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기하기</h3><p>‘필기만’으로 자료를 넓게 펼치고, 중요한 문장에 형광펜을 긋습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
                   <img src="assets/process-ink.webp?v=se1" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
@@ -218,7 +218,7 @@
               </figure>
             </li>
             <li data-recorded-on="mac">
-              <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 문장을 골라 그 구간의 원음을 다시 듣습니다.</p></div>
+              <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 한 문장을 골라 그 말을 했던 순간부터 다시 듣습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
                   <img src="assets/process-replay.webp?v=se1" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
@@ -236,8 +236,8 @@
       <div class="field-frame">
         <header class="problem-heading">
           <div class="problem-lede">
-            <p class="section-label">복습할 때</p>
-            <h2 id="preview-heading" class="motion-title"><span>수업이 끝나면</span><br><span>어떤 기록을 찾게 될까요?</span></h2>
+            <p class="section-label">수업 기록</p>
+            <h2 id="preview-heading" class="motion-title"><span>수업 한 시간,</span><br><span>무엇을 남길까요?</span></h2>
           </div>
           <figure class="lecture-page">
             <div class="lecture-window">
@@ -250,8 +250,8 @@
           <li>
             <div class="problem-copy">
               <span class="row-number" aria-hidden="true">01</span>
-              <h3>슬라이드와 필기가<br>따로 남습니다.</h3>
-              <p>밑줄 친 자료는 찾았는데, 그 옆에 적은 설명은 다른 노트에 있습니다.</p>
+              <h3>강의 자료 위에<br>내 설명을 적습니다.</h3>
+              <p>강의 PDF에 펜으로 쓰고 중요한 줄에 형광펜을 긋습니다. 이해가 안 된 대목은 그 쪽에 메모해 둡니다.</p>
             </div>
             <div class="problem-visual file-sketch" aria-hidden="true">
               <span>강의 자료.pdf</span><span>수업 필기</span><span>페이지 메모</span>
@@ -260,8 +260,8 @@
           <li>
             <div class="problem-copy">
               <span class="row-number" aria-hidden="true">02</span>
-              <h3>한 문장을 찾으려<br>강의 전체를 듣습니다.</h3>
-              <p>다시 듣고 싶은 설명은 짧아도, 녹음 파일에서 그 순간을 찾는 데는 시간이 걸립니다.</p>
+              <h3>대본 한 문장에서<br>강의를 다시 듣습니다.</h3>
+              <p>데스크톱에서는 강의 녹음을 대본으로 옮깁니다. 문장을 고르면 그 구간의 원음을 들으며 잘못 적힌 단어를 고칠 수 있습니다.</p>
             </div>
             <div class="problem-visual sound-sketch" aria-hidden="true">
               <div class="sound-line"></div><span>00:00</span><span>강의 녹음</span><span>50:00</span>
@@ -270,9 +270,9 @@
           <li>
             <div class="problem-copy">
               <span class="row-number" aria-hidden="true">03</span>
-              <h3>다음 수업마다<br>지난 기록을 찾습니다.</h3>
-              <p>같은 과목인데도 자료와 녹음이 회차마다 흩어져 지난 수업부터 다시 찾아봅니다.</p>
-              <a class="field-link" href="#solutions">Solasi 기능 보기 <span aria-hidden="true">↘</span></a>
+              <h3>한 과목에<br>여러 주의 기록을 모읍니다.</h3>
+              <p>같은 과목을 열면 지난주에 보던 PDF와 필기를 다시 펼칠 수 있습니다. 강의 녹음과 대본은 수업 날짜별로 찾아봅니다.</p>
+              <a class="field-link" href="#solutions">복습 기능 보기 <span aria-hidden="true">↘</span></a>
             </div>
             <div class="problem-visual week-sketch" aria-hidden="true">
               <span>1주차</span><span>2주차</span><span>3주차</span>
@@ -285,17 +285,17 @@
     <section class="study-solutions field" id="solutions" data-scene-surface="dark" aria-labelledby="solutions-heading">
       <div class="field-frame">
         <header class="section-head solution-head">
-          <div><p class="section-label">주요 기능</p><h2 id="solutions-heading" class="motion-title"><span>한 과목에서</span><br><span>모두 이어집니다.</span></h2></div>
+          <div><p class="section-label">데스크톱의 복습 기능</p><h2 id="solutions-heading" class="motion-title"><span>지난 수업에</span><br><span>다시 질문하기.</span></h2></div>
           <div class="course-map" aria-hidden="true">
-            <b>과목</b><span>자료</span><span>필기</span><span>녹음</span><span>대본</span>
+            <b>과목</b><span>검색</span><span>질문</span><span>요약</span><span>퀴즈</span>
           </div>
         </header>
         <ol class="solution-list">
-          <li><span class="row-number" aria-hidden="true">01</span><div><h3>자료 모으기</h3><p>과목에 강의 PDF를 연결하면 다음 수업에서도 같은 자료와 필기를 펼칠 수 있습니다.</p></div><span class="solution-code">과목</span></li>
-          <li><span class="row-number" aria-hidden="true">02</span><div><h3>PDF 위에 쓰기</h3><p>펜으로 설명을 덧붙이고 형광펜으로 중요한 줄을 표시합니다. 페이지마다 짧은 메모도 남길 수 있습니다.</p></div><span class="solution-code">PDF</span></li>
-          <li><span class="row-number" aria-hidden="true">03</span><div><h3>강의 녹음하기</h3><p>수업을 녹음해 회차별로 보관합니다. Mac에서는 녹음을 마친 뒤 대본으로 옮길 수 있습니다.</p></div><span class="solution-code">녹음</span></li>
-          <li><span class="row-number" aria-hidden="true">04</span><div><h3>문장에서 원음 듣기</h3><p>Mac에서 대본의 문장을 고른 뒤 ‘선택 구간 듣기’를 누르면 그 부분의 원음이 재생됩니다.</p></div><span class="solution-code">대본</span></li>
-          <li><span class="row-number" aria-hidden="true">05</span><div><h3>기록 내보내기</h3><p>Mac에서 대본은 텍스트나 Markdown으로, 페이지 메모와 필기는 JSON 파일로 저장합니다.</p></div><span class="solution-code">파일</span></li>
+          <li><span class="row-number" aria-hidden="true">01</span><div><h3>지난 수업까지 검색하기</h3><p>기억나는 단어를 입력하면 같은 과목의 자료와 확정된 대본, 메모에서 관련 대목을 찾습니다.</p></div><span class="solution-code">검색</span></li>
+          <li><span class="row-number" aria-hidden="true">02</span><div><h3>내 자료에 질문하기</h3><p>오늘 수업이나 과목 전체를 골라 질문하세요. 답변에 붙은 출처를 열면 해당 PDF 쪽이나 강의 대본으로 돌아갑니다.</p></div><span class="solution-code">질문</span></li>
+          <li><span class="row-number" aria-hidden="true">03</span><div><h3>요약에서 원문 읽기</h3><p>긴 강의는 요약으로 먼저 훑어봅니다. 더 읽고 싶은 부분은 연결된 원문에서 앞뒤 설명까지 확인합니다.</p></div><span class="solution-code">요약</span></li>
+          <li><span class="row-number" aria-hidden="true">04</span><div><h3>퀴즈로 이해한 내용 확인하기</h3><p>수업 자료로 만든 문제를 풀고, 답의 근거를 읽으며 어느 대목을 다시 공부할지 정합니다.</p></div><span class="solution-code">퀴즈</span></li>
+          <li><span class="row-number" aria-hidden="true">05</span><div><h3>필요한 기록 내보내기</h3><p>대본은 텍스트나 마크다운으로, 요약은 마크다운으로 저장해 다른 문서에서도 이어 쓸 수 있습니다.</p></div><span class="solution-code">내보내기</span></li>
         </ol>
       </div>
     </section>
@@ -304,24 +304,22 @@
       <div class="field-frame">
         <header class="section-head result-head">
           <div class="result-story">
-            <h2 id="results-heading" class="motion-title"><span>복습할 때</span><br><span>다시 꺼낼 수 있는 것.</span></h2>
-            <p>프로그램과 소프트웨어의 차이가 헷갈릴 때는 1장 16쪽을 다시 펼쳐 보세요. PDF에 표시한 개발 산출물의 예를 읽고, Mac에서는 대본의 문장을 골라 그 설명을 다시 들을 수 있습니다.</p>
-            <a class="field-link" href="#work">앱 화면 보기 <span aria-hidden="true">↘</span></a>
+            <p class="section-label">소프트웨어 공학 · Mac 복습 예시</p>
+            <h2 id="results-heading" class="motion-title"><span>답을 읽고,</span><br><span>그 설명을 다시 듣고.</span></h2>
+            <p>1장 16쪽을 읽다가 “프로그램과 소프트웨어의 차이는 무엇인가요?”라고 물었습니다. 저장된 답변에서 ‘대본 0:00’을 열어 보세요. 설계 문서와 테스트 결과를 예로 든 강의 대목을 원음으로 확인할 수 있습니다.</p>
+            <a class="field-link" href="solasi-introduction.txt">2~3분 발표 대본 읽기 <span aria-hidden="true">↗</span></a>
           </div>
-          <img class="result-example" src="assets/review-highlight.webp?v=se1" width="1600" height="1000" loading="lazy" alt="Android용 Solasi에서 소프트웨어 공학 1장 16쪽과 개발 산출물에 대한 페이지 메모를 함께 보는 전체 화면">
+          <figure>
+            <img class="result-example" src="assets/talk-source-mac.webp" width="2400" height="1471" loading="lazy" alt="프로그램과 소프트웨어의 차이를 묻는 저장된 답변에서 대본 출처와 원음 재생기를 펼친 Mac 화면">
+            <figcaption><span>Mac · 질문과 대본 출처</span><a class="enlarge" href="assets/talk-source-mac.webp">화면 크게 보기</a></figcaption>
+          </figure>
         </header>
-        <ul class="result-list">
-          <li><h3>표시해 둔 줄</h3><p>‘소프트웨어의 정의’를 펼치면 수업 중 형광펜으로 표시한 부분과 그 옆에 남긴 필기가 함께 보입니다.</p></li>
-          <li><h3>쪽마다 남긴 생각</h3><p>설계 문서나 테스트 결과가 왜 소프트웨어에 포함될까요? 16쪽에 떠오른 질문을 메모해 두면 복습할 때 같은 자리에서 이어 쓸 수 있습니다.</p></li>
-          <li><h3>그날의 목소리</h3><p>Mac 대본에서 확인할 문장을 고르고 ‘선택 구간 듣기’를 누르세요. 그 구간의 원음을 들으며 잘못 옮겨 적힌 용어를 고칠 수 있습니다.</p></li>
-          <li><h3>이어지는 수업 기록</h3><p>다음 주에도 같은 과목을 열면 지난 자료와 회차별 녹음을 찾을 수 있습니다. 앞 시간의 예시를 확인한 뒤 새 수업을 기록하세요.</p></li>
-        </ul>
       </div>
     </section>
 
     <section class="study-work field" id="work" data-scene-surface="dark" aria-labelledby="work-heading">
       <div class="field-frame">
-        <header class="section-head work-heading"><h2 id="work-heading" class="motion-title"><span>실제 앱에서</span><br><span>이렇게 씁니다.</span></h2></header>
+        <header class="section-head work-heading"><h2 id="work-heading" class="motion-title"><span>기기별 화면을</span><br><span>가까이에서.</span></h2></header>
         <div class="work-grid">
           <div class="work-index">
             <details name="work" id="notes" open><summary>PDF 펼쳐 보기</summary><p>과목에서 강의 PDF를 열면 필기 도구와 페이지 메모를 함께 볼 수 있습니다.</p></details>
@@ -350,7 +348,8 @@
     <section id="install" class="study-install field" data-scene-surface="install" aria-labelledby="install-heading">
       <div class="field-frame">
         <header class="install-heading">
-          <h2 id="install-heading" class="motion-title"><span>다음 수업을</span><br><span>Solasi와 함께.</span></h2>
+          <h2 id="install-heading" class="motion-title"><span>내 기기로</span><br><span>시작하기.</span></h2>
+          <p>수업 기록은 각 기기에 저장됩니다. 데스크톱에서 외부 AI를 선택하면 질문과 관련 자료가 해당 서비스로 전송됩니다.</p>
           <a class="field-link" href="#devices">기기별 설치 파일 <span aria-hidden="true">↓</span></a>
         </header>
         <div class="install-options" id="devices">
@@ -399,17 +398,19 @@
     <div class="footer-inner">
       <div class="footer-brand">
         <a class="brand" href="#home"><img src="assets/solasi-icon.png" width="26" height="26" alt="">Solasi</a>
-        <p>PDF 필기와 강의 녹음을 위한 학습 앱.</p>
+        <p>필기와 녹음을 남기고, 내 수업에서 답을 찾는 학습 앱.</p>
         <a href="#install" class="install-link">설치하기 <span aria-hidden="true">↘</span></a>
       </div>
       <nav aria-label="페이지 바로가기">
         <a href="#home">홈</a>
-        <a href="#process">사용 순서</a>
-        <a href="#solutions">주요 기능</a>
+        <a href="#process">사용 예시</a>
+        <a href="#preview">기능 소개</a>
         <a href="#work">앱 화면</a>
       </nav>
-      <nav aria-label="프로젝트 링크">
+      <nav aria-label="발표 자료와 프로젝트">
+        <a href="?device=overview">전체 기능 시연</a>
         <a href="https://github.com/car1bou/solasi">GitHub ↗</a>
+        <a href="solasi-introduction.txt">발표 대본</a>
         <a href="https://github.com/car1bou/solasi/issues">문제 제보 ↗</a>
       </nav>
     </div>

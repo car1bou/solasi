@@ -85,7 +85,7 @@
     const limit = header.offsetHeight + 2;
     const next = tops.findIndex(top => top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
-    const active = visible === "preview" || visible === "results" ? "solutions" : visible;
+    const active = visible === "solutions" || visible === "results" ? "preview" : visible;
     highlightSolution();
     const compact = tops[1] <= limit;
     const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
@@ -137,16 +137,6 @@
   }
   if (document.documentElement.dataset.device === "mac") {
     document.querySelector(".film-copy p").textContent = "Apple Silicon Mac · macOS 27 이상";
-    const lines = document.querySelectorAll("#heading > span");
-    lines[0].textContent = "대본에서 한 문장을";
-    lines[1].textContent = "다시 듣다.";
-    document.querySelector(".film-description").textContent = "강의 녹음을 대본으로 옮기고, 문장을 골라 그 순간의 목소리를 다시 들으세요.";
-    const example = document.querySelector(".result-example");
-    example.src = "assets/mac-replay.webp";
-    example.width = 1280;
-    example.height = 800;
-    example.alt = "Mac용 Solasi에서 개발 산출물에 관한 대본 문장을 선택하고 그 구간을 재생하는 전체 화면";
-    document.querySelector(".result-story p").textContent = "설계 문서와 테스트 결과도 소프트웨어에 포함되는 이유를 다시 들어 보세요. 강의 기록의 대본에서 해당 문장을 고르고 ‘선택 구간 듣기’를 누르면 그때의 설명을 원음으로 확인할 수 있습니다.";
     document.getElementById("transcript").open = true;
   }
   openLinkedScreen(true);
@@ -177,7 +167,7 @@
   if (!window.IntersectionObserver) return;
 
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const diagrams = document.querySelectorAll(".problem-visual, .course-map, .result-list");
+  const diagrams = document.querySelectorAll(".problem-visual, .course-map");
   const visible = new Set();
   let frame = 0;
   function paint() {

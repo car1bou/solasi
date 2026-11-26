@@ -18,11 +18,9 @@ window.renderPlatformPage = function (page) {
     image.src = src;
   };
 
-  const { name, hero, steps, result, gallery } = page;
+  const { name, hero, steps, gallery } = page;
   document.title = "Solasi | " + name;
   one(".film-copy > p").textContent = hero.eyebrow;
-  setTitle("#heading", hero.title);
-  one(".film-description").textContent = hero.description;
   const paper = one(".lecture-page");
   const detail = paper.querySelector("img");
   setImage(detail, hero.image, hero.alt);
@@ -38,14 +36,6 @@ window.renderPlatformPage = function (page) {
     link.setAttribute("aria-label", step.title + " 시연 영상 크게 보기");
   });
 
-  fill(".solution-list > li", page.features, (row, feature) => {
-    setCopy(row, feature);
-    row.querySelector(".solution-code").textContent = feature.tag;
-  });
-  if (page.map) fill(".course-map > span", page.map, (span, label) => { span.textContent = label; });
-  one(".result-story p").textContent = result.description;
-  setImage(one(".result-example"), result.image, result.alt);
-  fill(".result-list > li", result.items, setCopy);
   fill(".work-index > details", page.details, (detail, item) => {
     detail.querySelector("summary").textContent = item.title;
     detail.querySelector("p").textContent = item.description;
@@ -71,7 +61,7 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
     const macOpening = [
       {
         title: "강의 기록 열기",
-        description: "홈의 최근 기록에서 ‘소프트웨어 공학 개요’ 강의를 엽니다.",
+        description: "홈의 최근 기록에서 다시 듣고 싶은 강의를 엽니다.",
         alt: "Mac용 Solasi 홈에 표시된 최근 강의 기록",
         asset: "mac-step-record",
       },
@@ -99,10 +89,6 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
     conclusion.textContent = "PDF 필기까지.";
     document.title = "Solasi | Android 태블릿";
     document.querySelector(".film-copy > p").textContent = "Android 태블릿";
-    const [first, second] = document.querySelectorAll("#heading > span");
-    first.textContent = "강의 자료에";
-    second.textContent = "바로 필기하세요.";
-    document.querySelector(".film-description").textContent = "과목을 만들고 강의 PDF를 펼치세요. 중요한 문장에 형광펜을 긋고 자료 옆에 필기를 남길 수 있습니다.";
   }
   list.replaceChildren(...recordings);
   recordings.forEach((row, index) => {

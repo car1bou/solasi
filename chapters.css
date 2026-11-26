@@ -84,7 +84,7 @@
 .lecture-window img:not([src]) { display: none; }
 .problem-heading.page-missing { grid-template-columns: 1fr; }
 .problem-heading.page-missing .lecture-page { display: none; }
-.problem-list, .solution-list, .result-list, .process-list { list-style: none; padding: 0; }
+.problem-list, .solution-list, .process-list { list-style: none; padding: 0; }
 .problem-list { display: grid; gap: 1.2rem; border-top: 1px solid var(--study-line); }
 .problem-list > li {
   position: relative;
@@ -162,21 +162,18 @@
   .solution-list .is-current::after { transform: scaleY(1); }
   .solution-list .is-current h3 { color: var(--study-oak); transform: translateX(.28em); }
 }
-.study-results .field-frame { padding-top: clamp(4rem, 8vw, 8rem); }
+.study-results .field-frame { padding-block: clamp(4rem, 8vw, 8rem); }
 .result-head {
-  display: grid; grid-template-columns: minmax(0,1fr) minmax(12rem,.72fr);
+  display: grid; grid-template-columns: minmax(0,.86fr) minmax(12rem,1.14fr);
   align-items: center; gap: 1rem clamp(1.5rem,4vw,4rem);
 }
 .result-example {
   width: 100%; height: auto; justify-self: end;
   box-shadow: 0 .65rem 1.6rem -.8rem #1e150eab;
 }
+.result-head figure { min-width: 0; }
 .result-story { display: grid; justify-items: start; gap: clamp(1rem, 2vw, 1.6rem); }
-.result-story p { max-width: 35rem; color: var(--study-muted); font-size: clamp(1rem, 1.24vw, 1.13rem); text-wrap: pretty; }
-.result-list { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: clamp(.75rem, 1.5vw, 1.5rem); padding: var(--study-gap); border-bottom: 1px solid var(--study-line); }
-.result-list li { display: flex; flex-direction: column; justify-content: space-between; gap: 2rem; min-height: clamp(11rem, 16vw, 16rem); padding: clamp(.8rem, 1.45vw, 1.4rem); background: var(--study-fine); }
-.result-list h3 { font-size: clamp(1.14rem, 1.5vw, 1.6rem); }
-.result-list p { color: var(--study-text); font-size: .93rem; }
+.result-story p:not(.section-label) { max-width: 35rem; color: var(--study-muted); font-size: clamp(1rem, 1.24vw, 1.13rem); text-wrap: pretty; }
 .process-heading {
   text-align: center; padding: 4.5rem .75rem 2rem;
 }
@@ -247,7 +244,7 @@
 .work-ink, .work-mac, .work-grid:has(:is(#ink, #transcript, #audio)[open]) .work-android { display: none; }
 .work-grid:has(#ink[open]) .work-ink { display: block; }
 .work-grid:has(:is(#transcript, #audio)[open]) .work-mac { display: block; }
-.work-still figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 .65rem; padding: .15rem 1.05rem; font-size: .83rem; color: var(--study-muted); }
+:is(.work-still, .result-head) figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 .65rem; padding: .15rem 1.05rem; font-size: .83rem; color: var(--study-muted); }
 @media (prefers-reduced-motion: no-preference) {
   .work-image { animation: work-screen-in 480ms cubic-bezier(.2,.75,.23,1); }
   @keyframes work-screen-in {
@@ -267,6 +264,7 @@
   }
 }
 .install-heading { min-height: clamp(24rem, 57svh, 40rem); padding: clamp(4rem, 9vw, 8rem) .8rem; display: grid; align-content: center; justify-items: center; gap: clamp(2rem, 4.5vw, 4.5rem); text-align: center; }
+.install-heading p { max-width: 33rem; color: var(--study-muted); text-wrap: pretty; }
 .install-heading h2 { font-size: clamp(3rem, 6.6vw, 6.35rem); }
 .install-heading .field-link { font-size: clamp(1rem, 1.4vw, 1.32rem); }
 .install-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 1px solid var(--study-line); }
@@ -300,9 +298,7 @@
   .solution-list .row-number { gap: .29rem; padding: 1.25rem .35rem 1.25rem .5rem; }
   .solution-list li > div { gap: .85rem; padding: 1.25rem 1rem; }
   .solution-code { display: none; }
-  .result-list { grid-template-columns: repeat(2,minmax(0,1fr)); padding: .7rem; gap: .6rem; }
   .result-head { grid-template-columns: 1fr; }
-  .result-list li { min-height: 10rem; }
   .work-grid, .install-options { grid-template-columns: 1fr; }
   .work-gallery, .install-options article + article { border-left: 0; border-top: 1px solid var(--study-line); }
   .work-grid { padding-inline: .9rem; }
@@ -326,8 +322,6 @@
 
 }
 @media (max-width: 24rem) {
-  .result-list { grid-template-columns: 1fr; }
-  .result-list li { min-height: 0; gap: 1rem; }
   .install-options article > p span { display: block; margin-inline-start: 0; }
 }
 
