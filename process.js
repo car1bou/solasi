@@ -51,6 +51,7 @@
       if (i === index) step.setAttribute("aria-current", "step");
       else step.removeAttribute("aria-current");
     });
+    stage.dispatchEvent(new Event("stepchange"));
     if (steps[index + 1]) steps[index + 1].querySelector("img").loading = "eager";
     updateControls();
     if (visible && !paused) play();

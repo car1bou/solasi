@@ -151,12 +151,13 @@
     world.dataset.woodView = [-x / (photo.width * scale), -y / (photo.height * scale),
       w / (photo.width * scale), h / (photo.height * scale)].join(" ");
 
-    // Measure the first real video in its pinned position, even on a deep link or after rotation.
-    const target = seat.getBoundingClientRect();
+    // The active caption can wrap to a different height after a manual chapter change.
+    const step = list.querySelector('[aria-current="step"]') || list.firstElementChild;
+    const target = step.querySelector(".step-screen").getBoundingClientRect();
     const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
     const listOffset = stickyTop - list.getBoundingClientRect().top;
     const top = target.top + listOffset;
-    const copyRect = (list.querySelector('[aria-current] .step-copy') || list.querySelector('.step-copy')).getBoundingClientRect();
+    const copyRect = step.querySelector(".step-copy").getBoundingClientRect();
     copyBounds = [copyRect.left, copyRect.top + listOffset, copyRect.right, copyRect.bottom + listOffset];
     landing = [[target.left, top], [target.right, top],
       [target.right, top + target.height], [target.left, top + target.height]];
@@ -242,6 +243,7 @@
     sizes.observe(heroCopy);
     sizes.observe(list);
   } else window.addEventListener("resize", refresh);
+  list.addEventListener("stepchange", refresh);
   motion.addEventListener("change", refresh);
   narrow.addEventListener("change", refresh);
 })();

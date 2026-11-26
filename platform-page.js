@@ -32,6 +32,7 @@ window.renderPlatformPage = function (page) {
 
   if (page.tourTitle) setTitle("#process-heading", page.tourTitle);
   fill(".process-list > li", steps, (row, step) => {
+    row.dataset.recordedOn = document.documentElement.dataset.platform;
     row.removeAttribute("data-separate-demo");
     setCopy(row, step);
     setImage(row.querySelector(".step-screen img"), step.image, step.alt);
@@ -61,19 +62,28 @@ window.renderPlatformPage = function (page) {
   one("#image-viewer img").src = gallery[0].image;
 };
 
-// The Mac walkthrough starts inside a lecture recording. Keep the two native
-// captures in their recorded order so the first frame belongs to this device.
-if (document.documentElement.dataset.device === "mac") {
+// The default tour spans tablet and Mac. Device-specific tours stay on their own platform.
+const tourPlatform = document.documentElement.dataset.platform;
+if (tourPlatform === "mac" || tourPlatform === "android") {
   const list = document.querySelector(".process-list");
-  const recordings = [...list.querySelectorAll('a[href*="process-transcript.mp4"], a[href*="process-replay.mp4"]')]
-    .map(link => link.closest("li"));
+  const recordings = [...list.querySelectorAll(`[data-recorded-on="${tourPlatform}"]`)];
   list.replaceChildren(...recordings);
   const [opening, conclusion] = document.querySelectorAll("#process-heading > span");
-  opening.textContent = "강의 대본에서";
-  conclusion.textContent = "다시 듣기까지.";
+  if (tourPlatform === "mac") {
+    opening.textContent = "강의 대본에서";
+    conclusion.textContent = "다시 듣기까지.";
+  } else {
+    opening.textContent = "과목 만들기부터";
+    conclusion.textContent = "PDF 필기까지.";
+    document.title = "Solasi | Android 태블릿";
+    document.querySelector(".film-copy > p").textContent = "Android 태블릿";
+    const [first, second] = document.querySelectorAll("#heading > span");
+    first.textContent = "강의 자료에";
+    second.textContent = "바로 필기하세요.";
+    document.querySelector(".film-description").textContent = "과목을 만들고 강의 PDF를 펼치세요. 중요한 문장에 형광펜을 긋고 그래프 옆에 필기를 남길 수 있습니다.";
+  }
   recordings.forEach((row, index) => {
     row.querySelector(".step-number").textContent = String(index + 1).padStart(2, "0");
-    const poster = row.querySelector(".step-screen img");
-    poster.loading = index === 0 ? "eager" : "lazy";
+    row.querySelector(".step-screen img").loading = index === 0 ? "eager" : "lazy";
   });
 }
