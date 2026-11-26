@@ -31,7 +31,7 @@
     (() => {
       const root = document.documentElement;
       const previews = {overview: "other", windows: "windows", ipad: "ipad", mac: "mac", tablet: "android", android: "android"};
-      const device = new URLSearchParams(location.search).get("device");
+      const device = new URLSearchParams(location.search).get("device") || location.hash.slice(1);
       const ua = navigator.userAgent;
       const os = navigator.userAgentData?.platform || navigator.platform || "";
       // In desktop browsing mode iPadOS advertises a Mac with a multi-touch screen.
@@ -75,17 +75,18 @@
   </script>
   <link rel="stylesheet" href="style.css?v=scene3">
   <link rel="stylesheet" href="chapters.css?v=scene2">
-  <link rel="stylesheet" href="platform-install.css?v=1">
+  <link rel="stylesheet" href="platform-install.css?v=2">
   <link rel="stylesheet" href="diagram-motion.css?v=talk1">
-  <script src="platform-page.js?v=os5" defer></script>
+  <script src="platform-page.js?v=star1" defer></script>
   <script src="mac-page.js?v=scene2" defer></script>
   <script src="ipad-page.js?v=scene2" defer></script>
   <script src="windows-page.js?v=scene2" defer></script>
+  <script src="tablet-content.js?v=device2" defer></script>
   <script src="camera.js?v=scene3" defer></script>
   <script src="process.js?v=scene2" defer></script>
   <script src="experience.js?v=scene2" defer></script>
   <script src="wood-field.js?v=scene2" defer></script>
-  <script src="release.js?v=6" defer></script>
+  <script src="release.js?v=7" defer></script>
   <title>Solasi | 수업을 기록하고 다시 찾는 노트</title>
 </head>
 <body>
@@ -208,7 +209,7 @@
                 <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=take2" aria-label="강의 자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
-            <li data-recorded-on="android">
+            <li data-recorded-on="android" data-step="ink">
               <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기·메모 남기기</h3><p>‘필기만’으로 자료를 넓게 펼치고, 중요한 문장에 형광펜을 긋습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">

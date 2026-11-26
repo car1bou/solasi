@@ -4,7 +4,7 @@
 .platform-heading a {
   display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--study-muted); font-size: .87rem;
 }
-.platform-heading [aria-current] { text-decoration: none; }
+.install-options:has(article:only-child) { grid-template-columns: minmax(0, 48rem); justify-content: center; }
 .hero-install:disabled, .device-download:disabled {
   min-height: 2.75rem; padding: .6rem .95rem; border: 1px solid rgb(247 227 203 / 40%); border-radius: .28rem;
   background: rgb(50 38 29 / 88%); color: #e4d3be; cursor: not-allowed; text-decoration: none; opacity: 1;
