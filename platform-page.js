@@ -66,11 +66,37 @@ const tourPlatform = document.documentElement.dataset.platform;
 if (tourPlatform === "mac" || tourPlatform === "android") {
   const list = document.querySelector(".process-list");
   const recordings = [...list.querySelectorAll(`[data-recorded-on="${tourPlatform}"]`)];
-  list.replaceChildren(...recordings);
   const [opening, conclusion] = document.querySelectorAll("#process-heading > span");
   if (tourPlatform === "mac") {
-    opening.textContent = "강의 대본에서";
+    opening.textContent = "강의 기록에서";
     conclusion.textContent = "다시 듣기까지.";
+    // The native recording continues from the open lecture directly into its transcript.
+    const macOpening = [
+      {
+        title: "강의 기록 열기",
+        description: "홈의 최근 기록에서 ‘기억과 학습’ 강의를 엽니다.",
+        alt: "Mac용 Solasi 홈에 표시된 최근 강의 기록",
+        asset: "mac-step-record",
+      },
+      {
+        title: "대본 열기",
+        description: "강의 기록에서 대본 탭을 눌러 녹음한 내용을 문장별로 확인합니다.",
+        alt: "Mac용 Solasi의 ‘기억과 학습’ 강의 기록과 대본 탭",
+        asset: "mac-step-transcript",
+      },
+    ];
+    recordings.splice(1, 0, recordings[0].cloneNode(true));
+    macOpening.forEach(({ title, description, alt, asset }, index) => {
+      const row = recordings[index];
+      row.querySelector("h3").textContent = title;
+      row.querySelector("p").textContent = description;
+      const image = row.querySelector(".step-screen img");
+      image.alt = alt;
+      image.src = `assets/${asset}.webp`;
+      const link = row.querySelector(".step-film a");
+      link.href = `assets/${asset}.mp4`;
+      link.setAttribute("aria-label", title + " 시연 영상 크게 보기");
+    });
   } else {
     opening.textContent = "과목 만들기부터";
     conclusion.textContent = "PDF 필기까지.";
@@ -81,6 +107,7 @@ if (tourPlatform === "mac" || tourPlatform === "android") {
     second.textContent = "바로 필기하세요.";
     document.querySelector(".film-description").textContent = "과목을 만들고 강의 PDF를 펼치세요. 중요한 문장에 형광펜을 긋고 그래프 옆에 필기를 남길 수 있습니다.";
   }
+  list.replaceChildren(...recordings);
   recordings.forEach((row, index) => {
     row.querySelector(".step-number").textContent = String(index + 1).padStart(2, "0");
     row.querySelector(".step-screen img").loading = index === 0 ? "eager" : "lazy";

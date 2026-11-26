@@ -185,7 +185,7 @@
     stage.style.setProperty("--desk-opacity", room);
     header.style.setProperty("--header-fill", ease(clamp((scroll - .58) / .42)));
     const chapter = ease(clamp((scroll - .72) / .23));
-    stage.style.setProperty("--screen-mix", glass.naturalWidth ? 1 - chapter : 0);
+    stage.style.setProperty("--screen-mix", glass.naturalWidth ? 1 : 0);
     stage.classList.toggle("inside-screen", room === 0);
     stage.classList.toggle("dissolving-desk", room < 1);
     film.classList.toggle("docked", docked);

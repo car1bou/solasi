@@ -342,7 +342,7 @@
   .install-options article > p span { display: block; margin-inline-start: 0; }
 }
 
-/* One pinned stage alternates a chapter title and its full recording as the reader scrolls. */
+/* Each chapter uses the same screen position, including the landing point of the intro camera. */
 .study-walkthrough:has(.is-player) {
   --wash: rgb(45 19 14 / 88%);
   --study-text: #fff0e1;
@@ -352,8 +352,8 @@
 .study-walkthrough:has(.is-player) .field-frame { border-color: transparent; }
 .process-run.is-player {
   --stage-h: calc(100svh - var(--header));
-  --top-room: clamp(3.5rem, 9svh, 5.5rem);
-  --bottom-room: clamp(.4rem, 2svh, 1.5rem);
+  --screen-clearance: clamp(8.3rem, 18svh, 10.4rem);
+  --ruler-height: min(7.5%, 4.5rem);
   --step-travel: 96svh;
   display: grid; grid-template: minmax(0,1fr) / minmax(0,1fr);
   height: calc(var(--stage-h) + var(--steps, 1) * var(--step-travel));
@@ -370,26 +370,43 @@
 }
 .is-player .process-heading span { color: inherit; }
 .is-player .process-list { isolation: isolate; }
+/* Two equal tracks above and below keep the app itself at the center.
+   Its caption sits outside the grid calculation, so text never shifts the screen. */
 .is-player .process-list li {
-  position: absolute; inset: 0; border: 0; opacity: 0; visibility: hidden;
-  padding: var(--top-room) clamp(.55rem, 2.8vw, 2rem) var(--bottom-room);
+  position: absolute; inset: 0; visibility: hidden; border: 0;
+  grid-template: minmax(0, 1fr) auto minmax(0, 1fr) / minmax(0, 1fr);
+  gap: 0; padding: 0 clamp(.55rem, 2.8vw, 2rem);
 }
-.is-player .process-list li[aria-current="step"] { opacity: 1; visibility: visible; }
+.is-player .process-list li[aria-current="step"] { visibility: visible; }
 .is-player .step-copy {
-  z-index: 1; position: absolute; top: 38%; left: 50%; translate: -50% -50%;
-  width: min(16rem, calc(100% - 1.25rem)); opacity: var(--card-opacity, 1); pointer-events: none;
+  grid-area: 1 / 1; align-self: end; width: 100%; margin-bottom: clamp(.7rem, 2svh, 1.35rem);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  column-gap: .65rem; row-gap: .4rem; pointer-events: none;
+}
+.is-player .step-number { font-size: clamp(1.55rem, 4.5svh, 2.75rem); }
+.is-player .step-copy h3 {
+  margin: 0; padding: .22em .44em; font-size: clamp(.85rem, 1.15vw, 1rem);
+}
+.is-player .step-copy h3::before, .is-player .step-copy h3::after { content: none; }
+.is-player .step-copy p {
+  width: 100%; max-width: none; margin: 0; padding-inline: max(0px, calc((100% - 43rem) / 2));
+  font-size: clamp(.8rem, 1.08vw, .95rem); line-height: 1.4; text-wrap: balance;
 }
 .is-player .step-film {
-  z-index: 1; opacity: var(--demo-opacity, 0);
-  width: min(100%, 65rem, calc((var(--stage-h) - var(--top-room) - var(--bottom-room) - 2.75rem) * var(--demo-ratio, 1.6)));
+  position: relative; grid-area: 2 / 1; width: min(100%, 62rem,
+    calc((var(--stage-h) - 2 * var(--screen-clearance)) * var(--demo-ratio, 1.6)));
 }
+.is-player .step-film figcaption { position: absolute; inset: 100% 0 auto; }
 .is-player .step-film[inert] { pointer-events: none; }
 .is-player .step-screen video { display: block; }
 .is-player .step-screen:has(.is-showing) img { opacity: 0; }
+.step-screen .held-frame {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain;
+  z-index: 2; background: #151515; pointer-events: none;
+}
 .process-ruler {
   position: absolute; bottom: 0; left: 50%; translate: -50% 0;
-  width: 100vw; height: 45%; overflow: clip; pointer-events: none;
-  opacity: var(--card-opacity, 1);
+  width: 100vw; height: var(--ruler-height); overflow: clip; pointer-events: none;
 }
 .process-ruler i {
   position: absolute; bottom: 0; left: var(--tick-left); width: var(--tick-width, 1px); height: 100%;
@@ -398,25 +415,38 @@
   background: linear-gradient(to bottom, #f7e5cc 0%, #ebc6a7 51%, rgb(214 163 127 / 18%));
 }
 @media (prefers-reduced-motion: no-preference) {
-  .is-player .process-list li { transition: opacity .22s ease-out, visibility 0s linear .22s; }
-  .is-player .process-list li[aria-current="step"] { transition-delay: 0s; }
-  .is-player :is(.step-copy, .step-film, .process-ruler) { transition: opacity .28s ease-in-out; }
   .process-ruler i {
     animation: ruler-breathe 7s ease-in-out var(--tick-delay, 0s) infinite alternate;
   }
   @keyframes ruler-breathe { from { scale: 1 .986; } to { scale: 1 1.01; } }
 }
-.camera-ready:not(.docked) + .study-walkthrough .process-heading,
-.camera-ready:not(.docked) + .study-walkthrough .process-list { opacity: var(--lesson-copy, 0); }
-.camera-ready:not(.docked) + .study-walkthrough .step-film { visibility: hidden; }
-@media (max-height: 32.99rem) {
-  .is-player .step-copy { top: 42%; }
-  .is-player .step-number { font-size: clamp(2.5rem, 10svh, 3.25rem); }
-  .is-player .step-copy h3 { margin-top: 1.05rem; }
-  .is-player .step-copy p { margin-top: .5rem; font-size: .8rem; }
-  .process-ruler { height: 27%; }
+.camera-ready:not(.docked) + .study-walkthrough :is(.process-heading, .step-copy, .process-ruler, figcaption) {
+  opacity: var(--lesson-copy, 0);
 }
-@media (max-height: 23rem) and (min-aspect-ratio: 1/1) {
-  .is-player .step-copy { top: 43%; width: min(19rem, calc(100% - 1.5rem)); }
-  .is-player .step-copy p { max-width: 18.5rem; }
+.camera-ready:not(.docked) + .study-walkthrough .step-screen { visibility: hidden; }
+@media (max-width: 36rem) {
+  .process-run.is-player { --ruler-height: min(5%, 2.25rem); }
+  .is-player .process-list li { padding-inline: .3rem; }
+  .is-player .step-copy { column-gap: .55rem; margin-bottom: .85rem; }
+}
+@media (max-height: 33rem) and (min-aspect-ratio: 1/1) {
+  .process-run.is-player { --screen-clearance: clamp(4.65rem, 17svh, 5.5rem); --ruler-height: 4%; }
+  .is-player .process-heading { padding-top: .35rem; font-size: .75rem; }
+  .is-player .step-copy {
+    display: grid; grid-template-columns: auto auto minmax(0, auto); justify-items: start;
+    column-gap: .45rem; margin-bottom: .45rem; text-align: start;
+  }
+  .is-player .step-number { font-size: 1.35rem; }
+  .is-player .step-copy h3 { font-size: .78rem; }
+  .is-player .step-copy p { width: auto; max-width: 28rem; padding: 0; font-size: .74rem; line-height: 1.22; }
+  .is-player .step-film figcaption { font-size: .72rem; }
+}
+/* A short landscape window fits both headings on one line above the centered film. */
+@media (max-height: 25rem) and (min-aspect-ratio: 1/1) {
+  .process-run.is-player { --screen-clearance: calc(2.9rem + 4svh); }
+  .is-player .process-heading { text-align: start; padding: .65rem .3rem 0; }
+  .is-player .step-copy {
+    padding-inline-start: 5.65rem; align-self: center; margin-bottom: 0;
+    justify-content: start;
+  }
 }
