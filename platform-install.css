@@ -1,8 +1,8 @@
 .platform-heading {
-  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: .35rem 1rem;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .25rem 1rem;
 }
 .platform-heading a {
-  display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--study-muted); font-size: .87rem;
+  display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--study-muted); font-size: .9rem; line-height: 1.5; word-break: keep-all;
 }
 .install-options:has(article:only-child) { grid-template-columns: minmax(0, 48rem); justify-content: center; }
 .hero-install:disabled, .device-download:disabled {

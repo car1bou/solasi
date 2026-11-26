@@ -4,11 +4,11 @@
   .diagram-motion :is(.file-sketch, .week-sketch, .course-map) span {
     animation: open-record 1s cubic-bezier(.36, .08, .3, 1) both;
   }
-  .file-sketch span:first-child { --from-x: 4%; --from-y: 86%; --from-angle: 3deg; --arc-x: -.75rem; --arc-y: -.55rem; }
+  .file-sketch span:first-child { --from-x: 4%; --from-y: .5rem; --from-angle: 3deg; --arc-x: -.75rem; --arc-y: -.35rem; }
   .file-sketch span:nth-child(2) { --from-x: -5%; --from-angle: -3deg; }
-  .file-sketch span:last-child { --from-y: -86%; --start: .14; --arc-x: .5rem; --arc-y: .42rem; }
-  .week-sketch span:first-child { --from-x: 41%; --from-y: 89%; --arc-x: -.45rem; --arc-y: -.35rem; }
-  .week-sketch span:last-child { --from-x: -41%; --from-y: -89%; --start: .18; --arc-x: .45rem; --arc-y: .4rem; }
+  .file-sketch span:last-child { --from-y: -.5rem; --start: .14; --arc-x: .5rem; --arc-y: .3rem; }
+  .week-sketch span:first-child { --from-x: 22%; --from-y: .4rem; --arc-x: -.45rem; --arc-y: -.3rem; }
+  .week-sketch span:last-child { --from-x: -22%; --from-y: -.4rem; --start: .18; --arc-x: .45rem; --arc-y: .3rem; }
 
   .diagram-motion .sound-line {
     position: relative;
@@ -33,12 +33,11 @@
   }
   .sound-sketch { --start: .12; --end: .69; }
 
-  .diagram-motion .course-map { container-type: inline-size; }
   .diagram-motion .course-map b { z-index: 1; }
-  .course-map span:nth-child(2) { --from-y: calc(22.73cqw - 50%); }
-  .course-map span:nth-child(3) { --from-x: calc(46cqw - 50%); --start: .14; --arc-y: -.58rem; }
-  .course-map span:nth-child(4) { --from-x: calc(50% - 46cqw); --start: .18; --arc-y: .58rem; }
-  .course-map span:nth-child(5) { --from-y: calc(50% - 22.73cqw); --start: .22; }
+  .course-map span:nth-child(2) { --from-y: .5rem; }
+  .course-map span:nth-child(3) { --from-x: .75rem; --start: .14; --arc-y: -.45rem; }
+  .course-map span:nth-child(4) { --from-x: -.75rem; --start: .18; --arc-y: .45rem; }
+  .course-map span:nth-child(5) { --from-y: -.5rem; --start: .22; }
   .diagram-motion .course-map::before { animation: open-orbit 1s ease-out both; }
 
   /* Both clocks scrub the same keyframes and the same portion of the viewport. */
