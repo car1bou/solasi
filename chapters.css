@@ -12,7 +12,9 @@
   --study-corners: linear-gradient(var(--study-tick),var(--study-tick)) top left / 9px 1px,
     linear-gradient(var(--study-tick),var(--study-tick)) bottom right / 9px 1px;
   --study-gap: clamp(1.1rem, 2.4vw, 2rem);
-  --study-head: clamp(2.45rem, 4.1vw, 4.15rem);
+  --study-width: min(88rem, calc(100% - 2 * clamp(.55rem, 1.3vw, 1.5rem)));
+  --study-head: clamp(2.65rem, 4.8vw, 5rem);
+  --study-body: clamp(1.05rem, 1.35vw, 1.25rem);
 }
 .field { color: var(--study-text); }
 /* Both sides of a chapter boundary meet at the same exposure over the shared wood. */
@@ -36,7 +38,7 @@
 }
 .field, .field [id] { scroll-margin-top: var(--header); }
 .field-frame {
-  width: min(73rem, calc(100% - 2 * var(--edge, 1.25rem)));
+  width: var(--study-width);
   margin-inline: auto;
   border-inline: 1px solid var(--study-fine);
 }
@@ -46,9 +48,9 @@
 .field h2 span { color: var(--study-oak); }
 .motion-title > span { display: inline-block; max-width: 100%; }
 .field .motion-title > span:first-child, .install-heading .motion-title > span { color: inherit; }
-.field h3 { font-size: clamp(1.32rem, 2.1vw, 2.2rem); line-height: 1.2; }
+.field h3 { font-size: clamp(1.45rem, 2.4vw, 2.6rem); line-height: 1.2; }
 .field p { line-height: 1.6; }
-.section-label, .row-number, .solution-code { font-variant-numeric: tabular-nums; font-size: .84rem; font-weight: 620; }
+.section-label, .row-number, .solution-code { font-variant-numeric: tabular-nums; font-size: clamp(.92rem, 1.1vw, 1.06rem); font-weight: 620; }
 .section-label { display: flex; align-items: center; gap: .6rem; }
 .section-label::before, .row-number::before { content: ""; display: inline-block; width: .27rem; height: .27rem; background: currentColor; }
 .row-number { display: inline-flex; align-items: center; gap: .55rem; font-variant-numeric: tabular-nums; }
@@ -60,10 +62,10 @@
 .problem-heading {
   display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); align-items: center;
   gap: clamp(1.5rem,4vw,4rem); min-height: clamp(26rem,73svh,46rem);
-  padding: clamp(2rem,6vw,5rem) clamp(1.2rem,5vw,4.8rem);
+  padding: clamp(2rem,6vw,5rem) clamp(1rem,3vw,3rem);
 }
 .problem-lede { display: grid; justify-items: start; gap: clamp(1.2rem,3.4vw,3.2rem); }
-.problem-heading h2 { font-size: clamp(2.45rem, 4.5vw, 4.5rem); }
+.problem-heading h2 { font-size: var(--study-head); }
 .lecture-page {
   width: 100%; min-width: 0; justify-self: center;
 }
@@ -76,7 +78,7 @@
 .problem-list { display: grid; gap: 1.2rem; border-top: 1px solid var(--study-line); }
 .problem-list > li {
   position: relative;
-  width: min(100%,58rem);
+  width: min(100%,74rem);
   min-height: clamp(20rem, 31vw, 28rem);
   margin-inline: auto;
   display: grid;
@@ -87,12 +89,12 @@
 }
 .problem-list > li + li { border-color: var(--study-line); }
 .problem-copy { min-width: 0; display: flex; align-items: flex-start; flex-direction: column; padding: var(--study-gap); }
-.problem-copy h3 { margin-top: clamp(1.3rem, 3.2vw, 3.3rem); font-size: clamp(1.65rem, 2.65vw, 2.7rem); }
-.problem-copy p { max-width: 24rem; margin-top: auto; padding-top: 2.3rem; color: var(--study-muted); font-size: .97rem; }
-.problem-copy .field-link { margin-top: .6rem; font-size: .9rem; }
+.problem-copy h3 { margin-top: clamp(1.3rem, 3.2vw, 3.3rem); font-size: clamp(1.85rem, 3.1vw, 3.2rem); }
+.problem-copy p { max-width: 29rem; margin-top: auto; padding-top: 2.3rem; color: var(--study-muted); font-size: var(--study-body); }
+.problem-copy .field-link { margin-top: .6rem; }
 .problem-list li:nth-child(2) .problem-copy { grid-column: 2; grid-row: 1; }
 .problem-list li:nth-child(2) .problem-visual { grid-column: 1; grid-row: 1; }
-.problem-visual { position: relative; align-self: center; justify-self: center; width: min(82%, 23rem); min-height: 9.5rem; color: var(--study-muted); font-size: clamp(.76rem, 1vw, .9rem); }
+.problem-visual { position: relative; align-self: center; justify-self: center; width: min(84%, 29rem); min-height: 9.5rem; color: var(--study-muted); font-size: clamp(.91rem, 1.2vw, 1.1rem); }
 .file-sketch { display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .file-sketch span, .week-sketch span {
   width: 65%; padding: .9rem 1rem; border: 1px solid var(--study-line);
@@ -137,7 +139,7 @@
 .solution-list .row-number { align-self: stretch; align-items: start; padding: var(--study-gap); border-right: 1px solid var(--study-line); }
 .solution-list .row-number::before { margin-top: .44rem; }
 .solution-list li > div { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5rem; min-width: 0; padding: var(--study-gap); }
-.solution-list p { max-width: 25rem; color: var(--study-muted); font-size: .96rem; }
+.solution-list p { max-width: 35rem; color: var(--study-muted); font-size: var(--study-body); }
 .solution-code { align-self: start; margin: var(--study-gap); padding-block: .12rem; border-bottom: 1px solid var(--study-line); color: var(--study-oak); }
 @media (prefers-reduced-motion: no-preference) {
   .solution-list li { position: relative; transition: background-color .3s ease-out; }
@@ -161,18 +163,18 @@
 }
 .result-head figure { min-width: 0; }
 .result-story { display: grid; justify-items: start; gap: clamp(1rem, 2vw, 1.6rem); }
-.result-story p:not(.section-label) { max-width: 35rem; color: var(--study-muted); font-size: clamp(1rem, 1.24vw, 1.13rem); text-wrap: pretty; }
+.result-story p:not(.section-label) { max-width: 35rem; color: var(--study-muted); font-size: var(--study-body); text-wrap: pretty; }
 .process-heading {
   text-align: center; padding: 4.5rem .75rem 2rem;
 }
 .process-list { width: 100%; }
 .process-list li {
   display: grid; justify-items: center; align-content: center; gap: clamp(1.5rem, 4vw, 3rem);
-  padding: clamp(2.5rem, 7vw, 6rem) clamp(.75rem, 3vw, 2rem);
+  padding: clamp(2.5rem, 7vw, 6rem) clamp(.4rem, 1vw, 1rem);
 }
 .process-list li + li { border-top: 1px solid var(--study-line); }
 .step-copy {
-  display: grid; justify-items: center; align-content: center; width: min(100%, 16rem);
+  display: grid; justify-items: center; align-content: center; width: min(100%, 32rem);
   text-align: center;
 }
 .step-number {
@@ -183,7 +185,7 @@
 .step-copy h3 {
   position: relative; width: fit-content; margin-top: clamp(1.3rem, 3.1svh, 2rem);
   padding: .15rem .28rem; border: 1px solid currentColor;
-  font-size: .78rem; font-weight: 560; letter-spacing: -.035em; line-height: 1.18;
+  font-size: clamp(1.05rem, 1.6vw, 1.5rem); font-weight: 560; letter-spacing: -.035em; line-height: 1.18;
 }
 .step-copy h3::before, .step-copy h3::after {
   content: ""; position: absolute; left: 50%; transform: translateX(-50%); background: currentColor;
@@ -191,10 +193,10 @@
 .step-copy h3::before { bottom: 100%; height: .78rem; width: 1px; }
 .step-copy h3::after { bottom: calc(100% + .67rem); width: 3px; height: 3px; }
 .step-copy p {
-  margin-top: .95rem; max-width: 15.5rem; color: var(--study-muted);
-  font-size: .875rem; line-height: 1.32; text-wrap: pretty;
+  margin-top: .95rem; color: var(--study-muted);
+  font-size: var(--study-body); line-height: 1.4; text-wrap: pretty;
 }
-.step-film { width: min(100%, 59rem); min-width: 0; }
+.step-film { width: min(100%, 78rem); min-width: 0; }
 [data-recorded-on="ipad"] { --demo-ratio: 1.333333; }
 [data-recorded-on="windows"] { --demo-ratio: calc(16 / 9); }
 .step-screen {
@@ -206,7 +208,7 @@
 .step-screen video { display: none; }
 .step-film figcaption {
   min-height: 2.75rem; display: flex; align-items: center; justify-content: space-between;
-  gap: .55rem; color: var(--study-muted); font-size: .82rem;
+  gap: .55rem; color: var(--study-muted); font-size: clamp(.9rem, 1.1vw, 1rem);
 }
 .step-film figcaption > span { margin-inline-end: auto; }
 .step-film :is(a, .step-play) { display: inline-flex; align-items: center; gap: .35em; min-height: 2.75rem; }
@@ -222,12 +224,12 @@
 .work-index summary {
   display: flex; align-items: center; justify-content: space-between; gap: .65rem;
   min-height: 3.6rem; padding-block: .9rem; list-style: none;
-  font-weight: 560; letter-spacing: -.04em; font-size: clamp(1.12rem, 1.75vw, 1.6rem);
+  font-weight: 560; letter-spacing: -.04em; font-size: clamp(1.25rem, 2vw, 1.85rem);
 }
 .work-index summary::-webkit-details-marker { display: none; }
 .work-index summary::after { content: "+"; color: var(--study-oak); font-weight: 400; }
 .work-index details[open] summary::after { content: "−"; }
-.work-index details p { max-width: 29rem; padding: .55rem .4rem 1.65rem 0; color: var(--study-muted); font-size: .97rem; }
+.work-index details p { max-width: 32rem; padding: .55rem .4rem 1.65rem 0; color: var(--study-muted); font-size: var(--study-body); }
 .work-index summary:hover { color: var(--study-oak); }
 .work-gallery { align-self: center; border-left: 1px solid var(--study-line); background: var(--study-panel); }
 .work-ink, .work-mac, .work-grid:has(:is(#ink, #transcript, #audio)[open]) .work-android { display: none; }
@@ -253,32 +255,32 @@
   }
 }
 .install-heading { min-height: clamp(24rem, 57svh, 40rem); padding: clamp(4rem, 9vw, 8rem) .8rem; display: grid; align-content: center; justify-items: center; gap: clamp(2rem, 4.5vw, 4.5rem); text-align: center; }
-.install-heading p { max-width: 33rem; color: var(--study-muted); text-wrap: pretty; }
+.install-heading p { max-width: 39rem; color: var(--study-muted); font-size: var(--study-body); text-wrap: pretty; }
 .install-heading h2 { font-size: clamp(3rem, 6.6vw, 6.35rem); }
 .install-heading .field-link { font-size: clamp(1rem, 1.4vw, 1.32rem); }
 .install-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: 1px solid var(--study-line); }
 .install-options article { min-width: 0; padding: var(--study-gap); }
 .install-options article + article { border-left: 1px solid var(--study-line); }
 .install-options article h3 { font-size: clamp(1.45rem, 2.5vw, 2.4rem); }
-.install-options article > p { margin-top: .8rem; color: var(--study-muted); font-size: .95rem; }
+.install-options article > p { margin-top: .8rem; color: var(--study-muted); font-size: var(--study-body); }
 .install-options article > p span { display: inline-block; margin-inline-start: .4rem; }
 .device-download { margin: 1rem 0 .5rem; border-bottom: 1px solid currentColor; }
 .device-download::after { content: "↗"; }
-.install-options summary { min-height: 2.75rem; width: fit-content; padding-block: .7rem; font-size: .94rem; }
-.install-options ol { padding-left: 1.15rem; font-size: .93rem; line-height: 1.65; }
+.install-options summary { min-height: 2.75rem; width: fit-content; padding-block: .7rem; }
+.install-options ol { padding-left: 1.15rem; font-size: var(--study-body); line-height: 1.65; }
 .install-options li + li { margin-top: .4rem; }
 
-@media (max-width: 47.99rem) {
+@media (max-width: 55.99rem) {
   .problem-heading {
     grid-template-columns: minmax(0,1fr); align-content: center; gap: 1.8rem;
-    min-height: clamp(25rem,77svh,44rem); padding: 2.5rem clamp(1.15rem,5.5vw,2.4rem);
+    min-height: clamp(25rem,77svh,44rem); padding: 2.5rem clamp(.65rem,2.5vw,1.5rem);
   }
   .problem-lede { gap: .8rem; }
   .problem-list > li { grid-template-columns: 1fr; min-height: auto; }
   .problem-list li:nth-child(2) :is(.problem-copy,.problem-visual) { grid-column: auto; grid-row: auto; }
   .problem-copy h3 { margin-top: 1.25rem; }
   .problem-copy p { padding-top: 1.15rem; }
-  .problem-visual { min-height: 9rem; width: min(72%, 18rem); margin: .6rem auto 1.7rem; }
+  .problem-visual { min-height: 9rem; width: min(82%, 24rem); margin: .6rem auto 1.7rem; }
   .solution-head > div:first-child { min-height: 10rem; }
   .course-map { position: relative; inset: auto; align-self: center; width: min(86%, 22rem); margin-block: 2.25rem .5rem; transform: none; }
   .solution-head, .result-head { min-height: 13rem; }
@@ -300,7 +302,7 @@
   .work-grid:has(#ink[open]) .work-gallery { order: 4; }
   .work-grid:has(#audio[open]) .work-gallery { order: 6; }
 }
-@media (max-height: 32.99rem) and (min-aspect-ratio: 1/1) {
+@media (max-height: 32.99rem) and (min-aspect-ratio: 6/5) {
   .problem-heading {
     grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-content: center;
     min-height: 77svh; gap: 1rem; padding: 1.25rem 1rem;
@@ -320,11 +322,21 @@
   --study-muted: #d7c1ae;
   --study-oak: var(--study-text);
 }
+.study-walkthrough .field-frame { width: min(100%, 94rem); }
+/* Cover the full opening viewport as the desk dissolves, including the area above the runway. */
+.camera-ready + .study-walkthrough {
+  position: relative; isolation: isolate; background: none;
+}
+.camera-ready + .study-walkthrough::before {
+  content: ""; position: absolute; inset: -100svh 0 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(var(--wash) calc(100% - var(--fade)), var(--seam));
+  opacity: var(--lesson-exposure, 0);
+}
 .study-walkthrough:has(.is-player) .field-frame { border-color: transparent; }
 .process-run.is-player {
   position: relative;
   --stage-h: calc(100svh - var(--header));
-  --screen-clearance: clamp(8.3rem, 18svh, 10.4rem);
+  --screen-clearance: clamp(7.25rem, 13.6svh, 8.6rem);
   --ruler-height: min(7.5%, 4.5rem);
   --step-travel: 96svh;
   display: grid; grid-template: minmax(0,1fr) / minmax(0,1fr);
@@ -335,37 +347,39 @@
   height: var(--stage-h);
 }
 .is-player .process-heading {
-  z-index: 2; padding: clamp(.6rem, 2.1svh, 1.4rem) .6rem 0; pointer-events: none;
-  font-size: clamp(.88rem, 1.15vw, 1.05rem); line-height: 1.08; letter-spacing: -.045em; font-weight: 540;
+  z-index: 2; padding: clamp(.4rem, 1svh, .7rem) .6rem 0; pointer-events: none;
+  font-size: clamp(.95rem, 1.35vw, 1.25rem); line-height: 1.08; letter-spacing: -.045em; font-weight: 540;
   background: linear-gradient(var(--study-fine), var(--study-fine)) left top / 1px 50% no-repeat,
     linear-gradient(var(--study-fine), var(--study-fine)) right top / 1px 50% no-repeat;
 }
 .is-player .process-heading span { color: inherit; }
+.is-player .process-heading br { display: none; }
+.is-player .process-heading span + br + span { margin-inline-start: .22em; }
 .is-player .process-list { isolation: isolate; }
 /* Two equal tracks above and below keep the app itself at the center.
    Its caption sits outside the grid calculation, so text never shifts the screen. */
 .is-player .process-list li {
   position: absolute; inset: 0; visibility: hidden; border: 0;
   grid-template: minmax(0, 1fr) auto minmax(0, 1fr) / minmax(0, 1fr);
-  gap: 0; padding: 0 clamp(.55rem, 2.8vw, 2rem);
+  gap: 0; padding: 0 clamp(.4rem, 1vw, 1rem);
 }
 .is-player .process-list li[aria-current="step"] { visibility: visible; }
 .is-player .step-copy {
-  grid-area: 1 / 1; align-self: end; width: 100%; margin-bottom: clamp(.7rem, 2svh, 1.35rem);
+  grid-area: 1 / 1; align-self: end; width: 100%; margin-bottom: clamp(.45rem, 1svh, .8rem);
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
-  column-gap: .65rem; row-gap: .4rem; pointer-events: none;
+  column-gap: .65rem; row-gap: .25rem; pointer-events: none;
 }
-.is-player .step-number { font-size: clamp(1.55rem, 4.5svh, 2.75rem); }
+.is-player .step-number { font-size: clamp(1.8rem, 4.7svh, 3.25rem); }
 .is-player .step-copy h3 {
-  margin: 0; padding: .22em .44em; font-size: clamp(.85rem, 1.15vw, 1rem);
+  margin: 0; padding: .18em .42em; font-size: clamp(1.05rem, 1.6vw, 1.5rem);
 }
 .is-player .step-copy h3::before, .is-player .step-copy h3::after { content: none; }
 .is-player .step-copy p {
   width: 100%; max-width: none; margin: 0; padding-inline: max(0px, calc((100% - 43rem) / 2));
-  font-size: clamp(.8rem, 1.08vw, .95rem); line-height: 1.4; text-wrap: balance;
+  font-size: var(--study-body); line-height: 1.4; text-wrap: balance;
 }
 .is-player .step-film {
-  position: relative; grid-area: 2 / 1; width: min(100%, 62rem,
+  position: relative; grid-area: 2 / 1; width: min(100%, 82rem,
     calc((var(--stage-h) - 2 * var(--screen-clearance)) * var(--demo-ratio, 1.6)));
 }
 .is-player .step-film figcaption { position: absolute; inset: 100% 0 auto; }
@@ -390,31 +404,40 @@
 .camera-ready:not(.docked) + .study-walkthrough .step-screen { visibility: hidden; }
 @media (max-width: 36rem) {
   .process-run.is-player { --ruler-height: min(5%, 2.25rem); }
-  .is-player .process-list li { padding-inline: .3rem; }
   .is-player .step-copy { column-gap: .55rem; margin-bottom: .85rem; }
 }
 @media (max-height: 33rem) and (min-aspect-ratio: 1/1) {
-  .process-run.is-player { --screen-clearance: clamp(4.65rem, 17svh, 5.5rem); --ruler-height: 4%; }
+  .process-run.is-player { --screen-clearance: clamp(3.7rem, 12svh, 4.1rem); --ruler-height: 4%; }
   .is-player .process-heading { padding-top: .35rem; font-size: .75rem; }
   .is-player .step-copy {
     display: grid; grid-template-columns: auto auto minmax(0, auto); justify-items: start;
     column-gap: .45rem; margin-bottom: .45rem; text-align: start;
   }
-  .is-player .step-number { font-size: 1.35rem; }
-  .is-player .step-copy h3 { font-size: .78rem; }
-  .is-player .step-copy p { width: auto; max-width: 28rem; padding: 0; font-size: .74rem; line-height: 1.22; }
-  .is-player .step-film figcaption { font-size: .72rem; }
+  .is-player .step-number { font-size: 1.52rem; }
+  .is-player .step-copy h3 { font-size: .9rem; }
+  .is-player .step-copy p { width: auto; max-width: 32rem; padding: 0; font-size: .85rem; line-height: 1.22; }
+  .is-player .step-film figcaption { font-size: .78rem; }
 }
 /* A short landscape window fits both headings on one line above the centered film. */
-@media (max-height: 25rem) and (min-aspect-ratio: 1/1) {
-  .process-run.is-player { --screen-clearance: calc(2.9rem + 4svh); }
-  .is-player .process-heading { text-align: start; padding: .65rem .3rem 0; }
+@media (max-height: 25rem) and (min-aspect-ratio: 6/5) {
+  .process-run.is-player { --screen-clearance: calc(3rem + 1svh); }
+  .is-player .process-heading { text-align: start; padding: .65rem .4rem 0; }
+  .is-player .process-heading br { display: initial; }
+  .is-player .process-heading span + br + span { margin-inline-start: 0; }
   .is-player .step-copy {
     padding-inline-start: 5.65rem; align-self: center; margin-bottom: 0;
     justify-content: start;
   }
 }
-
+@media (max-height: 33rem) and (min-aspect-ratio: 1/1) and (max-aspect-ratio: 6/5) {
+  .process-run.is-player { --screen-clearance: 3.55rem; }
+  .is-player .process-list li { grid-template-rows: minmax(0, 1.22fr) auto minmax(0, .78fr); }
+  .is-player .process-heading { text-align: start; padding: .2rem .4rem 0; }
+  .is-player .process-heading br { display: initial; }
+  .is-player .process-heading span + br + span { margin-inline-start: 0; }
+  .is-player .step-copy { display: flex; text-align: center; justify-content: center; margin-bottom: .2rem; padding: 0; }
+  .is-player .step-copy p { width: 100%; }
+}
 
 .chapter-stop {
   position: absolute; left: 0; top: calc(var(--chapter-index) * var(--step-travel) + 2px);

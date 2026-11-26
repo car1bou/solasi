@@ -5,7 +5,7 @@
   const stage = film.querySelector(".film-stage");
   const header = document.querySelector(".masthead");
   const world = film.querySelector(".film-world");
-  const wood = world.querySelector(".wood-field");
+  const backdrop = document.querySelector(".opening-plate");
   const heroCopy = film.querySelector(".film-copy");
   const sourceLink = film.querySelector(".film-source");
   const heroDescription = film.querySelector(".film-description");
@@ -16,6 +16,7 @@
   const list = lesson.querySelector(".process-list");
   const chapterTitle = lesson.querySelector(".process-heading");
   const seat = list.querySelector(".step-screen");
+  const firstCopy = list.querySelector(".step-copy");
   const intro = document.querySelector(".problem-heading");
   const paper = intro.querySelector(".lecture-page");
   const paperImage = paper.querySelector("img");
@@ -81,7 +82,7 @@
     ]);
   }
 
-  let opening, landing, deskFromGlass, origin = 0, travel = 1, previous = -1, frame = 0;
+  let opening, landing, deskFromGlass, copyHeadroom, origin = 0, travel = 1, previous = -1, frame = 0;
 
   function compose() {
     const w = stage.clientWidth, h = stage.clientHeight;
@@ -99,12 +100,12 @@
     world.style.setProperty("--photo-w", photo.width + "px");
     world.style.setProperty("--photo-h", photo.height + "px");
 
-    // Leave enough photographed wood around the frame for both the pointer and idle camera.
+    // Leave photographed wood around the device as it blends into the shared desktop.
     const roomX = Math.min(portrait ? 27 : 48, w * (portrait ? .031 : .042));
     const roomY = Math.min(24, h * .034);
     const cover = Math.max((w + 2 * roomX) / photo.width, (h + 2 * roomY) / photoHeight);
     // The bounds include the full case and accessories. Reserve actual text and navigation
-    // space before fitting the photograph, including room for pointer-driven camera drift.
+    // space before fitting the photograph.
     const [left, rawTop, right, rawBottom] = photo.body;
     const bodyTop = rawTop * heightCorrection, bottom = rawBottom * heightCorrection;
     const gap = Math.max(12, Math.min(24, w * .022));
@@ -134,29 +135,23 @@
     const y = between(pan(h, photoHeight, aimY, (bodyTop + bottom) / 2, roomY),
       safeTop - bodyTop * scale, safeBottom - bottom * scale);
 
-    world.classList.toggle("wide-desk", panorama);
     const mask = {mac: "macbook", ipad: "ipad", windows: "windows-desktop"}[device];
     const maskFile = mask ? mask + (portrait ? "-tall" : "") : "walnut-" + (portrait ? "tall" : "wide");
     const silhouette = `url("assets/${maskFile}-mask.svg")`;
-    wood.style.maskImage = panorama ? silhouette + ",linear-gradient(90deg,transparent,#000 10%)" : silhouette;
-    wood.style.maskComposite = "intersect";
-    // Bookmatch the empty left edge of the same photograph for extra-wide windows.
-    const wing = panorama ? Math.max(0, (x + roomX) / scale) : 0;
-    world.style.setProperty("--wood-wing", wing + "px");
-    world.style.setProperty("--wing-photo", `url("assets/${photo.file}")`);
-    world.style.setProperty("--wing-size", Math.max(photo.width, wing / .30) + "px");
-    world.style.maskImage = y > -roomY || y + photoHeight * scale < h + roomY
-      ? "linear-gradient(transparent,#000 9%,#000 93%,transparent)" : "none";
+    world.style.setProperty("--wood-mask", silhouette);
+    backdrop.style.setProperty("--wood-mask", silhouette);
+    backdrop.style.width = photo.width + "px";
+    backdrop.style.height = photo.height + "px";
+    backdrop.style.backgroundImage = `url("assets/${photo.file}")`;
     opening = photo.screen.map(([sx, sy]) => [x + sx * scale, y + sy * heightCorrection * scale]);
-    // Anchor the moving light to this crop even when the page opens mid-zoom.
-    world.dataset.woodView = [-x / (photo.width * scale), -y / (photoHeight * scale),
-      w / (photo.width * scale), h / (photoHeight * scale)].join(" ");
 
     const target = seat.getBoundingClientRect();
     const stickyTop = parseFloat(getComputedStyle(list).top) || 0;
     origin = film.getBoundingClientRect().top + scrollY;
     travel = Math.max(1, film.offsetHeight - h - stickyTop);
     const top = target.top + stickyTop - list.getBoundingClientRect().top;
+    const headingHeight = chapterTitle.lastElementChild.getBoundingClientRect().bottom - chapterTitle.getBoundingClientRect().top;
+    copyHeadroom = Math.max(1, firstCopy.offsetTop - headingHeight - 6);
     landing = [[target.left, top], [target.right, top],
       [target.right, top + target.height], [target.left, top + target.height]];
     previous = -1;
@@ -170,25 +165,31 @@
     const scroll = moving ? clamp(offset / travel) : 0;
     if (scroll === previous) return;
     previous = scroll;
-    const t = ease(clamp((scroll - .19) / .81));
+    const t = ease(scroll);
     const docked = moving && offset >= travel - .75;
     const shot = opening.map((corner, i) => corner.map((n, axis) =>
       n + (landing[i][axis] - n) * t));
     const view = project(shot);
-    const room = 1 - ease(clamp((scroll - .14) / .50));
-    if (room > 0) world.style.transform = view.multiply(deskFromGlass).toString();
+    const room = 1 - ease(clamp((scroll - .12) / .77));
+    if (room > 0) {
+      world.style.transform = backdrop.style.transform = view.multiply(deskFromGlass).toString();
+    }
+    backdrop.hidden = !moving || room === 0;
+    backdrop.style.opacity = room;
     plane.style.transform = view.toString();
     const copy = 1 - ease(clamp((scroll - .12) / .32));
     stage.style.setProperty("--copy-opacity", copy);
     stage.style.setProperty("--opening-link-visibility", copy > .05 ? "visible" : "hidden");
     stage.style.setProperty("--room-presence", room);
-    stage.style.setProperty("--desk-opacity", room);
+    lesson.style.setProperty("--lesson-exposure", moving ? 1 - room : 1);
     header.style.setProperty("--header-fill", ease(clamp((scroll - .58) / .42)));
-    const chapter = ease(clamp((scroll - .72) / .23));
-    stage.classList.toggle("inside-screen", room === 0);
-    stage.classList.toggle("dissolving-desk", room < 1);
+    const chapter = ease(clamp((scroll - .51) / .44));
     film.classList.toggle("docked", docked);
     lesson.style.setProperty("--lesson-copy", moving ? chapter : 1);
+    // Keep the whole label above the moving LCD until it reaches the first player.
+    const lift = Math.min(0, Math.min(shot[0][1], shot[1][1]) - landing[0][1]);
+    firstCopy.style.translate = moving && !docked ? `0 ${lift}px` : "";
+    firstCopy.style.opacity = moving && !docked ? chapter * ease(clamp(1 + lift / copyHeadroom)) : "";
     const approach = moving && offset < travel ? "0 " + (offset - travel) + "px" : "";
     list.style.translate = chapterTitle.style.translate = approach;
     const span = Math.hypot(shot[1][0] - shot[0][0], shot[1][1] - shot[0][1]);

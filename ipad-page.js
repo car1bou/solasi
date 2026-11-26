@@ -1,11 +1,11 @@
 (() => {
   if (document.documentElement.dataset.device !== "ipad") return;
 
-  const image = name => "assets/ipad-" + name + ".webp?v=se1";
+  const image = (name, version = "se1") => "assets/ipad-" + name + ".webp?v=" + version;
   const step = (name, description, alt) => ({
     description, alt,
-    image: image("start-" + name),
-    video: "assets/ipad-" + name + ".mp4?v=se1"
+    image: image("start-" + name, "take2"),
+    video: "assets/ipad-" + name + ".mp4?v=take2"
   });
   const pdfAlt = "소프트웨어공학 개요 PDF 16쪽 ‘소프트웨어의 정의’를 펼친 iPad 화면";
   const inkAlt = "iPad에서 소프트웨어 정의에 형광펜으로 표시한 화면";

@@ -2,11 +2,11 @@
   if (document.documentElement.dataset.device !== "windows") return;
 
   // These captures use the desktop UI shared by the Windows app and a public sample course.
-  const image = name => "assets/windows-" + name + ".webp?v=se1";
+  const image = (name, version = "se1") => "assets/windows-" + name + ".webp?v=" + version;
   const step = (name, description, alt) => ({
     description, alt,
-    image: image("step-" + name),
-    video: "assets/windows-step-" + name + ".mp4?v=se1"
+    image: image("step-" + name, "take2"),
+    video: "assets/windows-step-" + name + ".mp4?v=take2"
   });
   window.renderPlatformPage({
     name: "Windows", demoCaption: "Windows 화면 예시",

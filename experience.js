@@ -1,7 +1,6 @@
 (() => {
   const header = document.querySelector(".masthead");
   const desk = document.querySelector(".desk-surface");
-  const stage = document.querySelector(".film-stage");
   const menu = header.querySelector(".fold-nav");
   const inlineNav = header.querySelector(".wide-nav");
   const narrowNav = matchMedia("(max-width: 58rem)");
@@ -11,7 +10,6 @@
   const navLinks = header.querySelectorAll("a[href^='#']");
   const solutions = Array.from(document.querySelectorAll(".solution-list li"));
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const deskPointer = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
   // Side-light position and shadow depth as each chapter comes into view.
   const daylight = {
     home: [-.12, .31], process: [-.12, .31], preview: [-.15, .49],
@@ -20,38 +18,24 @@
   let scheduled = false;
   let current = "";
   let highlighted, layout;
-  let lookFrame, lookX = 0, lookY = 0;
-
-  function look(x, y) {
-    lookX = Math.max(-1, Math.min(1, x));
-    lookY = Math.max(-1, Math.min(1, y));
-    if (lookFrame) return;
-    lookFrame = requestAnimationFrame(() => {
-      stage.style.setProperty("--look-x", lookX.toFixed(3));
-      stage.style.setProperty("--look-y", lookY.toFixed(3));
-      lookFrame = 0;
-    });
-  }
-  document.addEventListener("pointermove", event => {
-    if (deskPointer.matches && event.pointerType === "mouse") {
-      look(event.clientX * 2 / innerWidth - 1, event.clientY * 2 / innerHeight - 1);
-    }
-  }, { passive: true });
-  document.documentElement.addEventListener("pointerleave", () => look(0, 0));
-  addEventListener("blur", () => look(0, 0));
-  deskPointer.addEventListener("change", () => look(0, 0));
 
   // Document positions stay fixed while scrolling. Measure again when content or the viewport resizes.
   function measure(y) {
     const foot = footer.getBoundingClientRect();
-    const tops = sections.map(section => section.getBoundingClientRect().top + y);
     const headerHeight = header.offsetHeight;
     const travel = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const readingStops = [];
+    const tops = sections.map(section => {
+      const top = section.getBoundingClientRect().top + y;
+      if (section.matches("#preview, #solutions, #results, #work, #install")) readingStops.push(top - headerHeight);
+      return top;
+    });
     const chapters = Array.from(document.querySelectorAll(".is-player .chapter-stop"),
       stop => stop.getBoundingClientRect().top + y - headerHeight);
-    const chapterStops = [0, ...chapters, tops[2] - headerHeight];
+    const stops = [0, ...chapters, ...readingStops, foot.top + y - headerHeight, travel];
     return {
-      tops, travel, chapterStops, stops: [...chapterStops, ...tops.slice(3).map(top => top - headerHeight), Math.min(foot.top + y, travel), travel],
+      tops, travel, firstChapter: chapters[0], tourEnd: readingStops[0],
+      stops: [...new Set(stops.map(stop => Math.min(travel, Math.max(0, stop))))],
       rowBounds: solutions.map(row => {
         const rect = row.getBoundingClientRect();
         return [rect.top + y, rect.bottom + y];
@@ -93,7 +77,7 @@
     const limit = y + layout.header + 2;
     const next = tops.findIndex(top => top > limit);
     const visible = (next < 0 ? sections[sections.length - 1] : sections[Math.max(0, next - 1)]).id;
-    const active = visible === "solutions" || visible === "results" ? "preview" : visible;
+    const group = visible === "solutions" || visible === "results" ? "preview" : visible;
     highlightSolution(y);
     const compact = tops[1] <= limit;
     const folded = narrowNav.matches || menu.open || menu.contains(document.activeElement) || (compact && !inlineNav.contains(document.activeElement));
@@ -101,10 +85,11 @@
     header.classList.toggle("folded", folded);
     inlineNav.toggleAttribute("inert", folded);
     menu.toggleAttribute("inert", !folded);
-    if (active === current) return;
-    current = active;
+    if (visible === current) return;
+    current = visible;
     for (const link of navLinks) {
-      if (link.hash === "#" + active && !link.classList.contains("brand")) link.setAttribute("aria-current", "location");
+      const id = inlineNav.contains(link) ? group : visible;
+      if (link.hash === "#" + id && !link.classList.contains("brand")) link.setAttribute("aria-current", "location");
       else link.removeAttribute("aria-current");
     }
   }
@@ -152,8 +137,14 @@
     const travel = Math.abs(y - start);
     if (Math.abs(delta) < 5 || travel < 2 || travel > smallDistance() || reduced.matches || viewer.open || menu.open) return;
     if (!layout) layout = measure(y);
-    const chapter = layout.chapterStops.findIndex(stop => Math.abs(stop - start) <= 4);
-    let target = chapter < 0 ? undefined : layout.chapterStops[chapter + direction];
+    const index = layout.stops.findIndex(stop => Math.abs(stop - start) <= 4);
+    const from = layout.stops[index];
+    const next = index < 0 ? undefined : layout.stops[index + direction];
+    let target;
+    // The pinned tour advances one chapter. A reading section advances only when its content already fits on screen.
+    if (next !== undefined && (Math.max(from, next) <= layout.tourEnd || Math.abs(next - from) <= innerHeight - layout.header)) {
+      target = next;
+    }
     if (target === undefined) {
       let nearest = Math.min(100, innerHeight * .14);
       for (const stop of layout.stops) {
@@ -167,10 +158,12 @@
     if (target === undefined || Math.abs(target - y) <= 1) return;
     // Native smooth scrolling can swallow a new wheel gesture while it is still animating.
     const startTime = performance.now();
-    const duration = Math.min(380, 140 + Math.abs(target - y) * .34);
+    const opening = (from === 0 && target === layout.firstChapter) || (from === layout.firstChapter && target === 0);
+    const duration = opening ? 600 : Math.min(380, 140 + Math.abs(target - y) * .34);
     function align(now) {
       const t = Math.min(1, Math.max(0, (now - startTime) / duration));
-      scrollTo({top: target - (target - y) * (1 - t) ** 3, behavior: "instant"});
+      const progress = opening ? t * t * (3 - 2 * t) : 1 - (1 - t) ** 3;
+      scrollTo({top: y + (target - y) * progress, behavior: "instant"});
       snapFrame = t < 1 ? requestAnimationFrame(align) : 0;
     }
     snapFrame = requestAnimationFrame(align);

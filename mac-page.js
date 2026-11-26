@@ -4,8 +4,8 @@
   const image = name => "assets/mac-tour-" + name + ".webp";
   const step = (name, description, alt) => ({
     description, alt,
-    image: image(name),
-    video: "assets/mac-tour-" + name + ".mp4"
+    image: image(name) + "?v=take2",
+    video: "assets/mac-tour-" + name + ".mp4?v=take2"
   });
   const pdfAlt = "Mac에서 소프트웨어 공학 1장 PDF의 16쪽을 펼친 전체 화면";
   const noteAlt = "Mac에서 소프트웨어 공학 16쪽의 본문 옆에 메모를 남긴 화면";

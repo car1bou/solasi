@@ -42,13 +42,16 @@ body { isolation: isolate; }
 .wood-field {
   position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
 }
-.film-world .wood-field { visibility: hidden; }
-.camera-ready .film-world .wood-field {
-  visibility: visible; opacity: var(--room-presence, 1);
-  mask: url("assets/walnut-wide-mask.svg") center / 100% 100% no-repeat;
+/* The hardware and the wood share a camera transform, with one viewport-sized light between them. */
+.opening-plate {
+  position: absolute; top: 0; left: 0; transform-origin: 0 0; background-size: 100% 100%;
+  mask-image: var(--wood-mask), linear-gradient(90deg, transparent, #000 18%, #000 85%, transparent),
+    linear-gradient(transparent, #000 14%, #000 86%, transparent);
+  mask-size: 100% 100%; mask-composite: intersect;
 }
-@media (max-aspect-ratio: 9/10) {
-  .camera-ready .film-world .wood-field { mask-image: url("assets/walnut-tall-mask.svg"); }
+.camera-ready .film-world {
+  mask-image: linear-gradient(#000, #000), var(--wood-mask);
+  mask-size: 100% 100%; mask-composite: exclude;
 }
 @media (prefers-reduced-motion: reduce) {
   .wood-field { display: none; }
@@ -150,22 +153,10 @@ img { display: block; max-width: 100%; height: auto; }
 .film-rig { z-index: -3; isolation: isolate; }
 .film-world { z-index: -3; }
 .film-world picture { display: contents; }
-.film-world.wide-desk::before {
-  content: ""; position: absolute; inset: 0 100% 0 auto; width: var(--wood-wing, 0px);
-  background: var(--wing-photo, none) left center / var(--wing-size, auto) 100% no-repeat;
-  transform: scaleX(-1);
-}
 @media (prefers-reduced-motion: reduce) {
   :is([data-device="mac"], [data-device="windows"], [data-device="ipad"]) .camera-framed .has-capture .film-scenery { mask-image: linear-gradient(#000 96%, transparent); }
 }
 .film-photo { width: 100%; height: 100%; object-fit: cover; object-position: 50% 48%; }
-/* This extension is mirrored; its local left edge meets the monitor photograph. */
-[data-device="windows"] .wide-desk::before {
-  mask-image: linear-gradient(90deg, transparent, #000 min(78%, 18rem));
-}
-.film-world.wide-desk .film-photo {
-  mask-image: linear-gradient(90deg, transparent, #000 19%);
-}
 .glass-plane { display: none; }
 .field-overlay {
   z-index: -2;
@@ -183,7 +174,7 @@ img { display: block; max-width: 100%; height: auto; }
 .film-copy, .film-description, .film-source { position: absolute; opacity: var(--copy-opacity, 1); }
 .film-copy { top: 45%; left: var(--edge); max-width: 39%; pointer-events: none; }
 .film-copy p { margin-bottom: clamp(1.15rem, 3.3svh, 2.4rem); font-size: clamp(.9rem, 1.2vw, 1.12rem); color: #f3dfc4; }
-.film-copy h1 { font-size: clamp(2.4rem, 4vw, 4.15rem); font-weight: 530; line-height: 1.1; letter-spacing: -.065em; }
+.film-copy h1 { font-size: clamp(2.4rem, 4.7vw, 5rem); font-weight: 530; line-height: 1.1; letter-spacing: -.065em; }
 .hero-actions {
   display: flex; flex-wrap: wrap; align-items: center; gap: .3rem 1rem;
   margin-top: clamp(.85rem, 2.8vh, 1.65rem);
@@ -207,17 +198,8 @@ img { display: block; max-width: 100%; height: auto; }
 .camera-ready .film-source { pointer-events: auto; }
 .camera-ready + .study-walkthrough { margin-top: -100svh; }
 .camera-ready.docked .film-stage { visibility: hidden; }
-@media (prefers-reduced-motion: no-preference) {
-  .camera-ready .film-rig {
-    --sway-x: calc(clamp(2px, .37vw, 6px) * var(--room-presence, 1));
-    --sway-y: calc(clamp(1px, .35vh, 4px) * var(--room-presence, 1));
-    translate: calc(var(--look-x, 0) * var(--sway-x) * -1.2) calc(var(--look-y, 0) * var(--sway-y) * -1.2);
-    transition: translate .45s ease-out;
-  }
-  .camera-ready .inside-screen .film-rig { transition: none; translate: none; }
-}
 .camera-framed .film-world { inset: 0 auto auto 0; width: var(--photo-w); height: var(--photo-h); transform-origin: 0 0; }
-.camera-framed .film-world { opacity: var(--desk-opacity, 1); }
+.camera-framed .film-world { opacity: var(--room-presence, 1); }
 .camera-framed .glass-plane {
   display: block; position: absolute; inset: 0 auto auto 0; width: 1600px; height: 1000px;
   overflow: hidden; z-index: -2; transform-origin: 0 0; opacity: var(--screen-mix, 0);
@@ -229,7 +211,7 @@ img { display: block; max-width: 100%; height: auto; }
   border-radius: calc(1.65% * var(--room-presence, 1)) / calc(2.2% * var(--room-presence, 1));
 }
 .footer { color: var(--cream); }
-.footer-inner { width: min(73rem, calc(100% - 2 * var(--edge))); margin: auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; padding: clamp(2rem,5vw,4.25rem) var(--study-gap) clamp(1.75rem,3.4vw,3.5rem); }
+.footer-inner { width: var(--study-width); margin: auto; display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1.5rem; padding: clamp(2rem,5vw,4.25rem) var(--study-gap) clamp(1.75rem,3.4vw,3.5rem); font-size: var(--study-body); }
 .footer-brand p { color: var(--night-muted); margin: .8rem 0 1.1rem; }
 .footer nav { display: flex; align-items: flex-start; flex-direction: column; }
 .footer nav a { display: inline-flex; min-height: 2.75rem; align-items: center; }
@@ -250,7 +232,7 @@ html:has(#image-viewer[open]) { overflow-y: hidden; }
 }
 @media (max-aspect-ratio: 9/10) {
   .film-copy { top: auto; bottom: max(12%, 5.2rem); max-width: calc(100% - 2 * var(--edge)); }
-  .film-copy h1 { font-size: clamp(2.12rem, 7vw, 3.5rem); }
+  .film-copy h1 { font-size: clamp(2.18rem, 7.6vw, 3.9rem); }
   .film-copy p { margin-bottom: .7rem; }
   .film-description { max-width: 70%; bottom: 1.15rem; font-size: .85rem; }
   .film-source { bottom: 1rem; font-size: .8rem; gap: .35rem; }

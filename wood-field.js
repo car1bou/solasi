@@ -1,8 +1,7 @@
 (() => {
-  const canvases = [...document.querySelectorAll("canvas[data-wood]")];
-  if (!canvases.length) return;
-  const film = document.querySelector(".film");
-  const stage = film.querySelector(".film-stage");
+  const canvas = document.querySelector(".desk-surface .wood-field");
+  if (!canvas) return;
+  const img = canvas.parentElement.querySelector("picture img");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const mouse = matchMedia("(hover: hover) and (pointer: fine)");
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -23,7 +22,6 @@
     uniform sampler2D photo;
     uniform vec4 crop; // UV origin and extent of the photograph behind this canvas
     uniform vec2 texel;
-    uniform vec4 view; // visible part of the photographic plate at the opening
     uniform vec3 point;
     uniform vec4 state; // clock, signed scroll velocity, journey, surface aspect
 
@@ -32,7 +30,7 @@
 
     void main() {
       float t = state.x;
-      vec2 scene = (uv-view.xy)/view.zw;
+      vec2 scene = uv;
       vec2 p = vec2((scene.x-.5)*state.w+.5, scene.y);
       vec2 d = vec2((scene.x-point.x)*state.w, scene.y-point.y);
       float touch = exp2(-dot(d*vec2(2.85,3.9), d*vec2(2.85,3.9))) * point.z;
@@ -90,7 +88,7 @@
     const corner = gl.getAttribLocation(program, "corner");
     gl.enableVertexAttribArray(corner);
     gl.vertexAttribPointer(corner, 2, gl.FLOAT, false, 0, 0);
-    const uniforms = Object.fromEntries(["texel","crop","point","state","view"].map(name => [name, gl.getUniformLocation(program, name)]));
+    const uniforms = Object.fromEntries(["texel","crop","point","state"].map(name => [name, gl.getUniformLocation(program, name)]));
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -100,8 +98,7 @@
     const neutral = new Uint8Array([70,55,43,255]);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, neutral);
     let source;
-    return (t, velocity, travel, aspect, px, py, intensity, crop, view) => {
-      gl.uniform4fv(uniforms.view, view);
+    return (t, velocity, travel, aspect, px, py, intensity, crop) => {
       if (!img.complete || !img.naturalWidth || gl.isContextLost()) return;
       if (source !== img.currentSrc) {
         // Photo color is already present in the DOM; only a small relief map is needed.
@@ -131,12 +128,9 @@
   function softLight(canvas) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    return (t, velocity, travel, aspect, px, py, intensity, crop, view) => {
+    return (t, velocity, travel, aspect, px, py, intensity, crop) => {
       const w = canvas.width, h = canvas.height;
       ctx.clearRect(0, 0, w, h);
-      ctx.save();
-      ctx.translate(view[0]*w,view[1]*h);
-      ctx.scale(view[2],view[3]);
       const touchX = (px-.5)*aspect+.5;
       const bend = (x, y) => {
         const ridge = y - .13*Math.sin(x*3.2+t*.36+y) - .065*Math.sin(x*6.1-t*.27-y*2.4);
@@ -159,48 +153,40 @@
           ctx.stroke();
         }
       }
-      ctx.restore();
     };
   }
 
-  const surfaces = canvases.map(canvas => {
-    const surface = { canvas, hero: canvas.dataset.wood === "hero", img: canvas.parentElement.querySelector("img"), cold: true };
-    canvas.addEventListener("webglcontextlost", event => { event.preventDefault(); surface.paint = null; });
-    canvas.addEventListener("webglcontextrestored", () => { surface.paint = undefined; surface.cold = true; start(); });
-    surface.img.addEventListener("load", () => { surface.cold = true; invalidate(); });
-    return surface;
-  });
+  let paint;
+  canvas.addEventListener("webglcontextlost", event => { event.preventDefault(); paint = null; });
+  canvas.addEventListener("webglcontextrestored", () => { paint = undefined; invalidate(); });
+  img.addEventListener("load", invalidate);
   let frame = 0, last = 0, clock = 0, velocity = 0, previousScroll = scrollY;
   let x = innerWidth*.4, y = innerHeight*.5, targetX = x, targetY = y, strength = 0, targetStrength = 0;
 
   // Only the moving light is rasterized here. Keep the photograph and the camera at full resolution.
   const interval = 1000 / 30;
-  let nextPaint = 0, dirty = true, filmEnd, scrollRange;
+  let nextPaint = 0, dirty = true, scrollRange = 1, cropTop = 0, photoHeight = 1;
+  const crop = [0, 0, 1, 1];
   function invalidate() { dirty = true; start(); }
 
   function measure() {
     dirty = false;
-    filmEnd = film.getBoundingClientRect().bottom + scrollY;
-    scrollRange = Math.max(1, document.documentElement.scrollHeight-innerHeight);
-    for (const surface of surfaces) {
-      const { canvas, hero, img } = surface;
-      const width = canvas.clientWidth, height = canvas.clientHeight;
-      if (!width || !height) continue;
-      const scale = Math.min(1, 1024 / Math.max(width, height), Math.sqrt(440000 / (width*height)));
-      const w = Math.max(1, Math.round(width*scale)), h = Math.max(1, Math.round(height*scale));
-      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-      surface.crop = [0,0,1,1];
-      if (hero) continue;
-      surface.rect = canvas.getBoundingClientRect();
-      if (!img.naturalWidth) continue;
-      const b = img.getBoundingClientRect(), rect = surface.rect;
-      const fit = Math.max(b.width/img.naturalWidth, b.height/img.naturalHeight);
-      const iw = img.naturalWidth*fit, ih = img.naturalHeight*fit;
-      const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
-      surface.crop = [(rect.left-b.left+(iw-b.width)/2)/iw, 0, rect.width/iw, rect.height/ih];
-      surface.cropTop = (rect.top-b.top+drift+(ih-b.height)/2)/ih;
-      surface.photoHeight = ih;
-    }
+    scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    const rect = canvas.getBoundingClientRect();
+    const scale = Math.min(1, 1024 / Math.max(1, rect.width, rect.height),
+      Math.sqrt(440000 / Math.max(1, rect.width * rect.height)));
+    const w = Math.max(1, Math.round(rect.width * scale)), h = Math.max(1, Math.round(rect.height * scale));
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    if (!img.naturalWidth || !rect.width || !rect.height) return;
+    const b = img.getBoundingClientRect();
+    const fit = Math.max(b.width / img.naturalWidth, b.height / img.naturalHeight);
+    const iw = img.naturalWidth * fit;
+    photoHeight = img.naturalHeight * fit;
+    const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
+    crop[0] = (rect.left - b.left + (iw - b.width) / 2) / iw;
+    cropTop = (rect.top - b.top + drift + (photoHeight - b.height) / 2) / photoHeight;
+    crop[2] = rect.width / iw;
+    crop[3] = rect.height / photoHeight;
   }
 
   function update(now) {
@@ -223,36 +209,13 @@
     const speed = clamp((scroll-previousScroll)/(innerHeight*dt), -2, 2);
     velocity += (speed-velocity)*(1-Math.exp(-dt*3.5));
     previousScroll = scroll;
-    const travel = scroll / scrollRange;
-    const bottom = filmEnd - scroll;
-    let active = false;
-    for (const surface of surfaces) {
-      const {canvas, img, hero, crop} = surface;
-      const visible = hero ? bottom > 0 && !stage.classList.contains("inside-screen")
-        : bottom < innerHeight || stage.classList.contains("dissolving-desk");
-      // Prime both programs, textures and first draws during entry, before the first dissolve.
-      if (!crop || !visible && !(surface.cold && img.complete && img.naturalWidth)) continue;
-      if (surface.paint === undefined) surface.paint = makePainter(canvas,img);
-      if (!surface.paint) continue;
-      active ||= visible;
-      surface.cold = !img.complete || !img.naturalWidth;
-      if (!hero && surface.photoHeight) {
-        const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
-        crop[1] = surface.cropTop - drift/surface.photoHeight;
-      }
-      // The camera publishes its opening crop even when a visitor arrives at a deep link.
-      const framing = canvas.parentElement.dataset.woodView;
-      if (framing && framing !== surface.framing) {
-        surface.view = framing.split(" ").map(Number);
-        surface.framing = framing;
-      }
-      const rect = hero ? (strength > .001 || !surface.view ? canvas.getBoundingClientRect() : null) : surface.rect;
-      const view = surface.view || [-rect.left/rect.width, -rect.top/rect.height, innerWidth/rect.width, innerHeight/rect.height];
-      const px = rect ? ((x-rect.left)/rect.width-view[0])/view[2] : .5;
-      const py = rect ? ((y-rect.top)/rect.height-view[1])/view[3] : .5;
-      surface.paint(clock, velocity, travel, clamp(innerWidth/innerHeight,.8,1.95), px, py, strength, crop, view);
-    }
-    if (active) frame = requestAnimationFrame(update);
+    if (paint === undefined) paint = makePainter(canvas, img);
+    if (!paint) return;
+    const drift = parseFloat(canvas.parentElement.style.getPropertyValue("--desk-drift")) || 0;
+    crop[1] = cropTop - drift / photoHeight;
+    paint(clock, velocity, scroll / scrollRange, clamp(innerWidth / innerHeight, .8, 1.95),
+      x / innerWidth, y / innerHeight, strength, crop);
+    frame = requestAnimationFrame(update);
   }
   function start() {
     if (!frame && !document.hidden && !reduced.matches && !document.querySelector("dialog[open]")) {
@@ -273,10 +236,9 @@
   for (const name of ["resize","pageshow"]) window.addEventListener(name, invalidate);
   if ("ResizeObserver" in window) {
     const sizes = new ResizeObserver(invalidate);
-    for (const element of [document.body, film, ...canvases]) sizes.observe(element);
+    sizes.observe(document.body);
+    sizes.observe(canvas);
   }
-  // An instant anchor jump can update the camera after the last sleeping material frame.
-  new MutationObserver(start).observe(stage, {attributes: true, attributeFilter: ["class"]});
   document.addEventListener("visibilitychange", start);
   document.addEventListener("toggle", start, true);
   document.addEventListener("close", start, true);

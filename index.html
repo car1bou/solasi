@@ -60,24 +60,31 @@
         const images = document.querySelectorAll(".film-photo, .film-glass, .desk-surface img");
         const ready = Array.from(images, image => image.decode());
         ready.push(document.fonts.ready);
+        const firstClip = document.querySelector(".step-screen video[src]");
+        if (firstClip && firstClip.readyState < 3 && !firstClip.error) {
+          ready.push(new Promise(resolve => {
+            firstClip.addEventListener("canplay", resolve, {once: true});
+            firstClip.addEventListener("error", resolve, {once: true});
+          }));
+        }
         Promise.allSettled(ready).then(() => {
           requestAnimationFrame(() => requestAnimationFrame(reveal));
         });
       }, { once: true });
     })();
   </script>
-  <link rel="stylesheet" href="style.css?v=smooth1">
-  <link rel="stylesheet" href="chapters.css?v=gentle1">
+  <link rel="stylesheet" href="style.css?v=scene2">
+  <link rel="stylesheet" href="chapters.css?v=scene2">
   <link rel="stylesheet" href="platform-install.css?v=1">
   <link rel="stylesheet" href="diagram-motion.css?v=talk1">
   <script src="platform-page.js?v=os5" defer></script>
-  <script src="mac-page.js?v=os5" defer></script>
-  <script src="ipad-page.js?v=os5" defer></script>
-  <script src="windows-page.js?v=os5" defer></script>
-  <script src="camera.js?v=smooth1" defer></script>
-  <script src="process.js?v=smooth1" defer></script>
-  <script src="experience.js?v=gentle1" defer></script>
-  <script src="wood-field.js?v=smooth1" defer></script>
+  <script src="mac-page.js?v=scene2" defer></script>
+  <script src="ipad-page.js?v=scene2" defer></script>
+  <script src="windows-page.js?v=scene2" defer></script>
+  <script src="camera.js?v=scene2" defer></script>
+  <script src="process.js?v=scene2" defer></script>
+  <script src="experience.js?v=scene2" defer></script>
+  <script src="wood-field.js?v=scene2" defer></script>
   <script src="release.js?v=6" defer></script>
   <title>Solasi | 수업을 기록하고 다시 찾는 노트</title>
 </head>
@@ -112,6 +119,7 @@
     <picture>
       <img src="assets/studio-walnut.webp" width="941" height="600" alt="" decoding="async">
     </picture>
+    <div class="opening-plate" hidden></div>
     <canvas class="wood-field" data-wood="desk" aria-hidden="true"></canvas>
   </div>
   <a class="skip-link" href="#process">본문으로 건너뛰기</a>
@@ -128,9 +136,12 @@
         <summary aria-label="탐색 메뉴"><span aria-hidden="true"></span></summary>
         <nav aria-label="전체 메뉴">
           <a href="#home">홈</a>
-          <a href="#process">사용 예시</a>
-          <a href="#preview">기능 소개</a>
-          <a href="#work">앱 화면</a>
+          <a href="#process">사용 예시 01–05</a>
+          <a href="#preview">수업 기록</a>
+          <a href="#solutions">복습 기능</a>
+          <a href="#results">복습 예시</a>
+          <a href="#work">기기별 앱 화면</a>
+          <a href="#install">설치 안내</a>
         </nav>
       </details>
       <a href="#install" class="install-link">설치하기 <span aria-hidden="true">↘</span></a>
@@ -152,7 +163,6 @@
                   <img class="film-photo" src="assets/tablet-studio-wide.webp" alt="" width="3372" height="1641">
                 </picture>
               </noscript>
-              <canvas class="wood-field" data-wood="hero" aria-hidden="true"></canvas>
             </div>
             <div class="glass-plane">
               <div class="film-display"><img class="film-glass" width="1280" height="800" alt="" decoding="async"></div>
@@ -182,50 +192,50 @@
               <div class="step-copy"><span class="step-number" aria-hidden="true">01</span><h3>과목 준비하기</h3><p>과목 하나를 만들어 이번 학기 강의 자료와 필기를 모읍니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-course-opening.webp?v=se1" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
+                  <img src="assets/process-course-opening.webp?v=take2" decoding="async" alt="Android 태블릿에서 과목 만들기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=se1" aria-label="과목 준비하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-course.mp4?v=take2" aria-label="과목 준비하기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li data-recorded-on="android">
               <div class="step-copy"><span class="step-number" aria-hidden="true">02</span><h3>강의 자료 열기</h3><p>과목에 강의 PDF를 넣고 오늘 배울 쪽을 펼칩니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-material.webp?v=se1" loading="lazy" decoding="async" alt="Android에서 소프트웨어 공학 1장 PDF를 열고 16쪽으로 이동하는 화면">
+                  <img src="assets/process-material.webp?v=take2" loading="lazy" decoding="async" alt="Android에서 소프트웨어 공학 1장 PDF를 열고 16쪽으로 이동하는 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=se1" aria-label="강의 자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-material.mp4?v=take2" aria-label="강의 자료 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li data-recorded-on="android">
               <div class="step-copy"><span class="step-number" aria-hidden="true">03</span><h3>필기·메모 남기기</h3><p>‘필기만’으로 자료를 넓게 펼치고, 중요한 문장에 형광펜을 긋습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-ink.webp?v=se1" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
+                  <img src="assets/process-ink.webp?v=take2" loading="lazy" decoding="async" alt="Android 태블릿에서 필기하기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=se1" aria-label="필기·메모 남기기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Android 태블릿</span><a href="assets/process-ink.mp4?v=take2" aria-label="필기·메모 남기기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li data-recorded-on="mac">
               <div class="step-copy"><span class="step-number" aria-hidden="true">04</span><h3>강의 대본 열기</h3><p>Mac에서 강의 기록을 열고 대본 탭에서 수업 내용을 확인합니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-transcript.webp?v=se1" loading="lazy" decoding="async" alt="Mac에서 소프트웨어 공학 개요 강의 기록의 대본을 여는 화면">
+                  <img src="assets/process-transcript.webp?v=take2" loading="lazy" decoding="async" alt="Mac에서 소프트웨어 공학 개요 강의 기록의 대본을 여는 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=se1" aria-label="강의 대본 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Mac</span><a href="assets/process-transcript.mp4?v=take2" aria-label="강의 대본 열기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
             <li data-recorded-on="mac">
               <div class="step-copy"><span class="step-number" aria-hidden="true">05</span><h3>구간 다시 듣기</h3><p>대본에서 한 문장을 골라 그 말을 했던 순간부터 다시 듣습니다.</p></div>
               <figure class="step-film">
                 <div class="step-screen">
-                  <img src="assets/process-replay.webp?v=se1" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
+                  <img src="assets/process-replay.webp?v=take2" loading="lazy" decoding="async" alt="Mac에서 구간 다시 듣기 시연 중인 Solasi 화면">
                   <video muted playsinline preload="none" aria-hidden="true"></video>
                 </div>
-                <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=se1" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
+                <figcaption><span>Mac</span><a href="assets/process-replay.mp4?v=take2" aria-label="구간 다시 듣기 시연 영상 크게 보기">영상 크게 보기 <span aria-hidden="true">↗</span></a></figcaption>
               </figure>
             </li>
           </ol>

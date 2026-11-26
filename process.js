@@ -55,9 +55,18 @@
     clip.src = figures[i].querySelector("a").href;
   }
 
+  function showClip(i) {
+    if (i !== current || !watching) return;
+    clips[i].classList.add("is-showing");
+    heldFrame.remove();
+  }
+
   function play(i) {
     prepare(i);
-    clips[i].play().catch(() => updateButton(i));
+    const clip = clips[i];
+    // Arm before play so a long, still opening can hand off on its first presented frame.
+    if (!clip.classList.contains("is-showing")) clip.requestVideoFrameCallback?.(() => showClip(i));
+    clip.play().catch(() => updateButton(i));
   }
 
   function updateButton(i) {
@@ -78,8 +87,7 @@
     };
     clip.addEventListener("playing", () => {
       if (i !== current || !watching) { clip.pause(); return; }
-      clip.classList.add("is-showing");
-      heldFrame.remove();
+      if (!clip.requestVideoFrameCallback) showClip(i);
       updateButton(i);
     });
     clip.addEventListener("pause", () => updateButton(i));
