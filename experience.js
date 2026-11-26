@@ -40,17 +40,6 @@
   addEventListener("blur", () => look(0, 0));
   deskPointer.addEventListener("change", () => look(0, 0));
 
-  if ("IntersectionObserver" in window) {
-    const arrivals = new IntersectionObserver(entries => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        entry.target.classList.add("has-arrived");
-        arrivals.unobserve(entry.target);
-      }
-    });
-    document.querySelectorAll(".field .motion-title").forEach(title => arrivals.observe(title));
-  }
-
   function highlightSolution() {
     const center = (innerHeight + header.offsetHeight) / 2;
     const row = reduced.matches ? undefined : solutions.find(item => {

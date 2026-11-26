@@ -46,18 +46,6 @@
 .field h2 span { color: var(--study-oak); }
 .motion-title > span { display: inline-block; max-width: 100%; }
 .field .motion-title > span:first-child, .install-heading .motion-title > span { color: inherit; }
-@media (prefers-reduced-motion: no-preference) {
-  .motion-title.has-arrived:not(.process-heading) > span {
-    animation: lift-title .64s cubic-bezier(.2,.72,.22,1) backwards;
-  }
-  .motion-title.has-arrived:not(.process-heading) > span:last-child {
-    animation-delay: .085s;
-  }
-  @keyframes lift-title {
-    from { opacity: .12; transform: translateY(.52em); clip-path: inset(-.1em -.12em 88%); }
-    to { opacity: 1; transform: none; clip-path: inset(-.1em -.12em -.15em); }
-  }
-}
 .field h3 { font-size: clamp(1.32rem, 2.1vw, 2.2rem); line-height: 1.2; }
 .field p { line-height: 1.6; }
 .section-label, .row-number, .solution-code { font-variant-numeric: tabular-nums; font-size: .84rem; font-weight: 620; }
@@ -68,7 +56,7 @@
 .field-link, .device-download { gap: 1rem; text-decoration: none; }
 .field-link:is(:hover, :active), .device-download:is(:hover, :active) { text-decoration: underline; }
 .field :is(a, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-.study-problems .field-frame { padding-bottom: clamp(5rem, 11vw, 11rem); }
+.study-problems .field-frame { padding-bottom: clamp(2.5rem, 5vw, 5rem); }
 .problem-heading {
   display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.12fr); align-items: center;
   gap: clamp(1.5rem,4vw,4rem); min-height: clamp(26rem,73svh,46rem);
@@ -124,7 +112,7 @@
 .week-sketch span { width: 55%; padding: .7rem 1rem; }
 .week-sketch span:nth-child(2) { align-self: center; }
 .week-sketch span:last-child { align-self: end; }
-.study-solutions .field-frame, .study-work .field-frame { padding-block: clamp(4rem, 9vw, 9rem); }
+.study-solutions .field-frame, .study-work .field-frame { padding-block: clamp(3rem, 6vw, 5.5rem); }
 .section-head { position: relative; min-height: clamp(14rem, 25vw, 22rem); padding: var(--study-gap); border-block: 1px solid var(--study-line); background: var(--study-corners); background-repeat: no-repeat; }
 .solution-head { display: flex; flex-direction: column; }
 .solution-head > div:first-child { min-height: clamp(10rem, 21vw, 17rem); display: flex; flex-direction: column; justify-content: space-between; }
@@ -162,7 +150,7 @@
   .solution-list .is-current::after { transform: scaleY(1); }
   .solution-list .is-current h3 { color: var(--study-oak); transform: translateX(.28em); }
 }
-.study-results .field-frame { padding-block: clamp(4rem, 8vw, 8rem); }
+.study-results .field-frame { padding-block: clamp(3rem, 6vw, 5.5rem); }
 .result-head {
   display: grid; grid-template-columns: minmax(0,.86fr) minmax(12rem,1.14fr);
   align-items: center; gap: 1rem clamp(1.5rem,4vw,4rem);
@@ -225,6 +213,7 @@
 .step-play { padding: 0 .25rem; background: transparent; border: none; color: inherit; cursor: pointer; }
 .step-play:hover { text-decoration: underline; }
 .step-play[hidden] { display: none; }
+.work-heading { min-height: 0; padding-block: clamp(1.75rem, 3.5vw, 3rem); }
 .work-grid { display: grid; grid-template-columns: minmax(0, .86fr) minmax(0, 1.35fr); border-bottom: 1px solid var(--study-line); }
 .work-index { align-self: center; padding: var(--study-gap); }
 .work-index details { border-block-start: 1px solid var(--study-line); }
@@ -284,7 +273,6 @@
     grid-template-columns: minmax(0,1fr); align-content: center; gap: 1.8rem;
     min-height: clamp(25rem,77svh,44rem); padding: 2.5rem clamp(1.15rem,5.5vw,2.4rem);
   }
-  .lecture-page { grid-row: 1; }
   .problem-lede { gap: .8rem; }
   .problem-list > li { grid-template-columns: 1fr; min-height: auto; }
   .problem-list li:nth-child(2) :is(.problem-copy,.problem-visual) { grid-column: auto; grid-row: auto; }
@@ -293,7 +281,7 @@
   .problem-visual { min-height: 9rem; width: min(72%, 18rem); margin: .6rem auto 1.7rem; }
   .solution-head > div:first-child { min-height: 10rem; }
   .course-map { position: relative; inset: auto; align-self: center; width: min(86%, 22rem); margin-block: 2.25rem .5rem; transform: none; }
-  .section-head { min-height: 13rem; }
+  .solution-head, .result-head { min-height: 13rem; }
   .solution-list li { grid-template-columns: 2.9rem minmax(0,1fr); min-height: auto; }
   .solution-list .row-number { gap: .29rem; padding: 1.25rem .35rem 1.25rem .5rem; }
   .solution-list li > div { gap: .85rem; padding: 1.25rem 1rem; }
